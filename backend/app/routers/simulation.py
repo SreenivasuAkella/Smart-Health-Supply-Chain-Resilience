@@ -2,17 +2,22 @@ import json
 import os
 from fastapi import APIRouter
 from pydantic import BaseModel
+from typing import Optional
 
-router = APIRouter(prefix="/api/simulation", tags=["Crisis Stress-Testing Sandbox"])
-
-MEDICINES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "medicines.json")
+router = APIRouter(tags=["Crisis Stress-Testing Sandbox"])
 
 class CrisisScenarioRequest(BaseModel):
-    scenario_type: str  # "DENGUE_OUTBREAK_UP", "BRAHMAPUTRA_FLOOD_ASSAM", "POWER_GRID_FAILURE_PATNA", "HEATWAVE_SURGE_MAHARASHTRA"
+    scenario_type: Optional[str] = None
+    crisis_type: Optional[str] = None
+    target_facility_id: Optional[str] = "PHC-BARAGAON-03"
+    severity: Optional[str] = "HIGH"
+    grid_failure: Optional[bool] = True
 
-@router.post("/trigger-crisis")
+@router.post("/api/simulation/crisis-sandbox")
+@router.post("/api/simulation/trigger-crisis")
 def trigger_crisis_scenario(req: CrisisScenarioRequest):
-    if req.scenario_type == "DENGUE_OUTBREAK_UP":
+    stype = req.crisis_type or req.scenario_type or "DENGUE_OUTBREAK_UP"
+    if "DENGUE" in stype.upper() or "VECTOR" in stype.upper():
         return {
             "scenario": "Dengue Surge Crisis in Eastern UP (Varanasi/Chandauli)",
             "impact_summary": "450% surge in pediatric hospital admissions. Ringer Lactate & IV fluids daily burn increased 5x.",
@@ -24,7 +29,7 @@ def trigger_crisis_scenario(req: CrisisScenarioRequest):
                 "Dispatched WhatsApp/SMS advisories to 140 ASHA cluster leaders in Bhojpuri & Hindi"
             ]
         }
-    elif req.scenario_type == "BRAHMAPUTRA_FLOOD_ASSAM":
+    elif "FLOOD" in stype.upper() or "ASSAM" in stype.upper():
         return {
             "scenario": "Severe Monsoon Inundation in Morigaon & Brahmaputra Basin",
             "impact_summary": "Submerged road access to riverine PHCs. High risk of snake bites & waterborne gastroenteritis.",
