@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Network, ShieldCheck, Cpu, RefreshCw, CheckCircle2, Lock, Share2, Sparkles, Database } from 'lucide-react';
+import { fetchFederatedStatus } from '../services/api';
 
 export default function FederatedLearningHub() {
   const [federatedData, setFederatedData] = useState(null);
@@ -8,14 +9,9 @@ export default function FederatedLearningHub() {
   const [syncingRound, setSyncingRound] = useState(false);
 
   const loadFederatedStatus = async () => {
-    try {
-      const res = await fetch("http://localhost:8000/api/federated/status");
-      if (res.ok) {
-        const data = await res.json();
-        setFederatedData(data);
-      }
-    } catch (e) {
-      console.warn("Federated fetch error:", e);
+    const data = await fetchFederatedStatus();
+    if (data) {
+      setFederatedData(data);
     }
     setLoading(false);
   };
