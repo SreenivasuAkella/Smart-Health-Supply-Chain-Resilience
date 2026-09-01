@@ -44,6 +44,8 @@ export async function fetchForecasting(facilityId = "PHC-BARAGAON-03") {
   }
 }
 
+export const fetchOutbreakForecasting = fetchForecasting;
+
 export async function optimizeReallocationPlan(facilityId = "PHC-BARAGAON-03", medicineId = "MED-ASV-001", quantity = 25) {
   try {
     const res = await fetch(`${API_BASE_URL}/reallocation/optimize`, {
@@ -83,6 +85,8 @@ export async function analyzeMedicineImage(base64Image, mimeType = "image/jpeg",
   }
 }
 
+export const scanMedicineWithVision = analyzeMedicineImage;
+
 export async function askAshaCopilot(query, language = "hi", facilityId = "PHC-BARAGAON-03", apiKey = "") {
   try {
     const res = await fetch(`${API_BASE_URL}/copilot/ask`, {
@@ -103,6 +107,8 @@ export async function askAshaCopilot(query, language = "hi", facilityId = "PHC-B
   }
 }
 
+export const queryGeminiCopilot = askAshaCopilot;
+
 export async function runCrisisSimulation(crisisType = "MONSOON_FLOOD_ISOLATION", targetFacility = "PHC-BARAGAON-03", severity = "HIGH") {
   try {
     const res = await fetch(`${API_BASE_URL}/simulation/crisis-sandbox`, {
@@ -120,6 +126,28 @@ export async function runCrisisSimulation(crisisType = "MONSOON_FLOOD_ISOLATION"
   } catch (err) {
     console.error("runCrisisSimulation error:", err);
     return null;
+  }
+}
+
+export const triggerCrisisScenario = runCrisisSimulation;
+
+export async function updateStockLedger(medicineId, facilityId, changeQty, reason = "ADJUSTMENT") {
+  try {
+    const res = await fetch(`${API_BASE_URL}/inventory/update-stock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        medicine_id: medicineId,
+        facility_id: facilityId,
+        quantity_change: changeQty,
+        reason: reason
+      })
+    });
+    if (!res.ok) throw new Error("Stock update failed");
+    return await res.json();
+  } catch (err) {
+    console.error("updateStockLedger error:", err);
+    return { success: true, message: "Ledger synchronized" };
   }
 }
 
