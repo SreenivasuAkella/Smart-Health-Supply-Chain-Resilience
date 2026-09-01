@@ -184,3 +184,17 @@ export async function fetchBigQueryAnalytics(district = "Varanasi") {
     return null;
   }
 }
+
+export async function triggerLiveDatasetSync() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/analytics/sync-live-data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error("Dataset sync failed");
+    return await res.json();
+  } catch (err) {
+    console.error("triggerLiveDatasetSync error:", err);
+    return { status: "ERROR", detail: err.message };
+  }
+}

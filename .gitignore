@@ -43,6 +43,11 @@ __pycache__/
 **/.env*.local
 !**/.env.example
 !.env.example
+*.json.secret
+*key*.json
+gcp-key.json
+firebase-key.json
+service-account*.json
 
 # =================================================================
 # Logs & Diagnostics

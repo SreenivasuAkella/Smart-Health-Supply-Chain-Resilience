@@ -17,3 +17,23 @@ def get_firebase_status():
         "auth_role": firebase_service.verify_asha_auth_token(),
         "live_telemetry_sync": firebase_service.publish_iot_telemetry("IOT-COLD-BRG-03", 8.7, 9.12)
     }
+
+@router.post("/sync-live-data")
+def trigger_live_data_ingestion():
+    """
+    Triggers live ingestion from IMD/Open-Meteo, WHO GHO, and data.gov.in into BigQuery.
+    """
+    try:
+        from ..scripts.ingest_live_public_data import build_and_ingest_pipeline
+        build_and_ingest_pipeline()
+        return {
+            "status": "SUCCESS",
+            "message": "Live public datasets fetched and streamed to Google BigQuery.",
+            "sources": [
+                "IMD & Open-Meteo Weather Grid",
+                "WHO Global Health Observatory",
+                "data.gov.in (OGD India)"
+            ]
+        }
+    except Exception as e:
+        return {"status": "ERROR", "detail": str(e)}

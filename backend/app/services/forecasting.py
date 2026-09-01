@@ -21,6 +21,12 @@ def get_outbreak_predictions() -> Dict[str, Any]:
         
     vulnerability_index = public_data.get("districtVulnerabilityIndices", {})
     
+    # Query live BigQuery data warehouse for latest public health telemetry
+    from .bigquery_service import bigquery_service
+    live_bq = bigquery_service.get_live_district_vulnerabilities()
+    live_districts = live_bq.get("districts", {})
+    data_source_tag = "Live Google BigQuery + IMD Surveillance Grid" if live_districts else "Analytical Intelligence Engine"
+    
     forecasts = []
     high_risk_alerts = []
     
@@ -30,10 +36,23 @@ def get_outbreak_predictions() -> Dict[str, Any]:
             "floodRisk": 0.4, "dengueRisk": 0.5, "malariaRisk": 0.4, "heatwaveRisk": 0.5, "accessibilityScore": 0.7
         })
         
-        # Calculate disease risk score based on multi-factor telemetry
-        dengue_surge_prob = min(98.0, round(dist_indices["dengueRisk"] * 100 * 1.08, 1))
-        malaria_surge_prob = min(95.0, round(dist_indices["malariaRisk"] * 100 * 1.05, 1))
-        flood_risk_pct = round(dist_indices["floodRisk"] * 100, 1)
+        # Override with real-time BigQuery data if available
+        if dist in live_districts:
+            bq_d = live_districts[dist]
+            flood_risk_pct = round(bq_d["floodRisk"] * 100, 1)
+            # Normalize cases into risk percentages
+            dengue_surge_prob = min(98.0, round((bq_d["dengueCases"] / 600.0) * 100, 1))
+            malaria_surge_prob = min(95.0, round((bq_d["malariaCases"] / 300.0) * 100, 1))
+            dengue_risk_factor = min(1.0, bq_d["dengueCases"] / 500.0)
+            flood_risk_factor = bq_d["floodRisk"]
+            malaria_risk_factor = min(1.0, bq_d["malariaCases"] / 250.0)
+        else:
+            dengue_surge_prob = min(98.0, round(dist_indices["dengueRisk"] * 100 * 1.08, 1))
+            malaria_surge_prob = min(95.0, round(dist_indices["malariaRisk"] * 100 * 1.05, 1))
+            flood_risk_pct = round(dist_indices["floodRisk"] * 100, 1)
+            dengue_risk_factor = dist_indices["dengueRisk"]
+            flood_risk_factor = dist_indices["floodRisk"]
+            malaria_risk_factor = dist_indices["malariaRisk"]
         
         # Calculate stockout risk for key items at this facility
         fac_stockout_items = []
@@ -46,11 +65,11 @@ def get_outbreak_predictions() -> Dict[str, Any]:
             # Epidemic multiplier based on category
             multiplier = 1.0
             if "Dengue" in med["name"] or "Saline" in med["name"] or "ORS" in med["name"]:
-                multiplier = 1.0 + (dist_indices["dengueRisk"] * 1.5)
+                multiplier = 1.0 + (dengue_risk_factor * 1.5)
             elif "Anti-Snake" in med["name"]:
-                multiplier = 1.0 + (dist_indices["floodRisk"] * 2.0)
+                multiplier = 1.0 + (flood_risk_factor * 2.0)
             elif "Artesunate" in med["name"] or "Malaria" in med["name"]:
-                multiplier = 1.0 + (dist_indices["malariaRisk"] * 1.8)
+                multiplier = 1.0 + (malaria_risk_factor * 1.8)
                 
             adjusted_daily_burn_rate = round(max(0.5, (stock / 10.0) * multiplier), 2)
             days_of_stock_left = round(stock / adjusted_daily_burn_rate, 1) if adjusted_daily_burn_rate > 0 else 999
@@ -96,6 +115,7 @@ def get_outbreak_predictions() -> Dict[str, Any]:
         
     return {
         "model_framework": "Vertex AI AutoML Time-Series & IMD Geospatial Risk Ensemble",
+        "data_source": data_source_tag,
         "forecast_horizon": "14 to 30 Days",
         "confidence_interval": "94.6%",
         "total_facilities_monitored": len(facilities),
