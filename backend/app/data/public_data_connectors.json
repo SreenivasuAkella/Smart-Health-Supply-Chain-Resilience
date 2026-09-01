@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "sourceName": "data.gov.in & National Health Mission (e-Aushadhi / HMIS)",
+      "category": "Public Healthcare Supply & Morbidity",
+      "dataset": "National Essential Medicines List (NLEM 2022) & Sub-district Monthly Drug Consumption",
+      "recordsCount": "1,420,000+",
+      "updateFrequency": "Weekly Sync",
+      "integrationStatus": "ACTIVE"
+    },
+    {
+      "sourceName": "India Meteorological Department (IMD) & ISRO Bhuvan",
+      "category": "Geospatial Climate & Flood Vulnerability",
+      "dataset": "High-Resolution Monsoon Inundation & Heatwave Index",
+      "recordsCount": "750 Districts",
+      "updateFrequency": "Real-Time 3h",
+      "integrationStatus": "ACTIVE"
+    },
+    {
+      "sourceName": "WHO Global Health Observatory & IDSP India",
+      "category": "Epidemic Incidence & Outbreak Watch",
+      "dataset": "Integrated Disease Surveillance Programme (IDSP) Weekly Acute Diarrheal & Vector-borne Alerts",
+      "recordsCount": "36 States & UTs",
+      "updateFrequency": "Daily",
+      "integrationStatus": "ACTIVE"
+    },
+    {
+      "sourceName": "Google BigQuery Public Health Sandbox",
+      "category": "Cloud Data Warehouse",
+      "dataset": "bigquery-public-data.covid19_open_data & indian_public_health_surveillance",
+      "recordsCount": "48M Rows",
+      "updateFrequency": "Continuous Stream",
+      "integrationStatus": "ACTIVE"
+    }
+  ],
+  "districtVulnerabilityIndices": {
+    "Varanasi": { "floodRisk": 0.42, "dengueRisk": 0.88, "malariaRisk": 0.45, "heatwaveRisk": 0.65, "accessibilityScore": 0.85 },
+    "Patna": { "floodRisk": 0.78, "dengueRisk": 0.82, "malariaRisk": 0.50, "heatwaveRisk": 0.70, "accessibilityScore": 0.80 },
+    "Kamrup Metro": { "floodRisk": 0.65, "dengueRisk": 0.55, "malariaRisk": 0.72, "heatwaveRisk": 0.40, "accessibilityScore": 0.75 },
+    "Morigaon": { "floodRisk": 0.95, "dengueRisk": 0.60, "malariaRisk": 0.89, "heatwaveRisk": 0.35, "accessibilityScore": 0.38 },
+    "Pune": { "floodRisk": 0.30, "dengueRisk": 0.75, "malariaRisk": 0.32, "heatwaveRisk": 0.60, "accessibilityScore": 0.92 },
+    "Wayanad": { "floodRisk": 0.88, "dengueRisk": 0.40, "malariaRisk": 0.25, "heatwaveRisk": 0.20, "accessibilityScore": 0.52 }
+  }
+}
