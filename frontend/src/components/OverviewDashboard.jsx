@@ -3,7 +3,7 @@ import React from 'react';
 import { 
   ShieldCheck, AlertTriangle, ThermometerSnowflake, Truck, 
   TrendingUp, Activity, ArrowUpRight, Sparkles, MapPin, 
-  CheckCircle2, RefreshCw 
+  CheckCircle2, RefreshCw, Bed, Users, UserCheck, Stethoscope, HeartPulse
 } from 'lucide-react';
 
 export default function OverviewDashboard({ 
@@ -18,67 +18,80 @@ export default function OverviewDashboard({
   const optimalCount = facilities.filter(f => f.status === 'Optimal' || f.status === 'Surplus').length;
   const excursionCount = telemetry?.critical_excursions || 1;
 
+  // Aggregate resource availability across monitored facilities
+  const totalBeds = facilities.reduce((sum, f) => sum + (f.bedCapacity || 0), 0);
+  const occupiedBeds = facilities.reduce((sum, f) => sum + (f.bedsOccupied || 0), 0);
+  const oxygenBeds = facilities.reduce((sum, f) => sum + (f.oxygenBedsAvailable || 0), 0);
+  const icuBeds = facilities.reduce((sum, f) => sum + (f.icuBedsAvailable || 0), 0);
+
+  const doctorsOnDuty = facilities.reduce((sum, f) => sum + (f.doctorsOnDuty || 0), 0);
+  const doctorsTotal = facilities.reduce((sum, f) => sum + (f.doctorsTotal || 0), 0);
+  const nursesOnDuty = facilities.reduce((sum, f) => sum + (f.nursesOnDuty || 0), 0);
+  const ashaActive = facilities.reduce((sum, f) => sum + (f.ashaActiveCount || 0), 0);
+
+  const dailyPatientFootfall = facilities.reduce((sum, f) => sum + (f.dailyPatientFootfall || 0), 0);
+
   const quickStats = [
     {
-      title: "National Health Resilience Score",
+      title: "National Health Resilience",
       value: "96.4%",
       change: "+4.2% this week",
       icon: ShieldCheck,
       color: "text-emerald-400",
       bg: "bg-emerald-500/10 border-emerald-500/30",
-      trend: "Vertex AI Outbreak-Ready"
+      trend: "Vertex AI Federated Sync"
     },
     {
-      title: "Active Facilities Monitored",
-      value: `${facilities.length} Centers`,
-      change: `${optimalCount} Optimal / ${criticalDeficitCount} Critical`,
-      icon: Activity,
+      title: "Real-Time Bed Occupancy",
+      value: `${occupiedBeds} / ${totalBeds} Beds`,
+      change: `${oxygenBeds} O2 Beds | ${icuBeds} ICU Avail`,
+      icon: Bed,
       color: "text-cyan-400",
       bg: "bg-cyan-500/10 border-cyan-500/30",
-      trend: "6 States & UTs"
+      trend: `${Math.round((occupiedBeds/totalBeds)*100)}% National Occupancy`
     },
     {
-      title: "Cold-Chain IoT Excursions",
-      value: `${excursionCount} Alert`,
-      change: "PHC Baragaon (8.7°C > 8°C)",
-      icon: ThermometerSnowflake,
-      color: "text-rose-400",
-      bg: "bg-rose-500/10 border-rose-500/30",
-      trend: "Autonomous SOS Dispatched"
-    },
-    {
-      title: "AI Reallocations In-Transit",
-      value: "8 Shipments",
-      change: "Avg ETA: 42 Mins",
-      icon: Truck,
+      title: "Medical Staff Attendance",
+      value: `${doctorsOnDuty}/${doctorsTotal} Doctors`,
+      change: `${nursesOnDuty} Nurses | ${ashaActive} ASHA Active`,
+      icon: Stethoscope,
       color: "text-indigo-400",
       bg: "bg-indigo-500/10 border-indigo-500/30",
-      trend: "Google Maps Route Optimized"
+      trend: "87.5% Duty Adherence"
+    },
+    {
+      title: "Live Patient Footfall",
+      value: `${dailyPatientFootfall.toLocaleString()} Today`,
+      change: "Surge Alerts in 3 PHCs",
+      icon: Users,
+      color: "text-amber-400",
+      bg: "bg-amber-500/10 border-amber-500/30",
+      trend: "Peak Monsoon Influx"
     }
   ];
 
   const highPriorityAlerts = [
     {
       id: "ALT-01",
-      severity: "CRITICAL",
+      severity: "CRITICAL DEFICIT",
       facility: "PHC Baragaon (Varanasi, UP)",
-      message: "Anti-Snake Venom buffer collapsed to 3 vials (Threshold: 25). Monsoon snake-bite surge in progress.",
+      message: "Anti-Snake Venom buffer collapsed to 3 vials (Threshold: 25). Beds at 100% capacity; patient footfall surge at 130%.",
       action: "Execute Emergency Rebalancing",
       targetId: "PHC-BARAGAON-03",
       medId: "MED-ASV-001"
     },
     {
       id: "ALT-02",
-      severity: "CRITICAL",
+      severity: "CLIMATE CRISIS",
       facility: "PHC Laharighat (Morigaon, Assam)",
-      message: "Brahmaputra flood alert: Artesunate Malaria injectable stock is ZERO vials. Immediate riverine / drone dispatch needed.",
+      message: "Brahmaputra flood alert: Artesunate Malaria injectable stock is ZERO. Riverine emergency drone dispatch required.",
       action: "Execute Emergency Rebalancing",
       targetId: "PHC-MORIGAON-08",
       medId: "MED-ART-006"
     },
     {
       id: "ALT-03",
-      severity: "WARNING",
+      severity: "HIGH VULNERABILITY",
       facility: "PHC Meppadi (Wayanad, Kerala)",
       message: "Highland landslide season: Human Insulin stock at 5 vials. 14-day stockout forecast probability is 88%.",
       action: "Execute Emergency Rebalancing",
@@ -94,33 +107,33 @@ export default function OverviewDashboard({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
-              <Sparkles size={13} /> Powered by Google Gemini 1.5 Flash & Vertex AI
+              <Sparkles size={13} /> Federated Google AI Platform
             </span>
             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live National Sync
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Real-Time PHC & Resource Mesh
             </span>
           </div>
           <h2 className="text-2xl font-extrabold text-white tracking-tight">
-            National Health & Vaccine Supply Chain Resilience Hub
+            National Health Resource, Bed, Staff & Supply Chain Platform
           </h2>
           <p className="text-slate-400 text-sm mt-1 max-w-3xl">
-            Autonomous multi-tier redistribution engine preventing drug stockouts, mitigating cold-chain spoilage, and alerting frontline ASHA workers across Indian districts.
+            Real-time visibility into medicine stocks, bed availability, and medical personnel attendance across India's PHC network with shared cross-state federated AI forecasting.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
           <button 
-            onClick={() => onNavigate('vision')}
+            onClick={() => onNavigate('federated')}
             className="btn-primary text-sm px-4 py-2.5"
           >
-            <Sparkles size={16} />
-            <span>Scan Medicine Pack</span>
+            <span>Federated Multi-State AI</span>
+            <ArrowUpRight size={15} />
           </button>
           <button 
             onClick={onOpenCopilot}
             className="btn-secondary text-sm px-4 py-2.5"
           >
-            <span>Launch ASHA Voice Copilot</span>
+            <span>ASHA Voice Copilot</span>
           </button>
         </div>
       </div>
@@ -160,7 +173,7 @@ export default function OverviewDashboard({
             <div className="flex items-center gap-2">
               <AlertTriangle className="text-rose-400" size={20} />
               <h3 className="font-bold text-lg text-white">
-                Live Epidemic & Stockout Crisis Alerts ({highPriorityAlerts.length})
+                Early Warning Crisis Alerts ({highPriorityAlerts.length})
               </h3>
             </div>
             <span className="text-xs text-slate-400 flex items-center gap-1">
@@ -202,12 +215,12 @@ export default function OverviewDashboard({
           </div>
 
           <div className="pt-2 flex justify-between items-center text-xs text-slate-400">
-            <span>Synchronized with National IDSP Outbreak Surveillance Portal</span>
+            <span>Synchronized with National IDSP & e-Aushadhi Surveillance Portal</span>
             <button 
-              onClick={() => onNavigate('forecasting')} 
+              onClick={() => onNavigate('map')} 
               className="text-cyan-400 hover:underline flex items-center gap-1"
             >
-              View 30-Day Outbreak Projections <ArrowUpRight size={13} />
+              Open Cross-District Google Maps Router <ArrowUpRight size={13} />
             </button>
           </div>
         </div>

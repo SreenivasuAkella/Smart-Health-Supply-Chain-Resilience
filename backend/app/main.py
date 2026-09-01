@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import inventory, ai_vision, copilot, forecasting, reallocation, telemetry, simulation
+from .routers import inventory, ai_vision, copilot, forecasting, reallocation, telemetry, simulation, analytics, federated
 
 app = FastAPI(
     title="Sanjeevani AI - Smart Health & Supply Chain Resilience API",
@@ -25,6 +25,8 @@ app.include_router(forecasting.router)
 app.include_router(reallocation.router)
 app.include_router(telemetry.router)
 app.include_router(simulation.router)
+app.include_router(analytics.router)
+app.include_router(federated.router)
 
 @app.get("/")
 def root():

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, Navigation, Truck, RefreshCw, Layers, ShieldCheck, AlertCircle, Building2, Phone } from 'lucide-react';
+import { MapPin, Navigation, Truck, RefreshCw, Layers, ShieldCheck, AlertCircle, Building2, Phone, Sparkles } from 'lucide-react';
 import { optimizeReallocationPlan } from '../services/api';
 
 // Dynamic import of Leaflet components with SSR disabled
@@ -29,9 +29,29 @@ const Polyline = dynamic(
 export default function InteractiveMap({ facilities = [], activeReallocation, onSelectFacility }) {
   const [isClient, setIsClient] = useState(false);
   const [selectedState, setSelectedState] = useState('All');
+  const [mapLayer, setMapLayer] = useState('google-roadmap'); // 'google-roadmap', 'google-hybrid', 'google-terrain', 'osm'
   const [reallocationPlan, setReallocationPlan] = useState(activeReallocation || null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [customIcons, setCustomIcons] = useState(null);
+
+  const tileUrls = {
+    'google-roadmap': {
+      url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      attribution: '&copy; Google Maps Platform'
+    },
+    'google-hybrid': {
+      url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      attribution: '&copy; Google Maps Platform / Google Earth Engine'
+    },
+    'google-terrain': {
+      url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+      attribution: '&copy; Google Maps Platform Terrain'
+    },
+    'osm': {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; OpenStreetMap contributors'
+    }
+  };
 
   useEffect(() => {
     setIsClient(true);
@@ -45,20 +65,20 @@ export default function InteractiveMap({ facilities = [], activeReallocation, on
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
 
-      const createCustomIcon = (color) => {
+      const createCustomIcon = (color, pulseColor) => {
         return L.divIcon({
           className: 'custom-pin',
-          html: `<div style="background-color: ${color}; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 0 12px ${color};"></div>`,
-          iconSize: [18, 18],
-          iconAnchor: [9, 9]
+          html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 0 14px ${pulseColor || color};"></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
         });
       };
 
       setCustomIcons({
-        critical: createCustomIcon('#f43f5e'),
-        optimal: createCustomIcon('#10b981'),
-        warning: createCustomIcon('#f59e0b'),
-        warehouse: createCustomIcon('#38bdf8')
+        critical: createCustomIcon('#f43f5e', '#fb7185'),
+        optimal: createCustomIcon('#10b981', '#34d399'),
+        warning: createCustomIcon('#f59e0b', '#fbbf24'),
+        warehouse: createCustomIcon('#0284c7', '#38bdf8')
       });
     }
   }, []);
@@ -91,15 +111,47 @@ export default function InteractiveMap({ facilities = [], activeReallocation, on
             <Navigation size={20} className="text-cyan-400" />
           </div>
           <div>
-            <h3 className="font-bold text-white text-base">Geospatial Reallocation & Cold-Chain Routing</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-base">Google Maps Geospatial Rebalancing & Routing</h3>
+              <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                <Sparkles size={11} /> Google Maps Platform
+              </span>
+            </div>
             <p className="text-xs text-slate-400">
-              Interactive Google Maps compliant route simulation between surplus hubs and rural deficit clinics
+              Live distance matrix calculation, route optimization, and terrain-aware vaccine transit windows
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">Filter State:</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Map Layer Switcher */}
+          <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg p-0.5">
+            <button
+              onClick={() => setMapLayer('google-roadmap')}
+              className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
+                mapLayer === 'google-roadmap' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Google Street
+            </button>
+            <button
+              onClick={() => setMapLayer('google-hybrid')}
+              className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
+                mapLayer === 'google-hybrid' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Google Satellite
+            </button>
+            <button
+              onClick={() => setMapLayer('google-terrain')}
+              className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
+                mapLayer === 'google-terrain' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Google Terrain
+            </button>
+          </div>
+
           <select
             value={selectedState}
             onChange={(e) => setSelectedState(e.target.value)}
@@ -128,15 +180,17 @@ export default function InteractiveMap({ facilities = [], activeReallocation, on
       <div className="glass-panel p-2 relative h-[520px] rounded-2xl overflow-hidden border border-slate-800">
         {isClient ? (
           <MapContainer
-            center={[25.3176, 82.9739]}
-            zoom={6}
+            center={[23.5937, 82.9629]}
+            zoom={5}
             scrollWheelZoom={true}
             style={{ height: '100%', width: '100%', borderRadius: '12px' }}
           >
-            {/* CartoDB Dark Matter Tiles */}
+            {/* Google Maps Tiles */}
             <TileLayer
-              attribution='&copy; <a href="https://carto.com/">CARTO</a> | Sanjeevani AI'
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              key={mapLayer}
+              attribution={tileUrls[mapLayer].attribution}
+              url={tileUrls[mapLayer].url}
+              maxZoom={20}
             />
 
             {filteredFacilities.map((fac) => (
@@ -184,16 +238,16 @@ export default function InteractiveMap({ facilities = [], activeReallocation, on
             {reallocationPlan?.route_coordinates && (
               <Polyline
                 positions={reallocationPlan.route_coordinates}
-                color="#06b6d4"
-                weight={4}
-                dashArray="6, 8"
+                color="#0284c7"
+                weight={5}
+                dashArray="8, 10"
               />
             )}
           </MapContainer>
         ) : (
           <div className="h-full flex items-center justify-center text-slate-400 text-sm">
             <RefreshCw className="animate-spin text-cyan-400 mr-2" size={18} />
-            Loading Geospatial Network...
+            Loading Google Maps Geospatial Network...
           </div>
         )}
 

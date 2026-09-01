@@ -1,10 +1,11 @@
 import React from 'react';
-import { Activity, ShieldAlert, Cpu, Sparkles, Key, MapPin, Radio, Languages, ThermometerSnowflake, Zap, FileSpreadsheet } from 'lucide-react';
+import { Activity, ShieldAlert, Cpu, Sparkles, Key, MapPin, Radio, Languages, ThermometerSnowflake, Zap, FileSpreadsheet, Network } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab, onOpenTechModal, onOpenKeyModal, isKeyConfigured }) {
   const navItems = [
     { id: 'overview', label: 'Command Center', icon: Activity },
     { id: 'map', label: 'Geospatial Rebalancer', icon: MapPin },
+    { id: 'federated', label: 'Federated Multi-State AI', icon: Network },
     { id: 'vision', label: 'Gemini Vision Scanner', icon: Sparkles },
     { id: 'voice', label: 'ASHA Voice Copilot', icon: Languages },
     { id: 'coldchain', label: 'Cold-Chain IoT Twin', icon: ThermometerSnowflake },
@@ -37,11 +38,11 @@ export default function Navbar({ activeTab, setActiveTab, onOpenTechModal, onOpe
                 SANJEEVANI AI
               </h1>
               <span className="badge-tech" style={{ padding: '2px 8px', fontSize: '0.65rem' }}>
-                Track 3: Smart Health Resilience
+                Federated Health Resilience
               </span>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Autonomous Health & Vaccine Supply Chain Operating System for India
+              National Health Resource, Bed, Personnel Attendance & Vaccine Supply Chain Platform
             </p>
           </div>
         </div>
@@ -59,9 +60,9 @@ export default function Navbar({ activeTab, setActiveTab, onOpenTechModal, onOpe
                   background: isActive ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
                   color: isActive ? '#38bdf8' : 'var(--text-secondary)',
                   border: isActive ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid transparent',
-                  padding: '8px 14px',
+                  padding: '8px 13px',
                   borderRadius: '10px',
-                  fontSize: '0.82rem',
+                  fontSize: '0.80rem',
                   fontWeight: isActive ? 600 : 500,
                   cursor: 'pointer',
                   display: 'flex',
@@ -71,7 +72,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenTechModal, onOpe
                   whiteSpace: 'nowrap'
                 }}
               >
-                <Icon size={16} />
+                <Icon size={15} />
                 <span>{item.label}</span>
               </button>
             );

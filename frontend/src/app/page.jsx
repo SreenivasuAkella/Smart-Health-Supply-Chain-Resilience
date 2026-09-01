@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import OverviewDashboard from '../components/OverviewDashboard';
 import InteractiveMap from '../components/InteractiveMap';
+import FederatedLearningHub from '../components/FederatedLearningHub';
 import MultimodalVisionScanner from '../components/MultimodalVisionScanner';
 import VoiceCopilotModal from '../components/VoiceCopilotModal';
 import ColdChainDigitalTwin from '../components/ColdChainDigitalTwin';
@@ -83,6 +84,10 @@ export default function Home() {
             activeReallocation={activeReallocation}
             onSelectFacility={(fac) => handleTriggerReallocation(fac.id)}
           />
+        )}
+
+        {activeTab === 'federated' && (
+          <FederatedLearningHub />
         )}
 
         {activeTab === 'vision' && (
