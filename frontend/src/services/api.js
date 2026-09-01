@@ -87,17 +87,29 @@ export async function analyzeMedicineImage(base64Image, mimeType = "image/jpeg",
 
 export const scanMedicineWithVision = analyzeMedicineImage;
 
-export async function askAshaCopilot(query, language = "hi", facilityId = "PHC-BARAGAON-03", apiKey = "") {
+export async function askAshaCopilot(param1, language = "hi", facilityId = "PHC-BARAGAON-03", apiKey = "") {
   try {
-    const res = await fetch(`${API_BASE_URL}/copilot/ask`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: query,
+    let payload = {};
+    if (typeof param1 === 'object' && param1 !== null) {
+      payload = {
+        prompt: param1.prompt || param1.query || "",
+        language: param1.language || "hi",
+        facility_id: param1.facilityId || "PHC-BARAGAON-03",
+        custom_api_key: param1.apiKey || ""
+      };
+    } else {
+      payload = {
+        prompt: String(param1 || ""),
         language: language,
         facility_id: facilityId,
         custom_api_key: apiKey
-      })
+      };
+    }
+
+    const res = await fetch(`${API_BASE_URL}/copilot/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error("Copilot API failed");
     return await res.json();
