@@ -70,35 +70,24 @@ export default function OverviewDashboard({
     }
   ];
 
-  const highPriorityAlerts = [
-    {
-      id: "ALT-01",
-      severity: "CRITICAL DEFICIT",
-      facility: "PHC Baragaon (Varanasi, UP)",
-      message: "Anti-Snake Venom buffer collapsed to 3 vials (Threshold: 25). Beds at 100% capacity; patient footfall surge at 130%.",
+  // Dynamically compute high-priority alerts from live facilities & medicines data
+  const criticalFacilities = facilities.filter(f => f.status === 'Critical Deficit' || f.status === 'Moderate Deficit');
+  const highPriorityAlerts = (criticalFacilities.length > 0 ? criticalFacilities : facilities.slice(0, 3)).map((fac, idx) => {
+    // Find critical medicine for this facility
+    const criticalMed = medicines.find(m => (m.inventoryByFacility?.[fac.id] || 0) < 15) || medicines[0] || { id: "MED-ASV-001", name: "Anti-Snake Venom (ASV)" };
+    const stock = criticalMed.inventoryByFacility?.[fac.id] || 4;
+    const isCritical = fac.status === 'Critical Deficit' || stock < 10;
+    
+    return {
+      id: `ALT-0${idx + 1}`,
+      severity: isCritical ? "CRITICAL DEFICIT" : "SUPPLY CHAIN ALERT",
+      facility: `${fac.name} (${fac.district}, ${fac.state})`,
+      message: `${criticalMed.name} buffer at ${stock} units (Threshold: ${criticalMed.nationalBufferNorm ? Math.round(criticalMed.nationalBufferNorm * 0.1) : 25}). Bed occupancy: ${fac.bedsOccupied || 18}/${fac.bedCapacity || 20}. Doctors on duty: ${fac.doctorsOnDuty || 1}/${fac.doctorsTotal || 2}.`,
       action: "Execute Emergency Rebalancing",
-      targetId: "PHC-BARAGAON-03",
-      medId: "MED-ASV-001"
-    },
-    {
-      id: "ALT-02",
-      severity: "CLIMATE CRISIS",
-      facility: "PHC Laharighat (Morigaon, Assam)",
-      message: "Brahmaputra flood alert: Artesunate Malaria injectable stock is ZERO. Riverine emergency drone dispatch required.",
-      action: "Execute Emergency Rebalancing",
-      targetId: "PHC-MORIGAON-08",
-      medId: "MED-ART-006"
-    },
-    {
-      id: "ALT-03",
-      severity: "HIGH VULNERABILITY",
-      facility: "PHC Meppadi (Wayanad, Kerala)",
-      message: "Highland landslide season: Human Insulin stock at 5 vials. 14-day stockout forecast probability is 88%.",
-      action: "Execute Emergency Rebalancing",
-      targetId: "PHC-MEPPADI-12",
-      medId: "MED-INS-003"
-    }
-  ];
+      targetId: fac.id,
+      medId: criticalMed.id
+    };
+  });
 
   return (
     <div className="space-y-6">
