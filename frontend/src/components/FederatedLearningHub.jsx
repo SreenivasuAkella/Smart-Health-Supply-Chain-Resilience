@@ -29,9 +29,57 @@ export default function FederatedLearningHub() {
 
   if (loading || !federatedData) {
     return (
-      <div className="glass-panel p-12 text-center text-slate-400">
-        <RefreshCw className="animate-spin text-cyan-400 mx-auto mb-3" size={28} />
-        <span>Connecting to National Federated Model Coordinator...</span>
+      <div className="space-y-6 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="glass-panel p-6 border border-slate-800 space-y-3">
+          <div className="flex gap-2">
+            <div className="skeleton w-48 h-6 rounded-full" />
+            <div className="skeleton w-36 h-6 rounded-full" />
+          </div>
+          <div className="skeleton w-2/3 h-7 rounded-lg" />
+          <div className="skeleton w-full max-w-2xl h-4 rounded" />
+        </div>
+
+        {/* 3 Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-panel p-5 border border-slate-800 space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="skeleton w-36 h-4" />
+                <div className="skeleton w-5 h-5 rounded" />
+              </div>
+              <div className="skeleton w-28 h-8 rounded" />
+              <div className="skeleton w-32 h-3" />
+            </div>
+          ))}
+        </div>
+
+        {/* 6 State Enclave Skeletons */}
+        <div className="glass-panel p-6 border border-slate-800 space-y-4">
+          <div className="skeleton w-80 h-5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <div className="skeleton w-32 h-5 rounded" />
+                    <div className="skeleton w-44 h-3 rounded" />
+                  </div>
+                  <div className="skeleton w-16 h-5 rounded" />
+                </div>
+                <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800/80 space-y-2">
+                  <div className="skeleton w-full h-3" />
+                  <div className="skeleton w-full h-3" />
+                  <div className="skeleton w-full h-3" />
+                </div>
+                <div className="flex justify-between">
+                  <div className="skeleton w-24 h-3" />
+                  <div className="skeleton w-32 h-3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

@@ -1,8 +1,18 @@
 from fastapi import APIRouter, HTTPException, Request
 from typing import Optional, Any, Dict
-from ..services.gemini_copilot import process_copilot_query
+from ..services.gemini_copilot import process_copilot_query, get_copilot_dispatch_history
 
 router = APIRouter(tags=["Gemini Multilingual Copilot"])
+
+@router.get("/api/copilot/status")
+def copilot_status():
+    return {"status": "ONLINE", "model": "gemini-1.5-flash", "supported_languages": 8}
+
+@router.get("/api/copilot/history")
+@router.get("/api/copilot/dispatches")
+def copilot_history():
+    history = get_copilot_dispatch_history()
+    return {"success": True, "dispatches": history, "count": len(history)}
 
 @router.post("/api/copilot/ask")
 @router.post("/api/copilot/query")

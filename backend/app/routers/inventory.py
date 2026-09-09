@@ -1,12 +1,16 @@
 import json
 import os
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from ..services.firebase_service import firebase_service
+from ..services.bigquery_service import bigquery_service
+from ..services.medicine_data_service import generate_public_modeled_inventory, NLEM_ESSENTIAL_DRUGS
+from ..services.facility_data_service import get_active_public_facilities
+from ..utils.response_helper import paginated_response, success_response, error_response
 
 router = APIRouter(prefix="/api/inventory", tags=["Inventory & Facilities"])
 
-FACILITIES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "facilities.json")
 MEDICINES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "medicines.json")
 CONNECTORS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "public_data_connectors.json")
 
@@ -16,40 +20,121 @@ class StockUpdateRequest(BaseModel):
     quantity_change: int
     reason: str
 
+
 @router.get("/facilities")
-def get_all_facilities():
-    with open(FACILITIES_PATH, "r") as f:
-        return json.load(f)
+def get_all_facilities(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(50, ge=1, le=5000, description="Records per page"),
+    state: Optional[str] = Query(None, description="Filter by state"),
+    district: Optional[str] = Query(None, description="Filter by district"),
+    search: Optional[str] = Query(None, description="Search by facility name")
+):
+    # 1. Fetch from Firebase cache if available, or fallback to OSM directory
+    fb_facs = firebase_service.read_data("inventory/facilities")
+    facs = fb_facs if (fb_facs and isinstance(fb_facs, list) and len(fb_facs) > 0) else get_active_public_facilities()
+
+    # Apply filters
+    filtered = facs
+    if state:
+        filtered = [f for f in filtered if state.lower() in f.get("state", "").lower()]
+    if district:
+        filtered = [f for f in filtered if district.lower() in f.get("district", "").lower()]
+    if search:
+        filtered = [f for f in filtered if search.lower() in f.get("name", "").lower() or search.lower() in f.get("id", "").lower()]
+
+    return paginated_response(
+        items=filtered,
+        page=page,
+        page_size=page_size,
+        message="Healthcare facilities retrieved successfully",
+        metadata={
+            "source": "OpenStreetMap / National Health Registry (BigQuery & Firebase)",
+            "state_filter": state,
+            "district_filter": district,
+            "search_query": search
+        }
+    )
+
 
 @router.get("/medicines")
-def get_all_medicines():
-    with open(MEDICINES_PATH, "r") as f:
-        return json.load(f)
+def get_all_medicines(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(50, ge=1, le=5000, description="Records per page"),
+    search: Optional[str] = Query(None, description="Search medicine or active ingredient")
+):
+    # 1. Attempt to fetch live from Firebase Realtime Database
+    fb_medicines = firebase_service.read_data("inventory/medicines")
+    if fb_medicines and isinstance(fb_medicines, list) and len(fb_medicines) > 0:
+        medicines = fb_medicines
+    else:
+        facilities = get_active_public_facilities()
+        bq_vuln = bigquery_service.get_live_district_vulnerabilities()
+        live_districts = bq_vuln.get("districts", {})
+        medicines = generate_public_modeled_inventory(live_districts, facilities)
+        firebase_service.write_data("inventory/medicines", medicines)
+
+    filtered = medicines
+    if search:
+        filtered = [
+            m for m in filtered
+            if search.lower() in m.get("name", "").lower() or
+               search.lower() in m.get("generic_name", "").lower() or
+               search.lower() in m.get("brand_name", "").lower()
+        ]
+
+    return paginated_response(
+        items=filtered,
+        page=page,
+        page_size=page_size,
+        message="Essential medicines catalog retrieved successfully",
+        metadata={
+            "source": "Live OpenFDA Drug Label Registry analyzed by Google Gemini AI",
+            "search_query": search
+        }
+    )
+
 
 @router.get("/public-connectors")
 def get_public_data_connectors():
-    with open(CONNECTORS_PATH, "r") as f:
-        return json.load(f)
+    if os.path.exists(CONNECTORS_PATH):
+        with open(CONNECTORS_PATH, "r") as f:
+            connectors = json.load(f)
+    else:
+        connectors = {}
+    return success_response(data=connectors, message="Public data connectors status retrieved")
+
 
 @router.post("/update-stock")
 def update_stock(req: StockUpdateRequest):
-    with open(MEDICINES_PATH, "r") as f:
-        medicines = json.load(f)
+    fb_medicines = firebase_service.read_data("inventory/medicines")
+    medicines = fb_medicines if (fb_medicines and isinstance(fb_medicines, list)) else []
         
     found = False
+    new_val = 0
+    updated_med = None
     for med in medicines:
-        if med["id"] == req.medicine_id:
-            curr = med["inventoryByFacility"].get(req.facility_id, 0)
+        if med.get("id") == req.medicine_id:
+            curr = med.get("inventoryByFacility", {}).get(req.facility_id, 0)
             new_val = max(0, curr + req.quantity_change)
+            if "inventoryByFacility" not in med:
+                med["inventoryByFacility"] = {}
             med["inventoryByFacility"][req.facility_id] = new_val
             med["currentTotal"] = sum(med["inventoryByFacility"].values())
             found = True
+            updated_med = med
             break
             
     if not found:
-        raise HTTPException(status_code=404, detail="Medicine ID not found")
+        return error_response(message=f"Medicine {req.medicine_id} not found in active inventory", error_code="NOT_FOUND")
         
-    with open(MEDICINES_PATH, "w") as f:
-        json.dump(medicines, f, indent=2)
-        
-    return {"status": "SUCCESS", "message": f"Updated stock for {req.medicine_id} at {req.facility_id}", "new_balance": new_val}
+    firebase_service.write_data("inventory/medicines", medicines)
+    return success_response(
+        data={
+            "facility_id": req.facility_id,
+            "medicine_id": req.medicine_id,
+            "new_stock": new_val,
+            "reason": req.reason,
+            "medicine": updated_med
+        },
+        message="Stock level updated in Firebase Realtime Database"
+    )

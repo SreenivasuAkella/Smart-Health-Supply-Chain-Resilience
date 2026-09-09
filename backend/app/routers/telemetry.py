@@ -6,5 +6,6 @@ router = APIRouter(tags=["Cold Chain IoT Telemetry"])
 @router.get("/api/telemetry/cold-chain-stream")
 @router.get("/api/telemetry/live-stream")
 @router.get("/api/telemetry/stream")
+@router.get("/api/telemetry/nodes")
 def get_telemetry():
     return get_live_telemetry_stream()

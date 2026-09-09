@@ -1,108 +1,4754 @@
 [
-  {"district": "Varanasi", "state": "Uttar Pradesh", "lat": 25.3176, "lon": 82.9739, "zone": "North", "pincode": "221001"},
-  {"district": "Gorakhpur", "state": "Uttar Pradesh", "lat": 26.7606, "lon": 83.3732, "zone": "North", "pincode": "273001"},
-  {"district": "Lucknow", "state": "Uttar Pradesh", "lat": 26.8467, "lon": 80.9462, "zone": "North", "pincode": "226001"},
-  {"district": "Kanpur Nagar", "state": "Uttar Pradesh", "lat": 26.4499, "lon": 80.3319, "zone": "North", "pincode": "208001"},
-  {"district": "Prayagraj", "state": "Uttar Pradesh", "lat": 25.4358, "lon": 81.8463, "zone": "North", "pincode": "211001"},
-  {"district": "Agra", "state": "Uttar Pradesh", "lat": 27.1767, "lon": 78.0081, "zone": "North", "pincode": "282001"},
-  {"district": "Meerut", "state": "Uttar Pradesh", "lat": 28.9845, "lon": 77.7064, "zone": "North", "pincode": "250001"},
-  {"district": "Patna", "state": "Bihar", "lat": 25.5941, "lon": 85.1376, "zone": "East", "pincode": "800001"},
-  {"district": "Gaya", "state": "Bihar", "lat": 24.7914, "lon": 85.0002, "zone": "East", "pincode": "823001"},
-  {"district": "Muzaffarpur", "state": "Bihar", "lat": 26.1209, "lon": 85.3647, "zone": "East", "pincode": "842001"},
-  {"district": "Bhagalpur", "state": "Bihar", "lat": 25.2425, "lon": 86.9842, "zone": "East", "pincode": "812001"},
-  {"district": "Purnia", "state": "Bihar", "lat": 25.7771, "lon": 87.4753, "zone": "East", "pincode": "854301"},
-  {"district": "Wayanad", "state": "Kerala", "lat": 11.6854, "lon": 76.1320, "zone": "South", "pincode": "673121"},
-  {"district": "Thiruvananthapuram", "state": "Kerala", "lat": 8.5241, "lon": 76.9366, "zone": "South", "pincode": "695001"},
-  {"district": "Ernakulam", "state": "Kerala", "lat": 9.9816, "lon": 76.2999, "zone": "South", "pincode": "682001"},
-  {"district": "Kozhikode", "state": "Kerala", "lat": 11.2588, "lon": 75.7804, "zone": "South", "pincode": "673001"},
-  {"district": "Idukki", "state": "Kerala", "lat": 9.8494, "lon": 76.9804, "zone": "South", "pincode": "685602"},
-  {"district": "South 24 Parganas", "state": "West Bengal", "lat": 22.1643, "lon": 88.5833, "zone": "East", "pincode": "743337"},
-  {"district": "Kolkata", "state": "West Bengal", "lat": 22.5726, "lon": 88.3639, "zone": "East", "pincode": "700001"},
-  {"district": "North 24 Parganas", "state": "West Bengal", "lat": 22.7196, "lon": 88.4654, "zone": "East", "pincode": "700124"},
-  {"district": "Darjeeling", "state": "West Bengal", "lat": 27.0410, "lon": 88.2663, "zone": "East", "pincode": "734101"},
-  {"district": "Murshidabad", "state": "West Bengal", "lat": 24.1759, "lon": 88.2802, "zone": "East", "pincode": "742101"},
-  {"district": "Puri", "state": "Odisha", "lat": 19.8135, "lon": 85.8312, "zone": "East", "pincode": "752001"},
-  {"district": "Khordha", "state": "Odisha", "lat": 20.1825, "lon": 85.6173, "zone": "East", "pincode": "752055"},
-  {"district": "Cuttack", "state": "Odisha", "lat": 20.4625, "lon": 85.8828, "zone": "East", "pincode": "753001"},
-  {"district": "Ganjam", "state": "Odisha", "lat": 19.3812, "lon": 84.8034, "zone": "East", "pincode": "760001"},
-  {"district": "Balasore", "state": "Odisha", "lat": 21.4934, "lon": 86.9135, "zone": "East", "pincode": "756001"},
-  {"district": "Kamrup Metropolitan", "state": "Assam", "lat": 26.1445, "lon": 91.7362, "zone": "Northeast", "pincode": "781001"},
-  {"district": "Kamrup Rural", "state": "Assam", "lat": 26.3167, "lon": 91.5900, "zone": "Northeast", "pincode": "781031"},
-  {"district": "Dibrugarh", "state": "Assam", "lat": 27.4728, "lon": 94.9120, "zone": "Northeast", "pincode": "786001"},
-  {"district": "Cachar", "state": "Assam", "lat": 24.8333, "lon": 92.7789, "zone": "Northeast", "pincode": "788001"},
-  {"district": "Shimla", "state": "Himachal Pradesh", "lat": 31.1048, "lon": 77.1734, "zone": "North", "pincode": "171001"},
-  {"district": "Kangra", "state": "Himachal Pradesh", "lat": 32.0998, "lon": 76.2691, "zone": "North", "pincode": "176001"},
-  {"district": "Mandi", "state": "Himachal Pradesh", "lat": 31.5892, "lon": 76.9182, "zone": "North", "pincode": "175001"},
-  {"district": "Bengaluru Urban", "state": "Karnataka", "lat": 12.9716, "lon": 77.5946, "zone": "South", "pincode": "560001"},
-  {"district": "Mysuru", "state": "Karnataka", "lat": 12.2958, "lon": 76.6394, "zone": "South", "pincode": "570001"},
-  {"district": "Dakshina Kannada", "state": "Karnataka", "lat": 12.9141, "lon": 74.8560, "zone": "South", "pincode": "575001"},
-  {"district": "Belagavi", "state": "Karnataka", "lat": 15.8497, "lon": 74.4977, "zone": "South", "pincode": "590001"},
-  {"district": "Kalaburagi", "state": "Karnataka", "lat": 17.3297, "lon": 76.8343, "zone": "South", "pincode": "585101"},
-  {"district": "Chennai", "state": "Tamil Nadu", "lat": 13.0827, "lon": 80.2707, "zone": "South", "pincode": "600001"},
-  {"district": "Coimbatore", "state": "Tamil Nadu", "lat": 11.0168, "lon": 76.9558, "zone": "South", "pincode": "641001"},
-  {"district": "Madurai", "state": "Tamil Nadu", "lat": 9.9252, "lon": 78.1198, "zone": "South", "pincode": "625001"},
-  {"district": "Tiruchirappalli", "state": "Tamil Nadu", "lat": 10.7905, "lon": 78.7047, "zone": "South", "pincode": "620001"},
-  {"district": "Nilgiris", "state": "Tamil Nadu", "lat": 11.4102, "lon": 76.6950, "zone": "South", "pincode": "643001"},
-  {"district": "Hyderabad", "state": "Telangana", "lat": 17.3850, "lon": 78.4867, "zone": "South", "pincode": "500001"},
-  {"district": "Warangal", "state": "Telangana", "lat": 17.9689, "lon": 79.5941, "zone": "South", "pincode": "506001"},
-  {"district": "Karimnagar", "state": "Telangana", "lat": 18.4386, "lon": 79.1288, "zone": "South", "pincode": "505001"},
-  {"district": "Nizamabad", "state": "Telangana", "lat": 18.6725, "lon": 78.0941, "zone": "South", "pincode": "503001"},
-  {"district": "Visakhapatnam", "state": "Andhra Pradesh", "lat": 17.6868, "lon": 83.2185, "zone": "South", "pincode": "530001"},
-  {"district": "Vijayawada", "state": "Andhra Pradesh", "lat": 16.5062, "lon": 80.6480, "zone": "South", "pincode": "520001"},
-  {"district": "Guntur", "state": "Andhra Pradesh", "lat": 16.3067, "lon": 80.4365, "zone": "South", "pincode": "522001"},
-  {"district": "Kurnool", "state": "Andhra Pradesh", "lat": 15.8281, "lon": 78.0373, "zone": "South", "pincode": "518001"},
-  {"district": "Tirupati", "state": "Andhra Pradesh", "lat": 13.6288, "lon": 79.4192, "zone": "South", "pincode": "517501"},
-  {"district": "Mumbai", "state": "Maharashtra", "lat": 19.0760, "lon": 72.8777, "zone": "West", "pincode": "400001"},
-  {"district": "Pune", "state": "Maharashtra", "lat": 18.5204, "lon": 73.8567, "zone": "West", "pincode": "411001"},
-  {"district": "Nagpur", "state": "Maharashtra", "lat": 21.1458, "lon": 79.0882, "zone": "West", "pincode": "440001"},
-  {"district": "Nashik", "state": "Maharashtra", "lat": 19.9975, "lon": 73.7898, "zone": "West", "pincode": "422001"},
-  {"district": "Aurangabad (Chhatrapati Sambhajinagar)", "state": "Maharashtra", "lat": 19.8762, "lon": 75.3433, "zone": "West", "pincode": "431001"},
-  {"district": "Ahmedabad", "state": "Gujarat", "lat": 23.0225, "lon": 72.5714, "zone": "West", "pincode": "380001"},
-  {"district": "Surat", "state": "Gujarat", "lat": 21.1702, "lon": 72.8311, "zone": "West", "pincode": "395001"},
-  {"district": "Vadodara", "state": "Gujarat", "lat": 22.3072, "lon": 73.1812, "zone": "West", "pincode": "390001"},
-  {"district": "Rajkot", "state": "Gujarat", "lat": 22.3039, "lon": 70.8022, "zone": "West", "pincode": "360001"},
-  {"district": "Kutch", "state": "Gujarat", "lat": 23.7337, "lon": 69.8597, "zone": "West", "pincode": "370001"},
-  {"district": "Jaipur", "state": "Rajasthan", "lat": 26.9124, "lon": 75.7873, "zone": "North", "pincode": "302001"},
-  {"district": "Jodhpur", "state": "Rajasthan", "lat": 26.2389, "lon": 73.0243, "zone": "North", "pincode": "342001"},
-  {"district": "Udaipur", "state": "Rajasthan", "lat": 24.5854, "lon": 73.7125, "zone": "North", "pincode": "313001"},
-  {"district": "Kota", "state": "Rajasthan", "lat": 25.2138, "lon": 75.8648, "zone": "North", "pincode": "324001"},
-  {"district": "Bhopal", "state": "Madhya Pradesh", "lat": 23.2599, "lon": 77.4126, "zone": "Central", "pincode": "462001"},
-  {"district": "Indore", "state": "Madhya Pradesh", "lat": 22.7196, "lon": 75.8577, "zone": "Central", "pincode": "452001"},
-  {"district": "Jabalpur", "state": "Madhya Pradesh", "lat": 23.1815, "lon": 79.9864, "zone": "Central", "pincode": "482001"},
-  {"district": "Gwalior", "state": "Madhya Pradesh", "lat": 26.2183, "lon": 78.1828, "zone": "Central", "pincode": "474001"},
-  {"district": "Raipur", "state": "Chhattisgarh", "lat": 21.2514, "lon": 81.6296, "zone": "Central", "pincode": "492001"},
-  {"district": "Bilaspur", "state": "Chhattisgarh", "lat": 22.0797, "lon": 82.1409, "zone": "Central", "pincode": "495001"},
-  {"district": "Bastar", "state": "Chhattisgarh", "lat": 19.1071, "lon": 81.9535, "zone": "Central", "pincode": "494001"},
-  {"district": "Ranchi", "state": "Jharkhand", "lat": 23.3441, "lon": 85.3096, "zone": "East", "pincode": "834001"},
-  {"district": "Dhanbad", "state": "Jharkhand", "lat": 23.7957, "lon": 86.4304, "zone": "East", "pincode": "826001"},
-  {"district": "East Singhbhum (Jamshedpur)", "state": "Jharkhand", "lat": 22.8046, "lon": 86.2029, "zone": "East", "pincode": "831001"},
-  {"district": "Dehradun", "state": "Uttarakhand", "lat": 30.3165, "lon": 78.0322, "zone": "North", "pincode": "248001"},
-  {"district": "Haridwar", "state": "Uttarakhand", "lat": 29.9457, "lon": 78.1642, "zone": "North", "pincode": "249401"},
-  {"district": "Nainital", "state": "Uttarakhand", "lat": 29.3919, "lon": 79.4542, "zone": "North", "pincode": "263001"},
-  {"district": "Ludhiana", "state": "Punjab", "lat": 30.9010, "lon": 75.8573, "zone": "North", "pincode": "141001"},
-  {"district": "Amritsar", "state": "Punjab", "lat": 31.6340, "lon": 74.8723, "zone": "North", "pincode": "143001"},
-  {"district": "Jalandhar", "state": "Punjab", "lat": 31.3260, "lon": 75.5762, "zone": "North", "pincode": "144001"},
-  {"district": "Gurugram", "state": "Haryana", "lat": 28.4595, "lon": 77.0266, "zone": "North", "pincode": "122001"},
-  {"district": "Faridabad", "state": "Haryana", "lat": 28.4089, "lon": 77.3178, "zone": "North", "pincode": "121001"},
-  {"district": "Ambala", "state": "Haryana", "lat": 30.3782, "lon": 76.7767, "zone": "North", "pincode": "134003"},
-  {"district": "New Delhi", "state": "Delhi", "lat": 28.6139, "lon": 77.2090, "zone": "North", "pincode": "110001"},
-  {"district": "North Delhi", "state": "Delhi", "lat": 28.7041, "lon": 77.1025, "zone": "North", "pincode": "110085"},
-  {"district": "South Delhi", "state": "Delhi", "lat": 28.4817, "lon": 77.1873, "zone": "North", "pincode": "110017"},
-  {"district": "Srinagar", "state": "Jammu and Kashmir", "lat": 34.0837, "lon": 74.7973, "zone": "North", "pincode": "190001"},
-  {"district": "Jammu", "state": "Jammu and Kashmir", "lat": 32.7266, "lon": 74.8570, "zone": "North", "pincode": "180001"},
-  {"district": "Anantnag", "state": "Jammu and Kashmir", "lat": 33.7311, "lon": 75.1522, "zone": "North", "pincode": "192101"},
-  {"district": "Leh", "state": "Ladakh", "lat": 34.1526, "lon": 77.5771, "zone": "North", "pincode": "194101"},
-  {"district": "Kargil", "state": "Ladakh", "lat": 34.5539, "lon": 76.1349, "zone": "North", "pincode": "194103"},
-  {"district": "North Goa", "state": "Goa", "lat": 15.4989, "lon": 73.8278, "zone": "West", "pincode": "403001"},
-  {"district": "South Goa", "state": "Goa", "lat": 15.2832, "lon": 73.9862, "zone": "West", "pincode": "403601"},
-  {"district": "East Sikkim (Gangtok)", "state": "Sikkim", "lat": 27.3389, "lon": 88.6065, "zone": "Northeast", "pincode": "737101"},
-  {"district": "Papum Pare (Itanagar)", "state": "Arunachal Pradesh", "lat": 27.0844, "lon": 93.6053, "zone": "Northeast", "pincode": "791111"},
-  {"district": "East Khasi Hills (Shillong)", "state": "Meghalaya", "lat": 25.5788, "lon": 91.8933, "zone": "Northeast", "pincode": "793001"},
-  {"district": "Imphal West", "state": "Manipur", "lat": 24.8170, "lon": 93.9368, "zone": "Northeast", "pincode": "795001"},
-  {"district": "Aizawl", "state": "Mizoram", "lat": 23.7271, "lon": 92.7176, "zone": "Northeast", "pincode": "796001"},
-  {"district": "Kohima", "state": "Nagaland", "lat": 25.6751, "lon": 94.1086, "zone": "Northeast", "pincode": "797001"},
-  {"district": "West Tripura (Agartala)", "state": "Tripura", "lat": 23.8315, "lon": 91.2868, "zone": "Northeast", "pincode": "799001"},
-  {"district": "Puducherry", "state": "Puducherry", "lat": 11.9416, "lon": 79.8083, "zone": "South", "pincode": "605001"},
-  {"district": "South Andaman (Port Blair)", "state": "Andaman and Nicobar Islands", "lat": 11.6234, "lon": 92.7265, "zone": "Island", "pincode": "744101"},
-  {"district": "Chandigarh", "state": "Chandigarh", "lat": 30.7333, "lon": 76.7794, "zone": "North", "pincode": "160017"}
+  {
+    "district": "Andaman Islands",
+    "state": "Andaman and Nicobar",
+    "lat": 10.7146,
+    "lon": 92.4853,
+    "pincode": "100000",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nicobar Islands",
+    "state": "Andaman and Nicobar",
+    "lat": 6.8506,
+    "lon": 93.7881,
+    "pincode": "110001",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Adilabad",
+    "state": "Andhra Pradesh",
+    "lat": 19.2845,
+    "lon": 78.8132,
+    "pincode": "120002",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Anantapur",
+    "state": "Andhra Pradesh",
+    "lat": 14.3121,
+    "lon": 77.4602,
+    "pincode": "130003",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chittoor",
+    "state": "Andhra Pradesh",
+    "lat": 13.3311,
+    "lon": 78.9276,
+    "pincode": "140004",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Cuddapah",
+    "state": "Andhra Pradesh",
+    "lat": 14.4903,
+    "lon": 78.6961,
+    "pincode": "150005",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East Godavari",
+    "state": "Andhra Pradesh",
+    "lat": 16.5749,
+    "lon": 82.3161,
+    "pincode": "160006",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Guntur",
+    "state": "Andhra Pradesh",
+    "lat": 15.831,
+    "lon": 80.7876,
+    "pincode": "170007",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hyderabad",
+    "state": "Andhra Pradesh",
+    "lat": 17.3897,
+    "lon": 78.4667,
+    "pincode": "180008",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Karimnagar",
+    "state": "Andhra Pradesh",
+    "lat": 18.5155,
+    "lon": 79.4377,
+    "pincode": "190009",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Khammam",
+    "state": "Andhra Pradesh",
+    "lat": 17.6839,
+    "lon": 80.6701,
+    "pincode": "200010",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Krishna",
+    "state": "Andhra Pradesh",
+    "lat": 15.7612,
+    "lon": 81.0255,
+    "pincode": "210011",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kurnool",
+    "state": "Andhra Pradesh",
+    "lat": 15.4376,
+    "lon": 77.9009,
+    "pincode": "220012",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mahbubnagar",
+    "state": "Andhra Pradesh",
+    "lat": 16.6395,
+    "lon": 77.9893,
+    "pincode": "230013",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Medak",
+    "state": "Andhra Pradesh",
+    "lat": 17.8893,
+    "lon": 78.1378,
+    "pincode": "240014",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nalgonda",
+    "state": "Andhra Pradesh",
+    "lat": 17.1132,
+    "lon": 79.1698,
+    "pincode": "250015",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nellore",
+    "state": "Andhra Pradesh",
+    "lat": 13.454,
+    "lon": 80.2797,
+    "pincode": "260016",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nizamabad",
+    "state": "Andhra Pradesh",
+    "lat": 18.4295,
+    "lon": 78.0752,
+    "pincode": "270017",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Prakasam",
+    "state": "Andhra Pradesh",
+    "lat": 15.1985,
+    "lon": 80.0607,
+    "pincode": "280018",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rangareddi",
+    "state": "Andhra Pradesh",
+    "lat": 17.2452,
+    "lon": 78.0576,
+    "pincode": "290019",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Srikakulam",
+    "state": "Andhra Pradesh",
+    "lat": 18.5709,
+    "lon": 84.2587,
+    "pincode": "300020",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Vishakhapatnam",
+    "state": "Andhra Pradesh",
+    "lat": 17.5673,
+    "lon": 83.1714,
+    "pincode": "310021",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Vizianagaram",
+    "state": "Andhra Pradesh",
+    "lat": 18.2833,
+    "lon": 83.4598,
+    "pincode": "320022",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Warangal",
+    "state": "Andhra Pradesh",
+    "lat": 18.0175,
+    "lon": 79.8742,
+    "pincode": "330023",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Godavari",
+    "state": "Andhra Pradesh",
+    "lat": 16.633,
+    "lon": 81.4591,
+    "pincode": "340024",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Changlang",
+    "state": "Arunachal Pradesh",
+    "lat": 27.3605,
+    "lon": 96.3755,
+    "pincode": "350025",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East Kameng",
+    "state": "Arunachal Pradesh",
+    "lat": 27.3712,
+    "lon": 93.0474,
+    "pincode": "360026",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East Siang",
+    "state": "Arunachal Pradesh",
+    "lat": 28.1538,
+    "lon": 95.065,
+    "pincode": "370027",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kurung Kumey",
+    "state": "Arunachal Pradesh",
+    "lat": 28.0485,
+    "lon": 93.2453,
+    "pincode": "380028",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lohit",
+    "state": "Arunachal Pradesh",
+    "lat": 27.9468,
+    "lon": 96.5967,
+    "pincode": "390029",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lower Dibang Valley",
+    "state": "Arunachal Pradesh",
+    "lat": 28.3265,
+    "lon": 95.7657,
+    "pincode": "400030",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lower Subansiri",
+    "state": "Arunachal Pradesh",
+    "lat": 27.7085,
+    "lon": 93.9623,
+    "pincode": "410031",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Papum Pare",
+    "state": "Arunachal Pradesh",
+    "lat": 27.2735,
+    "lon": 93.5447,
+    "pincode": "420032",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tawang",
+    "state": "Arunachal Pradesh",
+    "lat": 27.6807,
+    "lon": 91.825,
+    "pincode": "430033",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tirap",
+    "state": "Arunachal Pradesh",
+    "lat": 26.9441,
+    "lon": 95.4147,
+    "pincode": "440034",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Upper Dibang Valley",
+    "state": "Arunachal Pradesh",
+    "lat": 29.0199,
+    "lon": 95.9878,
+    "pincode": "450035",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Upper Siang",
+    "state": "Arunachal Pradesh",
+    "lat": 28.8309,
+    "lon": 95.0016,
+    "pincode": "460036",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Upper Subansiri",
+    "state": "Arunachal Pradesh",
+    "lat": 28.2772,
+    "lon": 93.8991,
+    "pincode": "470037",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Kameng",
+    "state": "Arunachal Pradesh",
+    "lat": 27.4649,
+    "lon": 92.6502,
+    "pincode": "480038",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Siang",
+    "state": "Arunachal Pradesh",
+    "lat": 28.1063,
+    "lon": 94.5351,
+    "pincode": "490039",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Barpeta",
+    "state": "Assam",
+    "lat": 26.4279,
+    "lon": 90.9791,
+    "pincode": "500040",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bongaigaon",
+    "state": "Assam",
+    "lat": 26.4501,
+    "lon": 90.6734,
+    "pincode": "510041",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Cachar",
+    "state": "Assam",
+    "lat": 24.8156,
+    "lon": 92.8685,
+    "pincode": "520042",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Darrang",
+    "state": "Assam",
+    "lat": 26.5846,
+    "lon": 92.0414,
+    "pincode": "530043",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhemaji",
+    "state": "Assam",
+    "lat": 27.5865,
+    "lon": 94.7134,
+    "pincode": "540044",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhuburi",
+    "state": "Assam",
+    "lat": 25.507,
+    "lon": 89.8637,
+    "pincode": "550045",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dibrugarh",
+    "state": "Assam",
+    "lat": 27.3061,
+    "lon": 95.0998,
+    "pincode": "560046",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Goalpara",
+    "state": "Assam",
+    "lat": 26.0173,
+    "lon": 90.5987,
+    "pincode": "570047",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Golaghat",
+    "state": "Assam",
+    "lat": 26.3772,
+    "lon": 93.8258,
+    "pincode": "580048",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hailakandi",
+    "state": "Assam",
+    "lat": 24.4575,
+    "lon": 92.5915,
+    "pincode": "590049",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jorhat",
+    "state": "Assam",
+    "lat": 26.7624,
+    "lon": 94.302,
+    "pincode": "600050",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kamrup",
+    "state": "Assam",
+    "lat": 26.1709,
+    "lon": 91.5886,
+    "pincode": "610051",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Karbi Anglong",
+    "state": "Assam",
+    "lat": 25.8689,
+    "lon": 92.5746,
+    "pincode": "620052",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Karimganj",
+    "state": "Assam",
+    "lat": 24.6966,
+    "lon": 92.3679,
+    "pincode": "630053",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kokrajhar",
+    "state": "Assam",
+    "lat": 26.4972,
+    "lon": 90.14,
+    "pincode": "640054",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lakhimpur",
+    "state": "Assam",
+    "lat": 27.1413,
+    "lon": 94.0776,
+    "pincode": "650055",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Marigaon",
+    "state": "Assam",
+    "lat": 26.2465,
+    "lon": 92.2195,
+    "pincode": "660056",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nagaon",
+    "state": "Assam",
+    "lat": 26.2646,
+    "lon": 92.9306,
+    "pincode": "670057",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nalbari",
+    "state": "Assam",
+    "lat": 26.4632,
+    "lon": 91.406,
+    "pincode": "680058",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "North Cachar Hills",
+    "state": "Assam",
+    "lat": 25.3383,
+    "lon": 92.9774,
+    "pincode": "690059",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sibsagar",
+    "state": "Assam",
+    "lat": 27.0276,
+    "lon": 94.9003,
+    "pincode": "700060",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sonitpur",
+    "state": "Assam",
+    "lat": 26.7351,
+    "lon": 92.852,
+    "pincode": "710061",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tinsukia",
+    "state": "Assam",
+    "lat": 27.5355,
+    "lon": 95.6906,
+    "pincode": "720062",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Araria",
+    "state": "Bihar",
+    "lat": 26.2115,
+    "lon": 87.3077,
+    "pincode": "730063",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Aurangabad",
+    "state": "Bihar",
+    "lat": 24.7743,
+    "lon": 84.4599,
+    "pincode": "740064",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Banka",
+    "state": "Bihar",
+    "lat": 24.8324,
+    "lon": 86.8665,
+    "pincode": "750065",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Begusarai",
+    "state": "Bihar",
+    "lat": 25.543,
+    "lon": 86.1256,
+    "pincode": "760066",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhabua",
+    "state": "Bihar",
+    "lat": 25.0216,
+    "lon": 83.6113,
+    "pincode": "770067",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhagalpur",
+    "state": "Bihar",
+    "lat": 25.2772,
+    "lon": 87.0421,
+    "pincode": "780068",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhojpur",
+    "state": "Bihar",
+    "lat": 25.5067,
+    "lon": 84.4941,
+    "pincode": "790069",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Buxar",
+    "state": "Bihar",
+    "lat": 25.4859,
+    "lon": 84.0881,
+    "pincode": "800070",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Darbhanga",
+    "state": "Bihar",
+    "lat": 26.1462,
+    "lon": 85.9739,
+    "pincode": "810071",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gaya",
+    "state": "Bihar",
+    "lat": 24.7267,
+    "lon": 84.9429,
+    "pincode": "820072",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gopalganj",
+    "state": "Bihar",
+    "lat": 26.4487,
+    "lon": 84.3464,
+    "pincode": "830073",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jamui",
+    "state": "Bihar",
+    "lat": 24.7842,
+    "lon": 86.2632,
+    "pincode": "840074",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jehanabad",
+    "state": "Bihar",
+    "lat": 25.1557,
+    "lon": 84.9208,
+    "pincode": "850075",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Katihar",
+    "state": "Bihar",
+    "lat": 25.5657,
+    "lon": 87.7047,
+    "pincode": "860076",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Khagaria",
+    "state": "Bihar",
+    "lat": 25.5356,
+    "lon": 86.5659,
+    "pincode": "870077",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kishanganj",
+    "state": "Bihar",
+    "lat": 26.5372,
+    "lon": 88.1038,
+    "pincode": "880078",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lakhisarai",
+    "state": "Bihar",
+    "lat": 25.1835,
+    "lon": 86.1283,
+    "pincode": "890079",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Madhepura",
+    "state": "Bihar",
+    "lat": 25.7734,
+    "lon": 86.8978,
+    "pincode": "100080",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Madhubani",
+    "state": "Bihar",
+    "lat": 26.4138,
+    "lon": 86.1633,
+    "pincode": "110081",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Munger",
+    "state": "Bihar",
+    "lat": 25.1985,
+    "lon": 86.5417,
+    "pincode": "120082",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Muzaffarpur",
+    "state": "Bihar",
+    "lat": 26.1866,
+    "lon": 85.3274,
+    "pincode": "130083",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nalanda",
+    "state": "Bihar",
+    "lat": 25.2293,
+    "lon": 85.4805,
+    "pincode": "140084",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nawada",
+    "state": "Bihar",
+    "lat": 24.8257,
+    "lon": 85.6159,
+    "pincode": "150085",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pashchim Champaran",
+    "state": "Bihar",
+    "lat": 27.1606,
+    "lon": 84.3027,
+    "pincode": "160086",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Patna",
+    "state": "Bihar",
+    "lat": 25.403,
+    "lon": 85.3198,
+    "pincode": "170087",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Purba Champaran",
+    "state": "Bihar",
+    "lat": 26.6813,
+    "lon": 85.0038,
+    "pincode": "180088",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Purnia",
+    "state": "Bihar",
+    "lat": 25.8171,
+    "lon": 87.4045,
+    "pincode": "190089",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rohtas",
+    "state": "Bihar",
+    "lat": 24.9917,
+    "lon": 83.9351,
+    "pincode": "200090",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Saharsa",
+    "state": "Bihar",
+    "lat": 25.8213,
+    "lon": 86.5467,
+    "pincode": "210091",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Samastipur",
+    "state": "Bihar",
+    "lat": 25.7932,
+    "lon": 85.9483,
+    "pincode": "220092",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Saran",
+    "state": "Bihar",
+    "lat": 25.8966,
+    "lon": 84.8227,
+    "pincode": "230093",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sheikhpura",
+    "state": "Bihar",
+    "lat": 25.1247,
+    "lon": 85.7784,
+    "pincode": "240094",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sheohar",
+    "state": "Bihar",
+    "lat": 26.4584,
+    "lon": 85.2954,
+    "pincode": "250095",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sitamarhi",
+    "state": "Bihar",
+    "lat": 26.536,
+    "lon": 85.5732,
+    "pincode": "260096",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Siwan",
+    "state": "Bihar",
+    "lat": 26.1736,
+    "lon": 84.3377,
+    "pincode": "270097",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Supaul",
+    "state": "Bihar",
+    "lat": 26.2816,
+    "lon": 86.785,
+    "pincode": "280098",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Vaishali",
+    "state": "Bihar",
+    "lat": 25.8135,
+    "lon": 85.3925,
+    "pincode": "290000",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chandigarh",
+    "state": "Chandigarh",
+    "lat": 30.7426,
+    "lon": 76.7587,
+    "pincode": "300001",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bastar",
+    "state": "Chhattisgarh",
+    "lat": 19.3939,
+    "lon": 81.529,
+    "pincode": "310002",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bilaspur",
+    "state": "Chhattisgarh",
+    "lat": 22.2401,
+    "lon": 82.9989,
+    "pincode": "320003",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dantewada",
+    "state": "Chhattisgarh",
+    "lat": 18.6539,
+    "lon": 81.072,
+    "pincode": "330004",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhamtari",
+    "state": "Chhattisgarh",
+    "lat": 20.5549,
+    "lon": 81.7569,
+    "pincode": "340005",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Durg",
+    "state": "Chhattisgarh",
+    "lat": 21.1945,
+    "lon": 81.3318,
+    "pincode": "350006",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Janjgir-Champa",
+    "state": "Chhattisgarh",
+    "lat": 21.9611,
+    "lon": 82.805,
+    "pincode": "360007",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jashpur",
+    "state": "Chhattisgarh",
+    "lat": 22.7729,
+    "lon": 83.8704,
+    "pincode": "370008",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kanker",
+    "state": "Chhattisgarh",
+    "lat": 20.1395,
+    "lon": 81.0691,
+    "pincode": "380009",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kawardha",
+    "state": "Chhattisgarh",
+    "lat": 22.048,
+    "lon": 81.1627,
+    "pincode": "390010",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Korba",
+    "state": "Chhattisgarh",
+    "lat": 22.4917,
+    "lon": 82.576,
+    "pincode": "400011",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Koriya",
+    "state": "Chhattisgarh",
+    "lat": 23.5041,
+    "lon": 82.1252,
+    "pincode": "410012",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mahasamund",
+    "state": "Chhattisgarh",
+    "lat": 21.2237,
+    "lon": 82.6593,
+    "pincode": "420013",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Raigarh",
+    "state": "Chhattisgarh",
+    "lat": 22.0083,
+    "lon": 83.278,
+    "pincode": "430014",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Raipur",
+    "state": "Chhattisgarh",
+    "lat": 20.886,
+    "lon": 82.2003,
+    "pincode": "440015",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Raj Nandgaon",
+    "state": "Chhattisgarh",
+    "lat": 21.0584,
+    "lon": 80.7853,
+    "pincode": "450016",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Surguja",
+    "state": "Chhattisgarh",
+    "lat": 23.3272,
+    "lon": 83.2358,
+    "pincode": "460017",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dadra and Nagar Haveli",
+    "state": "Dadra and Nagar Haveli",
+    "lat": 20.2151,
+    "lon": 73.0946,
+    "pincode": "470018",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Daman",
+    "state": "Daman and Diu",
+    "lat": 20.4316,
+    "lon": 72.8392,
+    "pincode": "480019",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Junagadh",
+    "state": "Daman and Diu",
+    "lat": 20.7097,
+    "lon": 70.8819,
+    "pincode": "490020",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Delhi",
+    "state": "Delhi",
+    "lat": 28.6459,
+    "lon": 77.128,
+    "pincode": "500021",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "North Goa",
+    "state": "Goa",
+    "lat": 15.5487,
+    "lon": 73.8067,
+    "pincode": "510022",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "South Goa",
+    "state": "Goa",
+    "lat": 15.3521,
+    "lon": 73.7732,
+    "pincode": "520023",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ahmadabad",
+    "state": "Gujarat",
+    "lat": 22.6054,
+    "lon": 72.239,
+    "pincode": "530024",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Amreli",
+    "state": "Gujarat",
+    "lat": 20.8138,
+    "lon": 71.2509,
+    "pincode": "540025",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Anand",
+    "state": "Gujarat",
+    "lat": 22.2058,
+    "lon": 72.4709,
+    "pincode": "550026",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Banas Kantha",
+    "state": "Gujarat",
+    "lat": 24.2585,
+    "lon": 71.9321,
+    "pincode": "560027",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bharuch",
+    "state": "Gujarat",
+    "lat": 21.4423,
+    "lon": 72.6698,
+    "pincode": "570028",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhavnagar",
+    "state": "Gujarat",
+    "lat": 20.9975,
+    "lon": 71.7008,
+    "pincode": "580029",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dahod",
+    "state": "Gujarat",
+    "lat": 22.898,
+    "lon": 73.9917,
+    "pincode": "590030",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gandhinagar",
+    "state": "Gujarat",
+    "lat": 23.1937,
+    "lon": 72.6722,
+    "pincode": "600031",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jamnagar",
+    "state": "Gujarat",
+    "lat": 22.3047,
+    "lon": 69.3106,
+    "pincode": "610032",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Junagadh",
+    "state": "Gujarat",
+    "lat": 20.7352,
+    "lon": 70.8627,
+    "pincode": "620033",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kachchh",
+    "state": "Gujarat",
+    "lat": 22.758,
+    "lon": 69.649,
+    "pincode": "630034",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kheda",
+    "state": "Gujarat",
+    "lat": 22.8877,
+    "lon": 73.0188,
+    "pincode": "640035",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mahesana",
+    "state": "Gujarat",
+    "lat": 23.5294,
+    "lon": 72.4555,
+    "pincode": "650036",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Narmada",
+    "state": "Gujarat",
+    "lat": 21.7067,
+    "lon": 73.684,
+    "pincode": "660037",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Navsari",
+    "state": "Gujarat",
+    "lat": 20.7578,
+    "lon": 72.8506,
+    "pincode": "670038",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Panch Mahals",
+    "state": "Gujarat",
+    "lat": 22.8044,
+    "lon": 73.6198,
+    "pincode": "680039",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Patan",
+    "state": "Gujarat",
+    "lat": 23.8063,
+    "lon": 71.7516,
+    "pincode": "690040",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Porbandar",
+    "state": "Gujarat",
+    "lat": 21.5596,
+    "lon": 69.7218,
+    "pincode": "700041",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rajkot",
+    "state": "Gujarat",
+    "lat": 22.406,
+    "lon": 70.8368,
+    "pincode": "710042",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sabar Kantha",
+    "state": "Gujarat",
+    "lat": 23.718,
+    "lon": 73.1364,
+    "pincode": "720043",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Surat",
+    "state": "Gujarat",
+    "lat": 21.0705,
+    "lon": 72.6512,
+    "pincode": "730044",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Surendranagar",
+    "state": "Gujarat",
+    "lat": 22.8267,
+    "lon": 71.4836,
+    "pincode": "740045",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "The Dangs",
+    "state": "Gujarat",
+    "lat": 20.8016,
+    "lon": 73.6884,
+    "pincode": "750046",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Vadodara",
+    "state": "Gujarat",
+    "lat": 22.2613,
+    "lon": 73.4943,
+    "pincode": "760047",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Valsad",
+    "state": "Gujarat",
+    "lat": 20.4424,
+    "lon": 72.9149,
+    "pincode": "770048",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ambala",
+    "state": "Haryana",
+    "lat": 30.3504,
+    "lon": 76.9497,
+    "pincode": "780049",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhiwani",
+    "state": "Haryana",
+    "lat": 28.7289,
+    "lon": 76.0211,
+    "pincode": "790050",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Faridabad",
+    "state": "Haryana",
+    "lat": 28.1487,
+    "lon": 77.3272,
+    "pincode": "800051",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Fatehabad",
+    "state": "Haryana",
+    "lat": 29.573,
+    "lon": 75.5461,
+    "pincode": "810052",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gurgaon",
+    "state": "Haryana",
+    "lat": 28.0439,
+    "lon": 77.0194,
+    "pincode": "820053",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hisar",
+    "state": "Haryana",
+    "lat": 29.2363,
+    "lon": 75.8432,
+    "pincode": "830054",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jhajjar",
+    "state": "Haryana",
+    "lat": 28.5965,
+    "lon": 76.6114,
+    "pincode": "840055",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jind",
+    "state": "Haryana",
+    "lat": 29.4515,
+    "lon": 76.296,
+    "pincode": "850056",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kaithal",
+    "state": "Haryana",
+    "lat": 29.9607,
+    "lon": 76.377,
+    "pincode": "860057",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Karnal",
+    "state": "Haryana",
+    "lat": 29.7032,
+    "lon": 76.8749,
+    "pincode": "870058",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kurukshetra",
+    "state": "Haryana",
+    "lat": 30.0565,
+    "lon": 76.7877,
+    "pincode": "880059",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mahendragarh",
+    "state": "Haryana",
+    "lat": 28.1352,
+    "lon": 76.1402,
+    "pincode": "890060",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Panchkula",
+    "state": "Haryana",
+    "lat": 30.7009,
+    "lon": 76.9717,
+    "pincode": "100061",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Panipat",
+    "state": "Haryana",
+    "lat": 29.3435,
+    "lon": 76.929,
+    "pincode": "110062",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rewari",
+    "state": "Haryana",
+    "lat": 28.1916,
+    "lon": 76.5596,
+    "pincode": "120063",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rohtak",
+    "state": "Haryana",
+    "lat": 28.8925,
+    "lon": 76.5312,
+    "pincode": "130064",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sirsa",
+    "state": "Haryana",
+    "lat": 29.6358,
+    "lon": 74.9097,
+    "pincode": "140065",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sonepat",
+    "state": "Haryana",
+    "lat": 29.0581,
+    "lon": 76.8559,
+    "pincode": "150066",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Yamuna Nagar",
+    "state": "Haryana",
+    "lat": 30.2647,
+    "lon": 77.3165,
+    "pincode": "160067",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bilaspur",
+    "state": "Himachal Pradesh",
+    "lat": 31.378,
+    "lon": 76.6532,
+    "pincode": "170068",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chamba",
+    "state": "Himachal Pradesh",
+    "lat": 32.6674,
+    "lon": 76.3935,
+    "pincode": "180069",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hamirpur",
+    "state": "Himachal Pradesh",
+    "lat": 31.6767,
+    "lon": 76.4977,
+    "pincode": "190070",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kangra",
+    "state": "Himachal Pradesh",
+    "lat": 32.1409,
+    "lon": 76.4121,
+    "pincode": "200071",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kinnaur",
+    "state": "Himachal Pradesh",
+    "lat": 31.6067,
+    "lon": 78.5161,
+    "pincode": "210072",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kullu",
+    "state": "Himachal Pradesh",
+    "lat": 31.9091,
+    "lon": 77.4092,
+    "pincode": "220073",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lahul and Spiti",
+    "state": "Himachal Pradesh",
+    "lat": 32.5172,
+    "lon": 77.6247,
+    "pincode": "230074",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mandi",
+    "state": "Himachal Pradesh",
+    "lat": 31.6358,
+    "lon": 76.9656,
+    "pincode": "240075",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Shimla",
+    "state": "Himachal Pradesh",
+    "lat": 31.1557,
+    "lon": 77.6257,
+    "pincode": "250076",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sirmaur",
+    "state": "Himachal Pradesh",
+    "lat": 30.6828,
+    "lon": 77.4318,
+    "pincode": "260077",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Solan",
+    "state": "Himachal Pradesh",
+    "lat": 31.0386,
+    "lon": 76.9444,
+    "pincode": "270078",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Una",
+    "state": "Himachal Pradesh",
+    "lat": 31.5833,
+    "lon": 76.1835,
+    "pincode": "280079",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Anantnag (Kashmir South)",
+    "state": "Jammu and Kashmir",
+    "lat": 33.7603,
+    "lon": 75.3039,
+    "pincode": "290080",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bagdam",
+    "state": "Jammu and Kashmir",
+    "lat": 33.9326,
+    "lon": 74.798,
+    "pincode": "300081",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Baramula (Kashmir North)",
+    "state": "Jammu and Kashmir",
+    "lat": 34.3813,
+    "lon": 74.7636,
+    "pincode": "310082",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Doda",
+    "state": "Jammu and Kashmir",
+    "lat": 33.3596,
+    "lon": 76.0716,
+    "pincode": "320083",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jammu",
+    "state": "Jammu and Kashmir",
+    "lat": 32.7132,
+    "lon": 74.8478,
+    "pincode": "330084",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kargil",
+    "state": "Jammu and Kashmir",
+    "lat": 33.566,
+    "lon": 76.6368,
+    "pincode": "340085",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kathua",
+    "state": "Jammu and Kashmir",
+    "lat": 32.5178,
+    "lon": 75.589,
+    "pincode": "350086",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kupwara (Muzaffarabad)",
+    "state": "Jammu and Kashmir",
+    "lat": 34.5992,
+    "lon": 74.2159,
+    "pincode": "360087",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ladakh (Leh)",
+    "state": "Jammu and Kashmir",
+    "lat": 33.5858,
+    "lon": 78.3073,
+    "pincode": "370088",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pulwama",
+    "state": "Jammu and Kashmir",
+    "lat": 33.8841,
+    "lon": 75.0092,
+    "pincode": "380089",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Punch",
+    "state": "Jammu and Kashmir",
+    "lat": 33.7912,
+    "lon": 74.2959,
+    "pincode": "390090",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rajauri",
+    "state": "Jammu and Kashmir",
+    "lat": 33.2723,
+    "lon": 74.4078,
+    "pincode": "400091",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Srinagar",
+    "state": "Jammu and Kashmir",
+    "lat": 34.2731,
+    "lon": 75.1102,
+    "pincode": "410092",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Udhampur",
+    "state": "Jammu and Kashmir",
+    "lat": 33.0477,
+    "lon": 75.1529,
+    "pincode": "420093",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bokaro",
+    "state": "Jharkhand",
+    "lat": 23.6815,
+    "lon": 85.984,
+    "pincode": "430094",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chatra",
+    "state": "Jharkhand",
+    "lat": 24.1162,
+    "lon": 84.933,
+    "pincode": "440095",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Deoghar",
+    "state": "Jharkhand",
+    "lat": 24.3307,
+    "lon": 86.757,
+    "pincode": "450096",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhanbad",
+    "state": "Jharkhand",
+    "lat": 23.8545,
+    "lon": 86.4037,
+    "pincode": "460097",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dumka",
+    "state": "Jharkhand",
+    "lat": 24.275,
+    "lon": 87.2766,
+    "pincode": "470098",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Garhwa",
+    "state": "Jharkhand",
+    "lat": 24.0821,
+    "lon": 83.6866,
+    "pincode": "480000",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Giridih",
+    "state": "Jharkhand",
+    "lat": 24.3058,
+    "lon": 86.0871,
+    "pincode": "490001",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Godda",
+    "state": "Jharkhand",
+    "lat": 24.8189,
+    "lon": 87.2942,
+    "pincode": "500002",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gumla",
+    "state": "Jharkhand",
+    "lat": 23.0785,
+    "lon": 84.5506,
+    "pincode": "510003",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hazaribag",
+    "state": "Jharkhand",
+    "lat": 23.9432,
+    "lon": 85.4944,
+    "pincode": "520004",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jamtara",
+    "state": "Jharkhand",
+    "lat": 23.9787,
+    "lon": 86.9533,
+    "pincode": "530005",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Koderma",
+    "state": "Jharkhand",
+    "lat": 24.5567,
+    "lon": 85.7169,
+    "pincode": "540006",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Latehar",
+    "state": "Jharkhand",
+    "lat": 23.7251,
+    "lon": 84.483,
+    "pincode": "550007",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lohardaga",
+    "state": "Jharkhand",
+    "lat": 23.4888,
+    "lon": 84.6605,
+    "pincode": "560008",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pakur",
+    "state": "Jharkhand",
+    "lat": 24.5726,
+    "lon": 87.6969,
+    "pincode": "570009",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Palamu",
+    "state": "Jharkhand",
+    "lat": 24.1969,
+    "lon": 84.2031,
+    "pincode": "580010",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pashchim Singhbhum",
+    "state": "Jharkhand",
+    "lat": 22.3994,
+    "lon": 85.541,
+    "pincode": "590011",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Purba Singhbhum",
+    "state": "Jharkhand",
+    "lat": 22.5913,
+    "lon": 86.5091,
+    "pincode": "600012",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ranchi",
+    "state": "Jharkhand",
+    "lat": 23.1842,
+    "lon": 85.3178,
+    "pincode": "610013",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sahibganj",
+    "state": "Jharkhand",
+    "lat": 24.9367,
+    "lon": 87.6826,
+    "pincode": "620014",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Saraikela Kharsawan",
+    "state": "Jharkhand",
+    "lat": 22.8559,
+    "lon": 85.8961,
+    "pincode": "630015",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Simdega",
+    "state": "Jharkhand",
+    "lat": 22.6088,
+    "lon": 84.5919,
+    "pincode": "640016",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bagalkot",
+    "state": "Karnataka",
+    "lat": 16.1586,
+    "lon": 75.6453,
+    "pincode": "650017",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bangalore Rural",
+    "state": "Karnataka",
+    "lat": 12.9368,
+    "lon": 77.4737,
+    "pincode": "660018",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bangalore Urban",
+    "state": "Karnataka",
+    "lat": 12.9019,
+    "lon": 77.5869,
+    "pincode": "670019",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Belgaum",
+    "state": "Karnataka",
+    "lat": 16.1611,
+    "lon": 74.7233,
+    "pincode": "680020",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bellary",
+    "state": "Karnataka",
+    "lat": 15.0744,
+    "lon": 76.4723,
+    "pincode": "690021",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bidar",
+    "state": "Karnataka",
+    "lat": 17.9504,
+    "lon": 77.1946,
+    "pincode": "700022",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bijapur",
+    "state": "Karnataka",
+    "lat": 16.8402,
+    "lon": 75.9591,
+    "pincode": "710023",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chamrajnagar",
+    "state": "Karnataka",
+    "lat": 11.9525,
+    "lon": 77.0238,
+    "pincode": "720024",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chikmagalur",
+    "state": "Karnataka",
+    "lat": 13.4253,
+    "lon": 75.6763,
+    "pincode": "730025",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chitradurga",
+    "state": "Karnataka",
+    "lat": 14.291,
+    "lon": 76.5782,
+    "pincode": "740026",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dakshin Kannad",
+    "state": "Karnataka",
+    "lat": 12.8912,
+    "lon": 74.9622,
+    "pincode": "750027",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Davanagere",
+    "state": "Karnataka",
+    "lat": 14.3304,
+    "lon": 75.9172,
+    "pincode": "760028",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dharwad",
+    "state": "Karnataka",
+    "lat": 15.3438,
+    "lon": 75.1383,
+    "pincode": "770029",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gadag",
+    "state": "Karnataka",
+    "lat": 15.5071,
+    "lon": 75.6486,
+    "pincode": "780030",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gulbarga",
+    "state": "Karnataka",
+    "lat": 17.0705,
+    "lon": 76.875,
+    "pincode": "790031",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hassan",
+    "state": "Karnataka",
+    "lat": 12.9451,
+    "lon": 76.1105,
+    "pincode": "800032",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Haveri",
+    "state": "Karnataka",
+    "lat": 14.7376,
+    "lon": 75.3961,
+    "pincode": "810033",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kodagu",
+    "state": "Karnataka",
+    "lat": 12.3968,
+    "lon": 75.7934,
+    "pincode": "820034",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kolar",
+    "state": "Karnataka",
+    "lat": 13.3128,
+    "lon": 78.0138,
+    "pincode": "830035",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Koppal",
+    "state": "Karnataka",
+    "lat": 15.6512,
+    "lon": 76.1617,
+    "pincode": "840036",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mandya",
+    "state": "Karnataka",
+    "lat": 12.5749,
+    "lon": 76.8157,
+    "pincode": "850037",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mysore",
+    "state": "Karnataka",
+    "lat": 12.2481,
+    "lon": 76.5288,
+    "pincode": "860038",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Raichur",
+    "state": "Karnataka",
+    "lat": 16.0508,
+    "lon": 76.8737,
+    "pincode": "870039",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Shimoga",
+    "state": "Karnataka",
+    "lat": 14.0638,
+    "lon": 75.1788,
+    "pincode": "880040",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tumkur",
+    "state": "Karnataka",
+    "lat": 13.4097,
+    "lon": 76.938,
+    "pincode": "890041",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Udupi",
+    "state": "Karnataka",
+    "lat": 13.0993,
+    "lon": 74.781,
+    "pincode": "100042",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Uttar Kannand",
+    "state": "Karnataka",
+    "lat": 14.0081,
+    "lon": 74.4809,
+    "pincode": "110043",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Alappuzha",
+    "state": "Kerala",
+    "lat": 9.5359,
+    "lon": 76.392,
+    "pincode": "120044",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ernakulam",
+    "state": "Kerala",
+    "lat": 9.8248,
+    "lon": 76.3863,
+    "pincode": "130045",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Idukki",
+    "state": "Kerala",
+    "lat": 9.8048,
+    "lon": 77.0459,
+    "pincode": "140046",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kannur",
+    "state": "Kerala",
+    "lat": 11.9407,
+    "lon": 75.3653,
+    "pincode": "150047",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kasaragod",
+    "state": "Kerala",
+    "lat": 12.0811,
+    "lon": 75.1695,
+    "pincode": "160048",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kollam",
+    "state": "Kerala",
+    "lat": 8.9294,
+    "lon": 76.6361,
+    "pincode": "170049",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kottayam",
+    "state": "Kerala",
+    "lat": 9.5365,
+    "lon": 76.4717,
+    "pincode": "180050",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kozhikode",
+    "state": "Kerala",
+    "lat": 11.1306,
+    "lon": 75.8347,
+    "pincode": "190051",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Malappuram",
+    "state": "Kerala",
+    "lat": 10.9733,
+    "lon": 75.9391,
+    "pincode": "200052",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Palakkad",
+    "state": "Kerala",
+    "lat": 10.7849,
+    "lon": 76.4998,
+    "pincode": "210053",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pattanamtitta",
+    "state": "Kerala",
+    "lat": 9.2913,
+    "lon": 76.8641,
+    "pincode": "220054",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Thiruvananthapuram",
+    "state": "Kerala",
+    "lat": 8.5371,
+    "lon": 76.8871,
+    "pincode": "230055",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Thrissur",
+    "state": "Kerala",
+    "lat": 10.5344,
+    "lon": 76.0507,
+    "pincode": "240056",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Wayanad",
+    "state": "Kerala",
+    "lat": 11.7153,
+    "lon": 76.0759,
+    "pincode": "250057",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kavaratti",
+    "state": "Lakshadweep",
+    "lat": 8.2784,
+    "lon": 73.0111,
+    "pincode": "260058",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Anuppur",
+    "state": "Madhya Pradesh",
+    "lat": 23.1818,
+    "lon": 81.8656,
+    "pincode": "270059",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ashoknagar",
+    "state": "Madhya Pradesh",
+    "lat": 24.631,
+    "lon": 77.8297,
+    "pincode": "280060",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Balaghat",
+    "state": "Madhya Pradesh",
+    "lat": 21.8002,
+    "lon": 80.4217,
+    "pincode": "290061",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Barwani",
+    "state": "Madhya Pradesh",
+    "lat": 21.7021,
+    "lon": 74.91,
+    "pincode": "300062",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Betul",
+    "state": "Madhya Pradesh",
+    "lat": 21.9646,
+    "lon": 77.7873,
+    "pincode": "310063",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhind",
+    "state": "Madhya Pradesh",
+    "lat": 26.3595,
+    "lon": 78.7618,
+    "pincode": "320064",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhopal",
+    "state": "Madhya Pradesh",
+    "lat": 23.4807,
+    "lon": 77.3925,
+    "pincode": "330065",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Burhanpur",
+    "state": "Madhya Pradesh",
+    "lat": 21.3646,
+    "lon": 76.2446,
+    "pincode": "340066",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chhatarpur",
+    "state": "Madhya Pradesh",
+    "lat": 24.8136,
+    "lon": 79.5645,
+    "pincode": "350067",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chhindwara",
+    "state": "Madhya Pradesh",
+    "lat": 22.228,
+    "lon": 78.7641,
+    "pincode": "360068",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Damoh",
+    "state": "Madhya Pradesh",
+    "lat": 23.7662,
+    "lon": 79.4705,
+    "pincode": "370069",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Datia",
+    "state": "Madhya Pradesh",
+    "lat": 25.9023,
+    "lon": 78.6392,
+    "pincode": "380070",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dewas",
+    "state": "Madhya Pradesh",
+    "lat": 22.7851,
+    "lon": 76.4609,
+    "pincode": "390071",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhar",
+    "state": "Madhya Pradesh",
+    "lat": 22.5727,
+    "lon": 75.1106,
+    "pincode": "400072",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dindori",
+    "state": "Madhya Pradesh",
+    "lat": 22.8374,
+    "lon": 81.0433,
+    "pincode": "410073",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East Nimar",
+    "state": "Madhya Pradesh",
+    "lat": 22.099,
+    "lon": 76.5581,
+    "pincode": "420074",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Guna",
+    "state": "Madhya Pradesh",
+    "lat": 24.4904,
+    "lon": 77.2236,
+    "pincode": "430075",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gwalior",
+    "state": "Madhya Pradesh",
+    "lat": 26.0407,
+    "lon": 78.1278,
+    "pincode": "440076",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Harda",
+    "state": "Madhya Pradesh",
+    "lat": 22.2277,
+    "lon": 77.0702,
+    "pincode": "450077",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hoshangabad",
+    "state": "Madhya Pradesh",
+    "lat": 22.5953,
+    "lon": 78.0217,
+    "pincode": "460078",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Indore",
+    "state": "Madhya Pradesh",
+    "lat": 22.6803,
+    "lon": 75.9134,
+    "pincode": "470079",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jabalpur",
+    "state": "Madhya Pradesh",
+    "lat": 23.1853,
+    "lon": 79.9833,
+    "pincode": "480080",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jhabua",
+    "state": "Madhya Pradesh",
+    "lat": 22.4196,
+    "lon": 74.4092,
+    "pincode": "490081",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Katni",
+    "state": "Madhya Pradesh",
+    "lat": 23.7244,
+    "lon": 80.3382,
+    "pincode": "500082",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mandla",
+    "state": "Madhya Pradesh",
+    "lat": 22.3433,
+    "lon": 80.8777,
+    "pincode": "510083",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mandsaur",
+    "state": "Madhya Pradesh",
+    "lat": 24.1928,
+    "lon": 75.4359,
+    "pincode": "520084",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Morena",
+    "state": "Madhya Pradesh",
+    "lat": 26.3731,
+    "lon": 77.8845,
+    "pincode": "530085",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Narsinghpur",
+    "state": "Madhya Pradesh",
+    "lat": 22.9513,
+    "lon": 79.002,
+    "pincode": "540086",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Neemuch",
+    "state": "Madhya Pradesh",
+    "lat": 24.7031,
+    "lon": 75.0661,
+    "pincode": "550087",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Panna",
+    "state": "Madhya Pradesh",
+    "lat": 24.4513,
+    "lon": 80.2113,
+    "pincode": "560088",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Raisen",
+    "state": "Madhya Pradesh",
+    "lat": 23.2925,
+    "lon": 78.1631,
+    "pincode": "570089",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rajgarh",
+    "state": "Madhya Pradesh",
+    "lat": 23.7855,
+    "lon": 76.6643,
+    "pincode": "580090",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ratlam",
+    "state": "Madhya Pradesh",
+    "lat": 23.5036,
+    "lon": 75.149,
+    "pincode": "590091",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rewa",
+    "state": "Madhya Pradesh",
+    "lat": 24.8612,
+    "lon": 81.5757,
+    "pincode": "600092",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sagar",
+    "state": "Madhya Pradesh",
+    "lat": 23.8003,
+    "lon": 78.7194,
+    "pincode": "610093",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Satna",
+    "state": "Madhya Pradesh",
+    "lat": 24.6278,
+    "lon": 80.7555,
+    "pincode": "620094",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sehore",
+    "state": "Madhya Pradesh",
+    "lat": 22.9297,
+    "lon": 77.0678,
+    "pincode": "630095",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Seoni",
+    "state": "Madhya Pradesh",
+    "lat": 22.3323,
+    "lon": 79.6605,
+    "pincode": "640096",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Shahdol",
+    "state": "Madhya Pradesh",
+    "lat": 23.4486,
+    "lon": 81.4597,
+    "pincode": "650097",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Shajapur",
+    "state": "Madhya Pradesh",
+    "lat": 23.5666,
+    "lon": 76.3356,
+    "pincode": "660098",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sheopur",
+    "state": "Madhya Pradesh",
+    "lat": 25.7801,
+    "lon": 77.1691,
+    "pincode": "670000",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Shivpuri",
+    "state": "Madhya Pradesh",
+    "lat": 25.378,
+    "lon": 77.7486,
+    "pincode": "680001",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sidhi",
+    "state": "Madhya Pradesh",
+    "lat": 24.1755,
+    "lon": 82.1054,
+    "pincode": "690002",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tikamgarh",
+    "state": "Madhya Pradesh",
+    "lat": 25.141,
+    "lon": 78.8936,
+    "pincode": "700003",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ujjain",
+    "state": "Madhya Pradesh",
+    "lat": 23.3193,
+    "lon": 75.8038,
+    "pincode": "710004",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Umaria",
+    "state": "Madhya Pradesh",
+    "lat": 23.596,
+    "lon": 80.9088,
+    "pincode": "720005",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Vidisha",
+    "state": "Madhya Pradesh",
+    "lat": 23.8284,
+    "lon": 77.9014,
+    "pincode": "730006",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Nimar",
+    "state": "Madhya Pradesh",
+    "lat": 22.0271,
+    "lon": 75.8734,
+    "pincode": "740007",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ahmednagar",
+    "state": "Maharashtra",
+    "lat": 19.2176,
+    "lon": 74.6922,
+    "pincode": "750008",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Akola",
+    "state": "Maharashtra",
+    "lat": 20.7463,
+    "lon": 77.1212,
+    "pincode": "760009",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Amravati",
+    "state": "Maharashtra",
+    "lat": 21.1652,
+    "lon": 77.6758,
+    "pincode": "770010",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Aurangabad",
+    "state": "Maharashtra",
+    "lat": 20.0979,
+    "lon": 75.3207,
+    "pincode": "780011",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhandara",
+    "state": "Maharashtra",
+    "lat": 21.3187,
+    "lon": 80.4291,
+    "pincode": "790012",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bid",
+    "state": "Maharashtra",
+    "lat": 18.9524,
+    "lon": 75.6932,
+    "pincode": "800013",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Buldana",
+    "state": "Maharashtra",
+    "lat": 20.5668,
+    "lon": 76.3902,
+    "pincode": "810014",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chandrapur",
+    "state": "Maharashtra",
+    "lat": 20.0956,
+    "lon": 79.3156,
+    "pincode": "820015",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhule",
+    "state": "Maharashtra",
+    "lat": 21.274,
+    "lon": 74.5872,
+    "pincode": "830016",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Garhchiroli",
+    "state": "Maharashtra",
+    "lat": 19.7955,
+    "lon": 80.3097,
+    "pincode": "840017",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gondiya",
+    "state": "Maharashtra",
+    "lat": 21.225,
+    "lon": 80.1752,
+    "pincode": "850018",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Greater Bombay",
+    "state": "Maharashtra",
+    "lat": 19.1342,
+    "lon": 72.7813,
+    "pincode": "860019",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hingoli",
+    "state": "Maharashtra",
+    "lat": 19.5953,
+    "lon": 77.0924,
+    "pincode": "870020",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jalgaon",
+    "state": "Maharashtra",
+    "lat": 20.8829,
+    "lon": 75.5514,
+    "pincode": "880021",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jalna",
+    "state": "Maharashtra",
+    "lat": 19.9846,
+    "lon": 75.9847,
+    "pincode": "890022",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kolhapur",
+    "state": "Maharashtra",
+    "lat": 16.4488,
+    "lon": 74.129,
+    "pincode": "100023",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Latur",
+    "state": "Maharashtra",
+    "lat": 18.3487,
+    "lon": 76.7581,
+    "pincode": "110024",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nagpur",
+    "state": "Maharashtra",
+    "lat": 21.1966,
+    "lon": 79.0217,
+    "pincode": "120025",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nanded",
+    "state": "Maharashtra",
+    "lat": 19.2093,
+    "lon": 77.6829,
+    "pincode": "130026",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nandurbar",
+    "state": "Maharashtra",
+    "lat": 21.5232,
+    "lon": 74.3264,
+    "pincode": "140027",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nashik",
+    "state": "Maharashtra",
+    "lat": 20.2669,
+    "lon": 74.0382,
+    "pincode": "150028",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Osmanabad",
+    "state": "Maharashtra",
+    "lat": 18.1946,
+    "lon": 75.995,
+    "pincode": "160029",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Parbhani",
+    "state": "Maharashtra",
+    "lat": 19.3103,
+    "lon": 76.7016,
+    "pincode": "170030",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pune",
+    "state": "Maharashtra",
+    "lat": 18.517,
+    "lon": 74.1292,
+    "pincode": "180031",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Raigarh",
+    "state": "Maharashtra",
+    "lat": 18.0512,
+    "lon": 73.0377,
+    "pincode": "190032",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ratnagiri",
+    "state": "Maharashtra",
+    "lat": 17.8166,
+    "lon": 73.0842,
+    "pincode": "200033",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sangli",
+    "state": "Maharashtra",
+    "lat": 17.1549,
+    "lon": 74.7071,
+    "pincode": "210034",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Satara",
+    "state": "Maharashtra",
+    "lat": 17.6738,
+    "lon": 74.1805,
+    "pincode": "220035",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sindhudurg",
+    "state": "Maharashtra",
+    "lat": 15.8886,
+    "lon": 73.4558,
+    "pincode": "230036",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Solapur",
+    "state": "Maharashtra",
+    "lat": 17.8374,
+    "lon": 75.4239,
+    "pincode": "240037",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Thane",
+    "state": "Maharashtra",
+    "lat": 19.4631,
+    "lon": 72.7316,
+    "pincode": "250038",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Wardha",
+    "state": "Maharashtra",
+    "lat": 20.8074,
+    "lon": 78.5726,
+    "pincode": "260039",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Washim",
+    "state": "Maharashtra",
+    "lat": 20.2823,
+    "lon": 77.255,
+    "pincode": "270040",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Yavatmal",
+    "state": "Maharashtra",
+    "lat": 20.0426,
+    "lon": 78.0533,
+    "pincode": "280041",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bishnupur",
+    "state": "Manipur",
+    "lat": 24.5071,
+    "lon": 93.8246,
+    "pincode": "290042",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chandel",
+    "state": "Manipur",
+    "lat": 24.2636,
+    "lon": 94.0944,
+    "pincode": "300043",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Churachandpur",
+    "state": "Manipur",
+    "lat": 24.3031,
+    "lon": 93.3867,
+    "pincode": "310044",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East Imphal",
+    "state": "Manipur",
+    "lat": 24.7446,
+    "lon": 93.1435,
+    "pincode": "320045",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Senapati",
+    "state": "Manipur",
+    "lat": 25.0847,
+    "lon": 94.0337,
+    "pincode": "330046",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tamenglong",
+    "state": "Manipur",
+    "lat": 24.9831,
+    "lon": 93.4945,
+    "pincode": "340047",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Thoubal",
+    "state": "Manipur",
+    "lat": 24.5454,
+    "lon": 93.9796,
+    "pincode": "350048",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ukhrul",
+    "state": "Manipur",
+    "lat": 25.059,
+    "lon": 94.4413,
+    "pincode": "360049",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Imphal",
+    "state": "Manipur",
+    "lat": 24.794,
+    "lon": 93.8886,
+    "pincode": "370050",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East Garo Hills",
+    "state": "Meghalaya",
+    "lat": 25.8273,
+    "lon": 90.6468,
+    "pincode": "380051",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East Khasi Hills",
+    "state": "Meghalaya",
+    "lat": 25.3038,
+    "lon": 91.7592,
+    "pincode": "390052",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jaintia Hills",
+    "state": "Meghalaya",
+    "lat": 25.3396,
+    "lon": 92.3761,
+    "pincode": "400053",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ri-Bhoi",
+    "state": "Meghalaya",
+    "lat": 25.8971,
+    "lon": 91.8452,
+    "pincode": "410054",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "South Garo Hills",
+    "state": "Meghalaya",
+    "lat": 25.2406,
+    "lon": 90.6456,
+    "pincode": "420055",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Garo Hills",
+    "state": "Meghalaya",
+    "lat": 25.4953,
+    "lon": 90.0371,
+    "pincode": "430056",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Khasi Hills",
+    "state": "Meghalaya",
+    "lat": 25.5009,
+    "lon": 91.2536,
+    "pincode": "440057",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Aizawl",
+    "state": "Mizoram",
+    "lat": 23.9078,
+    "lon": 92.8536,
+    "pincode": "450058",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Champhai",
+    "state": "Mizoram",
+    "lat": 23.5417,
+    "lon": 93.2422,
+    "pincode": "460059",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kolasib",
+    "state": "Mizoram",
+    "lat": 24.202,
+    "lon": 92.7347,
+    "pincode": "470060",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lawngtlai",
+    "state": "Mizoram",
+    "lat": 22.361,
+    "lon": 92.6696,
+    "pincode": "480061",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lunglei",
+    "state": "Mizoram",
+    "lat": 22.7357,
+    "lon": 92.5051,
+    "pincode": "490062",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mamit",
+    "state": "Mizoram",
+    "lat": 23.2679,
+    "lon": 92.3975,
+    "pincode": "500063",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Saiha",
+    "state": "Mizoram",
+    "lat": 22.3575,
+    "lon": 93.0283,
+    "pincode": "510064",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Serchhip",
+    "state": "Mizoram",
+    "lat": 23.2639,
+    "lon": 92.9142,
+    "pincode": "520065",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dimapur",
+    "state": "Nagaland",
+    "lat": 25.8142,
+    "lon": 93.7507,
+    "pincode": "530066",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kohima",
+    "state": "Nagaland",
+    "lat": 25.6031,
+    "lon": 93.786,
+    "pincode": "540067",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mokokchung",
+    "state": "Nagaland",
+    "lat": 26.4789,
+    "lon": 94.5224,
+    "pincode": "550068",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mon",
+    "state": "Nagaland",
+    "lat": 26.6921,
+    "lon": 95.0307,
+    "pincode": "560069",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Phek",
+    "state": "Nagaland",
+    "lat": 25.6327,
+    "lon": 94.5681,
+    "pincode": "570070",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tuensang",
+    "state": "Nagaland",
+    "lat": 26.211,
+    "lon": 94.8581,
+    "pincode": "580071",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Wokha",
+    "state": "Nagaland",
+    "lat": 26.2026,
+    "lon": 94.1991,
+    "pincode": "590072",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Zunheboto",
+    "state": "Nagaland",
+    "lat": 26.0282,
+    "lon": 94.5003,
+    "pincode": "600073",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Angul",
+    "state": "Orissa",
+    "lat": 21.1207,
+    "lon": 84.9984,
+    "pincode": "610074",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Baleshwar",
+    "state": "Orissa",
+    "lat": 21.5173,
+    "lon": 87.1215,
+    "pincode": "620075",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Baragarh",
+    "state": "Orissa",
+    "lat": 21.1324,
+    "lon": 83.2644,
+    "pincode": "630076",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhadrak",
+    "state": "Orissa",
+    "lat": 20.7848,
+    "lon": 86.946,
+    "pincode": "640077",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bolangir",
+    "state": "Orissa",
+    "lat": 20.6163,
+    "lon": 83.2152,
+    "pincode": "650078",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Boudh",
+    "state": "Orissa",
+    "lat": 20.5832,
+    "lon": 84.1236,
+    "pincode": "660079",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Cuttack",
+    "state": "Orissa",
+    "lat": 20.4076,
+    "lon": 85.7777,
+    "pincode": "670080",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Deogarh",
+    "state": "Orissa",
+    "lat": 21.4315,
+    "lon": 84.8145,
+    "pincode": "680081",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhenkanal",
+    "state": "Orissa",
+    "lat": 20.7989,
+    "lon": 85.5323,
+    "pincode": "690082",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gajapati",
+    "state": "Orissa",
+    "lat": 19.1211,
+    "lon": 84.1402,
+    "pincode": "700083",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ganjam",
+    "state": "Orissa",
+    "lat": 19.1032,
+    "lon": 84.7672,
+    "pincode": "710084",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jagatsinghpur",
+    "state": "Orissa",
+    "lat": 19.9607,
+    "lon": 86.3831,
+    "pincode": "720085",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jajpur",
+    "state": "Orissa",
+    "lat": 20.8532,
+    "lon": 86.1528,
+    "pincode": "730086",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jharsuguda",
+    "state": "Orissa",
+    "lat": 21.8271,
+    "lon": 83.9358,
+    "pincode": "740087",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kalahandi",
+    "state": "Orissa",
+    "lat": 19.7843,
+    "lon": 83.1124,
+    "pincode": "750088",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kandhamal",
+    "state": "Orissa",
+    "lat": 20.0929,
+    "lon": 84.0222,
+    "pincode": "760089",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kendrapara",
+    "state": "Orissa",
+    "lat": 20.3701,
+    "lon": 86.7928,
+    "pincode": "770090",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Keonjhar",
+    "state": "Orissa",
+    "lat": 21.4923,
+    "lon": 85.7628,
+    "pincode": "780091",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Khordha",
+    "state": "Orissa",
+    "lat": 20.0542,
+    "lon": 85.5223,
+    "pincode": "790092",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Koraput",
+    "state": "Orissa",
+    "lat": 18.8263,
+    "lon": 82.8128,
+    "pincode": "800093",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Malkangiri",
+    "state": "Orissa",
+    "lat": 18.2523,
+    "lon": 81.9829,
+    "pincode": "810094",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mayurbhanj",
+    "state": "Orissa",
+    "lat": 21.8976,
+    "lon": 86.403,
+    "pincode": "820095",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nabarangpur",
+    "state": "Orissa",
+    "lat": 19.513,
+    "lon": 82.4204,
+    "pincode": "830096",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nayagarh",
+    "state": "Orissa",
+    "lat": 20.1929,
+    "lon": 85.0561,
+    "pincode": "840097",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nuapada",
+    "state": "Orissa",
+    "lat": 20.4713,
+    "lon": 82.5915,
+    "pincode": "850098",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Puri",
+    "state": "Orissa",
+    "lat": 19.9096,
+    "lon": 86.2388,
+    "pincode": "860000",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rayagada",
+    "state": "Orissa",
+    "lat": 19.2928,
+    "lon": 83.4586,
+    "pincode": "870001",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sambalpur",
+    "state": "Orissa",
+    "lat": 21.5158,
+    "lon": 84.3496,
+    "pincode": "880002",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sonepur",
+    "state": "Orissa",
+    "lat": 20.8908,
+    "lon": 83.7685,
+    "pincode": "890003",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sundargarh",
+    "state": "Orissa",
+    "lat": 22.0635,
+    "lon": 84.5052,
+    "pincode": "100004",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Karaikal",
+    "state": "Puducherry",
+    "lat": 10.8252,
+    "lon": 79.8427,
+    "pincode": "110005",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mahe",
+    "state": "Puducherry",
+    "lat": 12.0064,
+    "lon": 75.2827,
+    "pincode": "120006",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Puducherry",
+    "state": "Puducherry",
+    "lat": 11.8878,
+    "lon": 79.7971,
+    "pincode": "130007",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Yanam",
+    "state": "Puducherry",
+    "lat": 16.6989,
+    "lon": 82.2702,
+    "pincode": "140008",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Amritsar",
+    "state": "Punjab",
+    "lat": 31.5487,
+    "lon": 74.7988,
+    "pincode": "150009",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bathinda",
+    "state": "Punjab",
+    "lat": 30.1905,
+    "lon": 75.0569,
+    "pincode": "160010",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Faridkot",
+    "state": "Punjab",
+    "lat": 30.5912,
+    "lon": 74.7975,
+    "pincode": "170011",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Fatehgarh Sahib",
+    "state": "Punjab",
+    "lat": 30.6429,
+    "lon": 76.3621,
+    "pincode": "180012",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Firozpur",
+    "state": "Punjab",
+    "lat": 30.6341,
+    "lon": 74.4025,
+    "pincode": "190013",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gurdaspur",
+    "state": "Punjab",
+    "lat": 32.0428,
+    "lon": 75.3204,
+    "pincode": "200014",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hoshiarpur",
+    "state": "Punjab",
+    "lat": 31.5516,
+    "lon": 75.847,
+    "pincode": "210015",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jalandhar",
+    "state": "Punjab",
+    "lat": 31.2503,
+    "lon": 75.544,
+    "pincode": "220016",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kapurthala",
+    "state": "Punjab",
+    "lat": 31.284,
+    "lon": 75.7782,
+    "pincode": "230017",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ludhiana",
+    "state": "Punjab",
+    "lat": 30.766,
+    "lon": 75.8311,
+    "pincode": "240018",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mansa",
+    "state": "Punjab",
+    "lat": 29.9195,
+    "lon": 75.4305,
+    "pincode": "250019",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Moga",
+    "state": "Punjab",
+    "lat": 30.7565,
+    "lon": 75.1601,
+    "pincode": "260020",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Muktsar",
+    "state": "Punjab",
+    "lat": 30.3124,
+    "lon": 74.5519,
+    "pincode": "270021",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nawan Shehar",
+    "state": "Punjab",
+    "lat": 31.1334,
+    "lon": 76.1019,
+    "pincode": "280022",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Patiala",
+    "state": "Punjab",
+    "lat": 30.2145,
+    "lon": 76.2751,
+    "pincode": "290023",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rupnagar",
+    "state": "Punjab",
+    "lat": 30.9109,
+    "lon": 76.5374,
+    "pincode": "300024",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sangrur",
+    "state": "Punjab",
+    "lat": 30.185,
+    "lon": 75.8944,
+    "pincode": "310025",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ajmer",
+    "state": "Rajasthan",
+    "lat": 25.7572,
+    "lon": 73.9934,
+    "pincode": "320026",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Alwar",
+    "state": "Rajasthan",
+    "lat": 27.5527,
+    "lon": 76.6536,
+    "pincode": "330027",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Banswara",
+    "state": "Rajasthan",
+    "lat": 23.4536,
+    "lon": 74.4425,
+    "pincode": "340028",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Baran",
+    "state": "Rajasthan",
+    "lat": 24.9802,
+    "lon": 76.8621,
+    "pincode": "350029",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Barmer",
+    "state": "Rajasthan",
+    "lat": 25.7707,
+    "lon": 71.503,
+    "pincode": "360030",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bharatpur",
+    "state": "Rajasthan",
+    "lat": 27.3241,
+    "lon": 77.2175,
+    "pincode": "370031",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bhilwara",
+    "state": "Rajasthan",
+    "lat": 25.4512,
+    "lon": 74.6395,
+    "pincode": "380032",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bikaner",
+    "state": "Rajasthan",
+    "lat": 28.1249,
+    "lon": 73.2694,
+    "pincode": "390033",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bundi",
+    "state": "Rajasthan",
+    "lat": 25.4858,
+    "lon": 75.7998,
+    "pincode": "400034",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chittaurgarh",
+    "state": "Rajasthan",
+    "lat": 24.8789,
+    "lon": 75.3859,
+    "pincode": "410035",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Churu",
+    "state": "Rajasthan",
+    "lat": 28.2933,
+    "lon": 74.6585,
+    "pincode": "420036",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dausa",
+    "state": "Rajasthan",
+    "lat": 26.9123,
+    "lon": 76.5734,
+    "pincode": "430037",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhaulpur",
+    "state": "Rajasthan",
+    "lat": 26.724,
+    "lon": 77.7448,
+    "pincode": "440038",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dungarpur",
+    "state": "Rajasthan",
+    "lat": 23.751,
+    "lon": 73.8477,
+    "pincode": "450039",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ganganagar",
+    "state": "Rajasthan",
+    "lat": 29.2568,
+    "lon": 73.5619,
+    "pincode": "460040",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hanumangarh",
+    "state": "Rajasthan",
+    "lat": 29.1813,
+    "lon": 74.7463,
+    "pincode": "470041",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jaipur",
+    "state": "Rajasthan",
+    "lat": 27.0335,
+    "lon": 75.7712,
+    "pincode": "480042",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jaisalmer",
+    "state": "Rajasthan",
+    "lat": 26.869,
+    "lon": 71.1837,
+    "pincode": "490043",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jalor",
+    "state": "Rajasthan",
+    "lat": 25.0758,
+    "lon": 72.1865,
+    "pincode": "500044",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jhalawar",
+    "state": "Rajasthan",
+    "lat": 24.2473,
+    "lon": 76.1124,
+    "pincode": "510045",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jhunjhunun",
+    "state": "Rajasthan",
+    "lat": 28.1352,
+    "lon": 75.5284,
+    "pincode": "520046",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jodhpur",
+    "state": "Rajasthan",
+    "lat": 26.6785,
+    "lon": 73.0045,
+    "pincode": "530047",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Karauli",
+    "state": "Rajasthan",
+    "lat": 26.519,
+    "lon": 76.9608,
+    "pincode": "540048",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kota",
+    "state": "Rajasthan",
+    "lat": 25.1757,
+    "lon": 76.1862,
+    "pincode": "550049",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nagaur",
+    "state": "Rajasthan",
+    "lat": 27.0786,
+    "lon": 74.1422,
+    "pincode": "560050",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pali",
+    "state": "Rajasthan",
+    "lat": 25.8049,
+    "lon": 73.5529,
+    "pincode": "570051",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rajsamand",
+    "state": "Rajasthan",
+    "lat": 25.2489,
+    "lon": 73.9657,
+    "pincode": "580052",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sawai Madhopur",
+    "state": "Rajasthan",
+    "lat": 26.2511,
+    "lon": 76.4219,
+    "pincode": "590053",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sikar",
+    "state": "Rajasthan",
+    "lat": 27.6464,
+    "lon": 75.2932,
+    "pincode": "600054",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sirohi",
+    "state": "Rajasthan",
+    "lat": 24.7977,
+    "lon": 72.7531,
+    "pincode": "610055",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tonk",
+    "state": "Rajasthan",
+    "lat": 26.1539,
+    "lon": 75.7919,
+    "pincode": "620056",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Udaipur",
+    "state": "Rajasthan",
+    "lat": 24.4408,
+    "lon": 73.8403,
+    "pincode": "630057",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East",
+    "state": "Sikkim",
+    "lat": 27.296,
+    "lon": 88.7491,
+    "pincode": "640058",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "North Sikkim",
+    "state": "Sikkim",
+    "lat": 27.8138,
+    "lon": 88.542,
+    "pincode": "650059",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "South Sikkim",
+    "state": "Sikkim",
+    "lat": 27.278,
+    "lon": 88.3754,
+    "pincode": "660060",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Sikkim",
+    "state": "Sikkim",
+    "lat": 27.336,
+    "lon": 88.158,
+    "pincode": "670061",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ariyalur",
+    "state": "Tamil Nadu",
+    "lat": 11.1905,
+    "lon": 79.2225,
+    "pincode": "680062",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chennai",
+    "state": "Tamil Nadu",
+    "lat": 13.0581,
+    "lon": 80.2814,
+    "pincode": "690063",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Coimbatore",
+    "state": "Tamil Nadu",
+    "lat": 10.8714,
+    "lon": 77.0762,
+    "pincode": "700064",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Cuddalore",
+    "state": "Tamil Nadu",
+    "lat": 11.5759,
+    "lon": 79.63,
+    "pincode": "710065",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dharmapuri",
+    "state": "Tamil Nadu",
+    "lat": 12.3001,
+    "lon": 78.1151,
+    "pincode": "720066",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dindigul",
+    "state": "Tamil Nadu",
+    "lat": 10.3778,
+    "lon": 77.7801,
+    "pincode": "730067",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Erode",
+    "state": "Tamil Nadu",
+    "lat": 11.267,
+    "lon": 77.4203,
+    "pincode": "740068",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kancheepuram",
+    "state": "Tamil Nadu",
+    "lat": 12.2225,
+    "lon": 79.9625,
+    "pincode": "750069",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kanniyakumari",
+    "state": "Tamil Nadu",
+    "lat": 8.0778,
+    "lon": 77.555,
+    "pincode": "760070",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Karur",
+    "state": "Tamil Nadu",
+    "lat": 10.7953,
+    "lon": 78.0875,
+    "pincode": "770071",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Madurai",
+    "state": "Tamil Nadu",
+    "lat": 9.9043,
+    "lon": 78.0137,
+    "pincode": "780072",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nagapattinam",
+    "state": "Tamil Nadu",
+    "lat": 10.4182,
+    "lon": 79.7903,
+    "pincode": "790073",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Namakkal",
+    "state": "Tamil Nadu",
+    "lat": 11.3377,
+    "lon": 78.1462,
+    "pincode": "800074",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nilgiris",
+    "state": "Tamil Nadu",
+    "lat": 11.4424,
+    "lon": 76.6615,
+    "pincode": "810075",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Perambalur",
+    "state": "Tamil Nadu",
+    "lat": 11.2601,
+    "lon": 78.8603,
+    "pincode": "820076",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pudukkottai",
+    "state": "Tamil Nadu",
+    "lat": 10.1305,
+    "lon": 79.0544,
+    "pincode": "830077",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ramanathapuram",
+    "state": "Tamil Nadu",
+    "lat": 9.0854,
+    "lon": 78.3631,
+    "pincode": "840078",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Salem",
+    "state": "Tamil Nadu",
+    "lat": 11.6293,
+    "lon": 78.2478,
+    "pincode": "850079",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sivaganga",
+    "state": "Tamil Nadu",
+    "lat": 9.9603,
+    "lon": 78.5654,
+    "pincode": "860080",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Thanjavur",
+    "state": "Tamil Nadu",
+    "lat": 10.321,
+    "lon": 79.515,
+    "pincode": "870081",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Theni",
+    "state": "Tamil Nadu",
+    "lat": 9.9241,
+    "lon": 77.4346,
+    "pincode": "880082",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Thiruvallur",
+    "state": "Tamil Nadu",
+    "lat": 13.4363,
+    "lon": 80.3232,
+    "pincode": "890083",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Thiruvarur",
+    "state": "Tamil Nadu",
+    "lat": 10.2867,
+    "lon": 79.7053,
+    "pincode": "100084",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Thoothukudi",
+    "state": "Tamil Nadu",
+    "lat": 8.6139,
+    "lon": 78.1162,
+    "pincode": "110085",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tiruchchirappalli",
+    "state": "Tamil Nadu",
+    "lat": 10.8378,
+    "lon": 78.5473,
+    "pincode": "120086",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tirunelveli Kattabo",
+    "state": "Tamil Nadu",
+    "lat": 8.3288,
+    "lon": 77.9633,
+    "pincode": "130087",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tiruvannamalai",
+    "state": "Tamil Nadu",
+    "lat": 12.4193,
+    "lon": 79.2327,
+    "pincode": "140088",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Vellore",
+    "state": "Tamil Nadu",
+    "lat": 12.7849,
+    "lon": 79.0264,
+    "pincode": "150089",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Villupuram",
+    "state": "Tamil Nadu",
+    "lat": 12.2191,
+    "lon": 79.9461,
+    "pincode": "160090",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Virudhunagar",
+    "state": "Tamil Nadu",
+    "lat": 9.4689,
+    "lon": 77.8764,
+    "pincode": "170091",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dhalai",
+    "state": "Tripura",
+    "lat": 23.7814,
+    "lon": 91.9465,
+    "pincode": "180092",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "North Tripura",
+    "state": "Tripura",
+    "lat": 24.1217,
+    "lon": 92.1784,
+    "pincode": "190093",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "South Tripura",
+    "state": "Tripura",
+    "lat": 23.2119,
+    "lon": 91.6066,
+    "pincode": "200094",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Tripura",
+    "state": "Tripura",
+    "lat": 23.7802,
+    "lon": 91.4131,
+    "pincode": "210095",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Agra",
+    "state": "Uttar Pradesh",
+    "lat": 26.9951,
+    "lon": 78.0528,
+    "pincode": "220096",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Aligarh",
+    "state": "Uttar Pradesh",
+    "lat": 27.9375,
+    "lon": 78.0015,
+    "pincode": "230097",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Allahabad",
+    "state": "Uttar Pradesh",
+    "lat": 25.392,
+    "lon": 82.0517,
+    "pincode": "240098",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ambedkar Nagar",
+    "state": "Uttar Pradesh",
+    "lat": 26.3912,
+    "lon": 82.6828,
+    "pincode": "250000",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Auraiya",
+    "state": "Uttar Pradesh",
+    "lat": 26.6689,
+    "lon": 79.4264,
+    "pincode": "260001",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Azamgarh",
+    "state": "Uttar Pradesh",
+    "lat": 26.0083,
+    "lon": 83.0122,
+    "pincode": "270002",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Badaun",
+    "state": "Uttar Pradesh",
+    "lat": 28.086,
+    "lon": 78.9971,
+    "pincode": "280003",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Baghpat",
+    "state": "Uttar Pradesh",
+    "lat": 29.0458,
+    "lon": 77.3027,
+    "pincode": "290004",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bahraich",
+    "state": "Uttar Pradesh",
+    "lat": 27.9547,
+    "lon": 81.7375,
+    "pincode": "300005",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ballia",
+    "state": "Uttar Pradesh",
+    "lat": 25.8608,
+    "lon": 84.0365,
+    "pincode": "310006",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Balrampur",
+    "state": "Uttar Pradesh",
+    "lat": 27.4491,
+    "lon": 82.4716,
+    "pincode": "320007",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Banda",
+    "state": "Uttar Pradesh",
+    "lat": 25.3519,
+    "lon": 80.5249,
+    "pincode": "330008",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bara Banki",
+    "state": "Uttar Pradesh",
+    "lat": 26.9228,
+    "lon": 81.3576,
+    "pincode": "340009",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bareilly",
+    "state": "Uttar Pradesh",
+    "lat": 28.511,
+    "lon": 79.4319,
+    "pincode": "350010",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Basti",
+    "state": "Uttar Pradesh",
+    "lat": 26.8339,
+    "lon": 82.6979,
+    "pincode": "360011",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bijnor",
+    "state": "Uttar Pradesh",
+    "lat": 29.314,
+    "lon": 78.451,
+    "pincode": "370012",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bulandshahr",
+    "state": "Uttar Pradesh",
+    "lat": 28.3488,
+    "lon": 78.0108,
+    "pincode": "380013",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chandauli",
+    "state": "Uttar Pradesh",
+    "lat": 25.1181,
+    "lon": 83.2531,
+    "pincode": "390014",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chitrakoot",
+    "state": "Uttar Pradesh",
+    "lat": 25.1599,
+    "lon": 81.0767,
+    "pincode": "400015",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Deoria",
+    "state": "Uttar Pradesh",
+    "lat": 26.4222,
+    "lon": 83.8244,
+    "pincode": "410016",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Etah",
+    "state": "Uttar Pradesh",
+    "lat": 27.5912,
+    "lon": 78.7002,
+    "pincode": "420017",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Etawah",
+    "state": "Uttar Pradesh",
+    "lat": 26.7882,
+    "lon": 79.0762,
+    "pincode": "430018",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Faizabad",
+    "state": "Uttar Pradesh",
+    "lat": 26.6059,
+    "lon": 82.0078,
+    "pincode": "440019",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Farrukhabad",
+    "state": "Uttar Pradesh",
+    "lat": 27.4506,
+    "lon": 79.4406,
+    "pincode": "450020",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Fatehpur",
+    "state": "Uttar Pradesh",
+    "lat": 25.8374,
+    "lon": 80.8542,
+    "pincode": "460021",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Firozabad",
+    "state": "Uttar Pradesh",
+    "lat": 27.2096,
+    "lon": 78.4266,
+    "pincode": "470022",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gautam Buddha Nagar",
+    "state": "Uttar Pradesh",
+    "lat": 28.3933,
+    "lon": 77.5246,
+    "pincode": "480023",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ghaziabad",
+    "state": "Uttar Pradesh",
+    "lat": 28.75,
+    "lon": 77.6744,
+    "pincode": "490024",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Ghazipur",
+    "state": "Uttar Pradesh",
+    "lat": 25.6247,
+    "lon": 83.5361,
+    "pincode": "500025",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gonda",
+    "state": "Uttar Pradesh",
+    "lat": 27.1572,
+    "lon": 82.0227,
+    "pincode": "510026",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Gorakhpur",
+    "state": "Uttar Pradesh",
+    "lat": 26.6332,
+    "lon": 83.355,
+    "pincode": "520027",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hamirpur",
+    "state": "Uttar Pradesh",
+    "lat": 25.7382,
+    "lon": 79.8262,
+    "pincode": "530028",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hardoi",
+    "state": "Uttar Pradesh",
+    "lat": 27.3374,
+    "lon": 80.2641,
+    "pincode": "540029",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hathras",
+    "state": "Uttar Pradesh",
+    "lat": 27.5781,
+    "lon": 78.1825,
+    "pincode": "550030",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jalaun",
+    "state": "Uttar Pradesh",
+    "lat": 26.068,
+    "lon": 79.3669,
+    "pincode": "560031",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jaunpur",
+    "state": "Uttar Pradesh",
+    "lat": 25.7014,
+    "lon": 82.5432,
+    "pincode": "570032",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jhansi",
+    "state": "Uttar Pradesh",
+    "lat": 25.4558,
+    "lon": 78.8995,
+    "pincode": "580033",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jyotiba Phule Nagar",
+    "state": "Uttar Pradesh",
+    "lat": 28.8705,
+    "lon": 78.3901,
+    "pincode": "590034",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kannauj",
+    "state": "Uttar Pradesh",
+    "lat": 26.994,
+    "lon": 79.6444,
+    "pincode": "600035",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kanpur Dehat",
+    "state": "Uttar Pradesh",
+    "lat": 26.4305,
+    "lon": 79.9871,
+    "pincode": "610036",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kanpur",
+    "state": "Uttar Pradesh",
+    "lat": 26.3705,
+    "lon": 80.2925,
+    "pincode": "620037",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kaushambi",
+    "state": "Uttar Pradesh",
+    "lat": 25.5359,
+    "lon": 81.4181,
+    "pincode": "630038",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kushinagar",
+    "state": "Uttar Pradesh",
+    "lat": 26.8925,
+    "lon": 83.9226,
+    "pincode": "640039",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lakhimpur Kheri",
+    "state": "Uttar Pradesh",
+    "lat": 28.0919,
+    "lon": 80.6473,
+    "pincode": "650040",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lalitpur",
+    "state": "Uttar Pradesh",
+    "lat": 24.5888,
+    "lon": 78.6008,
+    "pincode": "660041",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Lucknow",
+    "state": "Uttar Pradesh",
+    "lat": 26.8382,
+    "lon": 80.8971,
+    "pincode": "670042",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Maharajganj",
+    "state": "Uttar Pradesh",
+    "lat": 27.1771,
+    "lon": 83.4613,
+    "pincode": "680043",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mahoba",
+    "state": "Uttar Pradesh",
+    "lat": 25.3453,
+    "lon": 79.6786,
+    "pincode": "690044",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mainpuri",
+    "state": "Uttar Pradesh",
+    "lat": 27.1739,
+    "lon": 79.035,
+    "pincode": "700045",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mathura",
+    "state": "Uttar Pradesh",
+    "lat": 27.2793,
+    "lon": 77.9606,
+    "pincode": "710046",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mau",
+    "state": "Uttar Pradesh",
+    "lat": 26.0108,
+    "lon": 83.5058,
+    "pincode": "720047",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Meerut",
+    "state": "Uttar Pradesh",
+    "lat": 29.0296,
+    "lon": 77.8061,
+    "pincode": "730048",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Mirzapur",
+    "state": "Uttar Pradesh",
+    "lat": 25.1021,
+    "lon": 82.6013,
+    "pincode": "740049",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Moradabad",
+    "state": "Uttar Pradesh",
+    "lat": 28.8518,
+    "lon": 78.7358,
+    "pincode": "750050",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Muzaffarnagar",
+    "state": "Uttar Pradesh",
+    "lat": 29.4705,
+    "lon": 77.6402,
+    "pincode": "760051",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pilibhit",
+    "state": "Uttar Pradesh",
+    "lat": 28.5202,
+    "lon": 79.901,
+    "pincode": "770052",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pratapgarh",
+    "state": "Uttar Pradesh",
+    "lat": 25.8648,
+    "lon": 81.9353,
+    "pincode": "780053",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rae Bareli",
+    "state": "Uttar Pradesh",
+    "lat": 26.2539,
+    "lon": 81.2226,
+    "pincode": "790054",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rampur",
+    "state": "Uttar Pradesh",
+    "lat": 28.8324,
+    "lon": 79.1098,
+    "pincode": "800055",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Saharanpur",
+    "state": "Uttar Pradesh",
+    "lat": 30.0338,
+    "lon": 77.5991,
+    "pincode": "810056",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sant Kabir Nagar",
+    "state": "Uttar Pradesh",
+    "lat": 26.7916,
+    "lon": 83.0388,
+    "pincode": "820057",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sant Ravi Das Nagar",
+    "state": "Uttar Pradesh",
+    "lat": 25.3646,
+    "lon": 82.435,
+    "pincode": "830058",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Shahjahanpur",
+    "state": "Uttar Pradesh",
+    "lat": 27.9914,
+    "lon": 79.8302,
+    "pincode": "840059",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Shravasti",
+    "state": "Uttar Pradesh",
+    "lat": 27.9303,
+    "lon": 81.773,
+    "pincode": "850060",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Siddharth Nagar",
+    "state": "Uttar Pradesh",
+    "lat": 27.2074,
+    "lon": 82.7867,
+    "pincode": "860061",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sitapur",
+    "state": "Uttar Pradesh",
+    "lat": 27.502,
+    "lon": 80.8529,
+    "pincode": "870062",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sonbhadra",
+    "state": "Uttar Pradesh",
+    "lat": 24.4669,
+    "lon": 83.0682,
+    "pincode": "880063",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Sultanpur",
+    "state": "Uttar Pradesh",
+    "lat": 26.2846,
+    "lon": 82.0571,
+    "pincode": "890064",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Unnao",
+    "state": "Uttar Pradesh",
+    "lat": 26.6316,
+    "lon": 80.6368,
+    "pincode": "100065",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Varanasi",
+    "state": "Uttar Pradesh",
+    "lat": 25.3606,
+    "lon": 82.8253,
+    "pincode": "110066",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Almora",
+    "state": "Uttaranchal",
+    "lat": 29.6835,
+    "lon": 79.5016,
+    "pincode": "120067",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bageshwar",
+    "state": "Uttaranchal",
+    "lat": 29.987,
+    "lon": 79.8395,
+    "pincode": "130068",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Chamoli",
+    "state": "Uttaranchal",
+    "lat": 30.5834,
+    "lon": 79.5628,
+    "pincode": "140069",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Champawat",
+    "state": "Uttaranchal",
+    "lat": 29.2914,
+    "lon": 80.0772,
+    "pincode": "150070",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dehra Dun",
+    "state": "Uttaranchal",
+    "lat": 30.5333,
+    "lon": 77.9088,
+    "pincode": "160071",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Haridwar",
+    "state": "Uttaranchal",
+    "lat": 29.8861,
+    "lon": 77.9298,
+    "pincode": "170072",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Naini Tal",
+    "state": "Uttaranchal",
+    "lat": 29.3364,
+    "lon": 79.4998,
+    "pincode": "180073",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pauri Garhwal",
+    "state": "Uttaranchal",
+    "lat": 29.9781,
+    "lon": 78.7745,
+    "pincode": "190074",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Pithoragarh",
+    "state": "Uttaranchal",
+    "lat": 30.1472,
+    "lon": 80.3423,
+    "pincode": "200075",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Rudra Prayag",
+    "state": "Uttaranchal",
+    "lat": 30.5566,
+    "lon": 79.0942,
+    "pincode": "210076",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Tehri Garhwal",
+    "state": "Uttaranchal",
+    "lat": 30.4637,
+    "lon": 78.4878,
+    "pincode": "220077",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Udham Singh Nagar",
+    "state": "Uttaranchal",
+    "lat": 29.0278,
+    "lon": 79.4563,
+    "pincode": "230078",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Uttarkashi",
+    "state": "Uttaranchal",
+    "lat": 30.969,
+    "lon": 78.5688,
+    "pincode": "240079",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Bankura",
+    "state": "West Bengal",
+    "lat": 23.0813,
+    "lon": 87.1264,
+    "pincode": "250080",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Barddhaman",
+    "state": "West Bengal",
+    "lat": 23.4445,
+    "lon": 87.8151,
+    "pincode": "260081",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Birbhum",
+    "state": "West Bengal",
+    "lat": 24.0639,
+    "lon": 87.6515,
+    "pincode": "270082",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Dakshin Dinajpur",
+    "state": "West Bengal",
+    "lat": 25.3421,
+    "lon": 88.6982,
+    "pincode": "280083",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Darjiling",
+    "state": "West Bengal",
+    "lat": 26.8396,
+    "lon": 88.3315,
+    "pincode": "290084",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "East Midnapore",
+    "state": "West Bengal",
+    "lat": 21.9762,
+    "lon": 88.0985,
+    "pincode": "300085",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Haora",
+    "state": "West Bengal",
+    "lat": 22.4275,
+    "lon": 87.9225,
+    "pincode": "310086",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Hugli",
+    "state": "West Bengal",
+    "lat": 22.8793,
+    "lon": 88.0001,
+    "pincode": "320087",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Jalpaiguri",
+    "state": "West Bengal",
+    "lat": 26.6264,
+    "lon": 89.0415,
+    "pincode": "330088",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kochbihar",
+    "state": "West Bengal",
+    "lat": 26.2505,
+    "lon": 89.3061,
+    "pincode": "340089",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Kolkata",
+    "state": "West Bengal",
+    "lat": 22.5506,
+    "lon": 88.3528,
+    "pincode": "350090",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Maldah",
+    "state": "West Bengal",
+    "lat": 25.0803,
+    "lon": 88.1719,
+    "pincode": "360091",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Murshidabad",
+    "state": "West Bengal",
+    "lat": 24.3152,
+    "lon": 88.6755,
+    "pincode": "370092",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Nadia",
+    "state": "West Bengal",
+    "lat": 23.5641,
+    "lon": 88.5829,
+    "pincode": "380093",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "North 24 Parganas",
+    "state": "West Bengal",
+    "lat": 21.5751,
+    "lon": 88.861,
+    "pincode": "390094",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Puruliya",
+    "state": "West Bengal",
+    "lat": 23.2542,
+    "lon": 86.3969,
+    "pincode": "400095",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "South 24 Parganas",
+    "state": "West Bengal",
+    "lat": 21.5737,
+    "lon": 88.0181,
+    "pincode": "410096",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "Uttar Dinajpur",
+    "state": "West Bengal",
+    "lat": 25.5959,
+    "lon": 88.4581,
+    "pincode": "420097",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  },
+  {
+    "district": "West Midnapore",
+    "state": "West Bengal",
+    "lat": 22.3549,
+    "lon": 87.231,
+    "pincode": "430098",
+    "data_source": "Public Open GIS India GeoJSON Dataset"
+  }
 ]

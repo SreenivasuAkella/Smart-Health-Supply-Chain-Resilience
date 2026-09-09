@@ -1,0 +1,153 @@
+'use client';
+import React, { useState } from 'react';
+import { 
+  Menu, 
+  RefreshCw, 
+  Cpu, 
+  Key, 
+  Languages, 
+  CheckCircle2, 
+  Search, 
+  Bell, 
+  Activity, 
+  ShieldAlert, 
+  MapPin, 
+  Sparkles, 
+  ThermometerSnowflake, 
+  Network, 
+  Zap, 
+  FileSpreadsheet
+} from 'lucide-react';
+import { triggerLiveDatasetSync } from '../services/api';
+
+const TAB_METADATA = {
+  overview: { title: "National Command Center", subtitle: "Real-time PHC Resource, Bed Occupancy & Staff Mesh", icon: Activity },
+  map: { title: "Geospatial Rebalancer", subtitle: "Dynamic Road Flood Risk Routing & Pre-positioning", icon: MapPin },
+  inventory: { title: "e-Aushadhi National Ledger", subtitle: "Real-Time Rural Clinic Medicine Inventory & Burn Rates", icon: FileSpreadsheet },
+  forecasting: { title: "Epidemic Outbreak Forecasting", subtitle: "BigQuery IMD Weather & IDSP Morbidity Time-Series Models", icon: ShieldAlert },
+  coldchain: { title: "Cold-Chain IoT Digital Twin", subtitle: "Firebase Real-Time Thermal Watchdog & Mean Kinetic Temp", icon: ThermometerSnowflake },
+  federated: { title: "Federated Multi-State AI", subtitle: "Privacy-Preserving Cross-State Healthcare Model Aggregation", icon: Network },
+  simulation: { title: "Crisis Sandbox Drills", subtitle: "Monsoon Inundation & Supply Disruption Resilience Simulator", icon: Zap },
+  vision: { title: "Gemini Vision Scanner", subtitle: "Multimodal Visual Expiry, Batch & Damage Diagnostics", icon: Sparkles },
+  voice: { title: "ASHA Voice Copilot", subtitle: "8-Language Multilingual Clinical & Reorder Assistant", icon: Languages }
+};
+
+export default function TopHeader({
+  activeTab,
+  onOpenMobileMenu,
+  onOpenTechModal,
+  onOpenKeyModal,
+  onOpenCopilot,
+  isKeyConfigured,
+  onDataRefresh
+}) {
+  const [syncing, setSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
+
+  const currentTab = TAB_METADATA[activeTab] || TAB_METADATA.overview;
+  const CurrentIcon = currentTab.icon;
+
+  const handleSyncPublicData = async () => {
+    setSyncing(true);
+    setSyncSuccess(false);
+    try {
+      await triggerLiveDatasetSync();
+      if (onDataRefresh) await onDataRefresh();
+      setSyncSuccess(true);
+      setTimeout(() => setSyncSuccess(false), 4000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <header className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-6 py-3.5">
+      <div className="flex items-center justify-between gap-4">
+        
+        {/* Left: Mobile Toggle & Page Info */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onOpenMobileMenu}
+            className="lg:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu size={18} />
+          </button>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 items-center justify-center text-cyan-400">
+              <CurrentIcon size={18} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  {currentTab.title}
+                </h2>
+                <span className="hidden md:inline-block bg-slate-900 text-slate-400 border border-slate-800 text-[10px] font-mono px-2 py-0.5 rounded">
+                  India Grid
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 hidden sm:block truncate max-w-md">
+                {currentTab.subtitle}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Quick Action Controls */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          
+          {/* Live Data Sync Button */}
+          <button
+            onClick={handleSyncPublicData}
+            disabled={syncing}
+            className="flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-cyan-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-sm"
+            title="Fetch live IMD/data.gov.in datasets into BigQuery and Firebase"
+          >
+            <RefreshCw size={13} className={syncing ? "animate-spin text-cyan-400" : ""} />
+            <span className="hidden sm:inline">{syncing ? "Syncing..." : syncSuccess ? "Synced!" : "Sync Public APIs"}</span>
+            {syncSuccess && <CheckCircle2 size={13} className="text-emerald-400" />}
+          </button>
+
+          {/* Voice Copilot Quick Launch */}
+          <button
+            onClick={onOpenCopilot}
+            className="flex items-center gap-1.5 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all"
+            title="Launch ASHA Multilingual Voice Copilot"
+          >
+            <Languages size={14} className="text-indigo-400" />
+            <span className="hidden md:inline">Voice Copilot</span>
+          </button>
+
+          {/* Google AI Stack Architecture Modal */}
+          <button
+            onClick={onOpenTechModal}
+            className="flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all"
+            title="View Google Cloud & AI Platform Architecture"
+          >
+            <Cpu size={14} className="text-cyan-400" />
+            <span className="hidden lg:inline">Google AI Stack</span>
+          </button>
+
+          {/* Gemini Key Config Button */}
+          <button
+            onClick={onOpenKeyModal}
+            className={`
+              flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-all border
+              ${isKeyConfigured 
+                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30' 
+                : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/30'}
+            `}
+            title="Configure Google Gemini API Key"
+          >
+            <Key size={13} />
+            <span className="hidden xl:inline">{isKeyConfigured ? "Gemini Ready" : "Set Gemini Key"}</span>
+          </button>
+        </div>
+
+      </div>
+    </header>
+  );
+}

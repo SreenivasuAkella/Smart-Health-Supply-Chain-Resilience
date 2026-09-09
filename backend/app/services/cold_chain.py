@@ -65,8 +65,10 @@ def get_live_telemetry_stream() -> Dict[str, Any]:
             ambient_heat_factor = max(0.0, (matched_district.get("coldChainHours", 1.0) - 1.0) * 0.4)
             
         jitter = round(random.uniform(-0.15, 0.15), 2)
-        base_t = fb_sensor_data.get("temperature_celsius") if fb_sensor_data else item["currentTemp"]
-        live_temp = round(base_t + jitter + (ambient_heat_factor * 0.3), 2)
+        base_t = (fb_sensor_data.get("temperature_celsius") if fb_sensor_data else None) or item.get("currentTemp", 4.5)
+        if base_t is None:
+            base_t = 4.5
+        live_temp = round(float(base_t) + jitter + (ambient_heat_factor * 0.3), 2)
         
         # Calculate 24-hour temperature history curve
         history = [round(live_temp + random.uniform(-0.35, 0.35), 1) for _ in range(12)]

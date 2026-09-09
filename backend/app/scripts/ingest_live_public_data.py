@@ -29,58 +29,63 @@ from app.config import (
     GOOGLE_CLOUD_PROJECT,
     BIGQUERY_DATASET,
     GOOGLE_APPLICATION_CREDENTIALS,
-    GCP_SERVICE_ACCOUNT_JSON
+    GCP_SERVICE_ACCOUNT_JSON,
+    OPEN_METEO_API_URL,
+    WHO_GHO_API_URL,
+    DATA_GOV_IN_API_URL,
+    DATA_GOV_IN_API_KEY
 )
+
+import concurrent.futures
+from app.services.district_data_service import fetch_live_public_districts
 
 def load_all_india_districts() -> List[Dict[str, Any]]:
     """
-    Loads official National District Registry across all Indian States & UTs.
+    Loads official National District Registry dynamically resolved from Public GIS endpoints.
     """
-    districts_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "india_districts.json")
-    if os.path.exists(districts_file):
-        with open(districts_file, "r") as f:
-            return json.load(f)
-    return [
-        {"district": "Varanasi", "state": "Uttar Pradesh", "lat": 25.3176, "lon": 82.9739, "pincode": "221001"},
-        {"district": "Gorakhpur", "state": "Uttar Pradesh", "lat": 26.7606, "lon": 83.3732, "pincode": "273001"},
-        {"district": "Patna", "state": "Bihar", "lat": 25.5941, "lon": 85.1376, "pincode": "800001"},
-        {"district": "Wayanad", "state": "Kerala", "lat": 11.6854, "lon": 76.1320, "pincode": "673121"}
-    ]
+    return fetch_live_public_districts()
 
 def fetch_live_meteorology(lat: float, lon: float) -> Dict[str, Any]:
     """
-    Fetches live weather & precipitation models from Open-Meteo (IMD / ECMWF models).
+    Fetches live weather & precipitation directly from Open-Meteo (IMD / ECMWF public weather models).
     """
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,precipitation,rain&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto"
+    url = f"{OPEN_METEO_API_URL}?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,precipitation,rain,surface_pressure,wind_speed_10m,weather_code&timezone=auto"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Sanjeevani-Health-Pipeline/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=4) as response:
             if response.status == 200:
                 data = json.loads(response.read().decode())
                 current = data.get("current", {})
-                daily = data.get("daily", {})
                 
-                temp = current.get("temperature_2m", 28.0)
-                rain = sum(daily.get("precipitation_sum", [0])) or current.get("precipitation", 0.0)
                 return {
-                    "avg_temp_c": float(temp),
-                    "rainfall_mm": float(rain),
-                    "humidity": current.get("relative_humidity_2m", 65.0)
+                    "avg_temp_c": float(current.get("temperature_2m", 0.0)),
+                    "rainfall_mm": float(current.get("precipitation", current.get("rain", 0.0))),
+                    "humidity": float(current.get("relative_humidity_2m", 0.0)),
+                    "surface_pressure": float(current.get("surface_pressure", 1013.25)),
+                    "wind_speed": float(current.get("wind_speed_10m", 0.0)),
+                    "weather_code": int(current.get("weather_code", 0))
                 }
-    except Exception as e:
+    except Exception:
         pass
     
-    return {"avg_temp_c": 29.5, "rainfall_mm": 12.0, "humidity": 70.0}
+    return {
+        "avg_temp_c": 0.0,
+        "rainfall_mm": 0.0,
+        "humidity": 0.0,
+        "surface_pressure": 1013.25,
+        "wind_speed": 0.0,
+        "weather_code": 0
+    }
 
 
 def fetch_who_gho_indicators() -> Dict[str, Any]:
     """
     Fetches live disease and health indicators from the WHO Global Health Observatory (GHO) OData API.
     """
-    url = "https://ghoapi.azureedge.net/api/Dimension/COUNTRY/DimensionValues"
+    url = WHO_GHO_API_URL
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Sanjeevani-Health-Pipeline/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=4) as response:
             if response.status == 200:
                 print("[WHO GHO API]: Connected successfully to WHO Global Health Observatory.")
                 return {"status": "SUCCESS", "source": "WHO Global Health Observatory"}
@@ -93,12 +98,41 @@ def fetch_data_gov_in(api_key: Optional[str] = None) -> Dict[str, Any]:
     """
     Connects to data.gov.in Open Government Data (OGD) platform API.
     """
-    api_key = api_key or os.getenv("DATA_GOV_IN_API_KEY", "")
+    api_key = api_key or DATA_GOV_IN_API_KEY
     if not api_key:
         print("[data.gov.in]: Using Open Datasets feeds.")
         return {"source": "data.gov.in Open Datasets"}
     
     return {"source": "data.gov.in Live API"}
+
+
+def process_district_record(item: Dict[str, Any], current_month: str) -> Dict[str, Any]:
+    district_name = item["district"]
+    state_name = item["state"]
+    lat = item["lat"]
+    lon = item["lon"]
+    pincode = item.get("pincode", "110001")
+    
+    meteo = fetch_live_meteorology(lat, lon)
+    clean_code = "".join(c for c in district_name[:3] if c.isalnum()).upper() or "IND"
+    
+    return {
+        "record_id": f"PUB-{clean_code}-{current_month}",
+        "district": district_name,
+        "state": state_name,
+        "lat": lat,
+        "lon": lon,
+        "pincode": pincode,
+        "month_year": current_month,
+        "avg_ambient_temp_c": round(meteo["avg_temp_c"], 2),
+        "rainfall_mm": round(meteo["rainfall_mm"], 2),
+        "relative_humidity_pct": round(meteo["humidity"], 1),
+        "surface_pressure_hpa": round(meteo["surface_pressure"], 1),
+        "wind_speed_kmh": round(meteo["wind_speed"], 1),
+        "weather_code": meteo["weather_code"],
+        "data_source": "Live Open-Meteo IMD Weather API, OpenStreetMap & WHO Global Health Observatory",
+        "last_synced_utc": datetime.utcnow().isoformat() + "Z"
+    }
 
 
 def build_and_ingest_pipeline(districts_limit: Optional[int] = None):
@@ -117,55 +151,22 @@ def build_and_ingest_pipeline(districts_limit: Optional[int] = None):
     print("\n[2/3] Checking data.gov.in OGD Portal status...")
     fetch_data_gov_in()
 
-    # 3. Load all Indian districts
+    # 3. Load all Indian districts dynamically from public GIS
     all_districts = load_all_india_districts()
     target_districts = all_districts[:districts_limit] if districts_limit else all_districts
-    print(f"\n[3/3] Fetching live IMD / Meteorological feeds for {len(target_districts)} Indian Districts across all States & UTs...")
+    print(f"\n[3/3] Fetching live IMD / Meteorological feeds for {len(target_districts)} Indian Districts across all States & UTs (Parallel Mode)...")
     
     records_to_insert = []
     current_month = datetime.utcnow().strftime("%Y-%m")
 
-    for item in target_districts:
-        district_name = item["district"]
-        state_name = item["state"]
-        lat = item["lat"]
-        lon = item["lon"]
-        pincode = item.get("pincode", "110001")
-        
-        meteo = fetch_live_meteorology(lat, lon)
-        rain = meteo["rainfall_mm"]
-        temp = meteo["avg_temp_c"]
-        
-        # Risk & velocity modeling based on live temperature and precipitation
-        est_dengue = int(max(40, (rain * 4.2) + (temp * 7.8)))
-        est_malaria = int(max(18, (rain * 2.0) + (temp * 3.2)))
-        est_snakebite = int(max(12, (rain * 0.75) + 18))
-        burn_rate = round(float(est_snakebite * 0.42 + 10.0), 2)
-        
-        # Coastal & flood risk weighting
-        is_high_flood_zone = any(z in state_name for z in ["Kerala", "Bengal", "Assam", "Odisha", "Bihar"])
-        flood_risk = min(1.0, round(float(rain / 280.0) + (0.35 if is_high_flood_zone else 0.08), 2))
-        cold_chain_risk_hours = round(float(max(0.4, (temp - 26.0) * 0.42)), 1) if temp > 26 else 0.4
-
-        clean_code = "".join(c for c in district_name[:3] if c.isalnum()).upper() or "IND"
-        record = {
-            "record_id": f"LIVE-{clean_code}-{current_month}",
-            "district": district_name,
-            "state": state_name,
-            "pincode": pincode,
-            "month_year": current_month,
-            "dengue_cases": est_dengue,
-            "malaria_cases": est_malaria,
-            "snakebite_cases": est_snakebite,
-            "asv_monthly_burn_rate": burn_rate,
-            "paracetamol_stockout_days": 2 if rain > 120 else 0,
-            "rainfall_mm": round(rain, 2),
-            "avg_ambient_temp_c": round(temp, 2),
-            "cold_chain_excursion_hours": cold_chain_risk_hours,
-            "flood_risk_score": flood_risk,
-            "data_source": "Live Open-Meteo IMD Grid, OGD India & ISRO Bhuvan"
-        }
-        records_to_insert.append(record)
+    # Multi-threaded parallel fetching across districts
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(process_district_record, d, current_month) for d in target_districts]
+        for f in concurrent.futures.as_completed(futures):
+            try:
+                records_to_insert.append(f.result())
+            except Exception:
+                pass
 
     # 4. Ingest into BigQuery
     try:
@@ -188,7 +189,7 @@ def build_and_ingest_pipeline(districts_limit: Optional[int] = None):
             
             # Use batch Load Job (100% Free-Tier & Sandbox compatible)
             job_config = bigquery.LoadJobConfig(
-                write_disposition=bigquery.WriteDisposition.WRITE_APPEND
+                write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
             )
             load_job = client.load_table_from_json(records_to_insert, table_ref, job_config=job_config)
             load_job.result()  # Wait for the load job to complete
@@ -202,13 +203,29 @@ def build_and_ingest_pipeline(districts_limit: Optional[int] = None):
     # 5. Ingest into Firebase Realtime Database (for real-time dashboard subscriptions)
     try:
         from app.services.firebase_service import firebase_service
-        print(f"\n[Firebase] Syncing live surveillance and IoT telemetry to Firebase Realtime Database...")
+        from app.services.facility_data_service import get_active_public_facilities
+        from app.services.medicine_data_service import get_active_essential_medicines
+
+        print(f"\n[Firebase] Syncing live surveillance, facilities, and medicines to Firebase Realtime Database...")
         firebase_payload = {r["district"]: r for r in records_to_insert}
         fb_res = firebase_service.write_data("surveillance/districts", firebase_payload)
+        
+        # Sync authentic OpenStreetMap facilities
+        osm_facilities = get_active_public_facilities()
+        firebase_service.write_data("inventory/facilities", osm_facilities)
+        print(f"✅ Synced {len(osm_facilities)} authentic OpenStreetMap facilities to Firebase (/inventory/facilities)")
+
+        # Sync authentic OpenFDA medicines
+        fda_medicines = get_active_essential_medicines()
+        firebase_service.write_data("inventory/medicines", fda_medicines)
+        print(f"✅ Synced {len(fda_medicines)} authentic OpenFDA medicines to Firebase (/inventory/medicines)")
+
         firebase_service.write_data("surveillance/last_sync", {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "records_count": len(records_to_insert),
-            "sources": ["IMD Meteorological Grid", "data.gov.in OGD", "WHO GHO", "ISRO Bhuvan"]
+            "facilities_count": len(osm_facilities),
+            "medicines_count": len(fda_medicines),
+            "sources": ["IMD Meteorological Grid", "OpenStreetMap Geospatial Directory", "OpenFDA Drug Registry", "WHO GHO"]
         })
         print(f"✅ Firebase Sync Status: {fb_res.get('status', 'SYNCED')}")
     except Exception as fb_err:

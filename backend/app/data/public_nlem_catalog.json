@@ -17,23 +17,7 @@
     "indication_summary": "Use as directed by a physician or for conditions specified on package labeling.",
     "dataSource": "Live OpenFDA Drug Label Registry analyzed by Google Gemini AI",
     "data_source": "Live OpenFDA Drug Label Registry analyzed by Google Gemini AI",
-    "last_synced_utc": "2026-09-02T05:38:22.715275Z",
-    "inventoryByFacility": {
-      "DH-VARANASI-01": 150,
-      "CHC-CHOLAPUR-02": 150,
-      "PHC-BARAGAON-03": 150,
-      "PHC-PINDRA-04": 150,
-      "DH-PATNA-05": 150,
-      "PHC-DANAPUR-06": 150,
-      "WH-GUWAHATI-07": 150,
-      "PHC-MORIGAON-08": 150,
-      "DH-PUNE-09": 150,
-      "PHC-JUNNAR-10": 150,
-      "DH-WAYANAD-11": 150,
-      "PHC-MEPPADI-12": 150
-    },
-    "currentTotal": 1800,
-    "status": "ADEQUATE"
+    "last_synced_utc": "2026-09-02T05:38:22.715275Z"
   },
   {
     "id": "PUB-MED-002",
@@ -53,23 +37,7 @@
     "indication_summary": "Provides broad-spectrum SPF 46 PA+++ sun protection in a multi-purpose mineral powder formula.",
     "dataSource": "Live OpenFDA Drug Label Registry analyzed by Google Gemini AI",
     "data_source": "Live OpenFDA Drug Label Registry analyzed by Google Gemini AI",
-    "last_synced_utc": "2026-09-02T05:38:28.588950Z",
-    "inventoryByFacility": {
-      "DH-VARANASI-01": 150,
-      "CHC-CHOLAPUR-02": 150,
-      "PHC-BARAGAON-03": 150,
-      "PHC-PINDRA-04": 150,
-      "DH-PATNA-05": 150,
-      "PHC-DANAPUR-06": 150,
-      "WH-GUWAHATI-07": 150,
-      "PHC-MORIGAON-08": 150,
-      "DH-PUNE-09": 150,
-      "PHC-JUNNAR-10": 150,
-      "DH-WAYANAD-11": 150,
-      "PHC-MEPPADI-12": 150
-    },
-    "currentTotal": 1800,
-    "status": "ADEQUATE"
+    "last_synced_utc": "2026-09-02T05:38:28.588950Z"
   },
   {
     "id": "PUB-MED-003",
@@ -89,22 +57,6 @@
     "indication_summary": "First aid to help prevent infection in minor cuts, scrapes, and burns.",
     "dataSource": "Live OpenFDA Drug Label Registry analyzed by Google Gemini AI",
     "data_source": "Live OpenFDA Drug Label Registry analyzed by Google Gemini AI",
-    "last_synced_utc": "2026-09-02T05:38:36.449384Z",
-    "inventoryByFacility": {
-      "DH-VARANASI-01": 150,
-      "CHC-CHOLAPUR-02": 150,
-      "PHC-BARAGAON-03": 150,
-      "PHC-PINDRA-04": 150,
-      "DH-PATNA-05": 150,
-      "PHC-DANAPUR-06": 150,
-      "WH-GUWAHATI-07": 150,
-      "PHC-MORIGAON-08": 150,
-      "DH-PUNE-09": 150,
-      "PHC-JUNNAR-10": 150,
-      "DH-WAYANAD-11": 150,
-      "PHC-MEPPADI-12": 150
-    },
-    "currentTotal": 1800,
-    "status": "ADEQUATE"
+    "last_synced_utc": "2026-09-02T05:38:36.449384Z"
   }
 ]

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { ThermometerSnowflake, AlertTriangle, BatteryCharging, Radio, CheckCircle2, Wrench, RefreshCw, Cpu } from 'lucide-react';
-import { fetchColdChainTelemetry } from '../services/api';
+import { fetchColdChainTelemetry, subscribeToLiveSSE } from '../services/api';
 
 export default function ColdChainDigitalTwin() {
   const [telemetryData, setTelemetryData] = useState(null);
@@ -10,14 +10,24 @@ export default function ColdChainDigitalTwin() {
 
   const loadTelemetry = async () => {
     const data = await fetchColdChainTelemetry();
-    setTelemetryData(data);
+    if (data) setTelemetryData(data);
     setLoading(false);
   };
 
   useEffect(() => {
     loadTelemetry();
-    const interval = setInterval(loadTelemetry, 5000);
-    return () => clearInterval(interval);
+    
+    // Subscribe to SSE Real-Time IoT Stream
+    const unsubscribeSSE = subscribeToLiveSSE((event) => {
+      if (event.type === 'telemetry' && event.data) {
+        setTelemetryData(event.data);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      if (unsubscribeSSE) unsubscribeSSE();
+    };
   }, []);
 
   const handleSendSOS = () => {
@@ -27,9 +37,54 @@ export default function ColdChainDigitalTwin() {
 
   if (loading || !telemetryData) {
     return (
-      <div className="glass-panel p-12 text-center text-slate-400">
-        <RefreshCw className="animate-spin text-cyan-400 mx-auto mb-3" size={28} />
-        <span>Connecting to MQTT / Firebase Cold-Chain Telemetry Stream...</span>
+      <div className="space-y-6 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="glass-panel p-6 border border-slate-800 space-y-3">
+          <div className="flex gap-2">
+            <div className="skeleton w-44 h-6 rounded-full" />
+            <div className="skeleton w-48 h-6 rounded-full" />
+          </div>
+          <div className="skeleton w-1/2 h-7 rounded-lg" />
+          <div className="skeleton w-full max-w-xl h-4 rounded" />
+        </div>
+
+        {/* 6 Sensor Cards Skeletons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="glass-panel p-5 border border-slate-800 space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <div className="skeleton w-16 h-3 rounded" />
+                  <div className="skeleton w-36 h-5 rounded" />
+                  <div className="skeleton w-28 h-3 rounded" />
+                </div>
+                <div className="skeleton w-20 h-5 rounded-full" />
+              </div>
+
+              <div className="flex justify-between items-baseline py-2">
+                <div className="space-y-1">
+                  <div className="skeleton w-24 h-9 rounded" />
+                  <div className="skeleton w-28 h-3 rounded" />
+                </div>
+                <div className="space-y-1">
+                  <div className="skeleton w-24 h-3 rounded" />
+                  <div className="skeleton w-16 h-5 rounded" />
+                </div>
+              </div>
+
+              {/* Sparkline Skeleton */}
+              <div className="space-y-1.5">
+                <div className="skeleton w-40 h-3 rounded" />
+                <div className="skeleton w-full h-10 rounded-lg" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                <div className="skeleton h-4 rounded" />
+                <div className="skeleton h-4 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

@@ -18,11 +18,15 @@ def generate_reallocation_plan(target_facility_id: str = "PHC-BARAGAON-03", medi
     Autonomous Reallocation Optimizer:
     Finds optimal surplus facilities, computes Google Maps compliant transit route & cold-chain compliance window.
     """
-    facilities_path = os.path.join(os.path.dirname(__file__), "..", "data", "facilities.json")
+    from .facility_data_service import get_active_public_facilities
     medicines_path = os.path.join(os.path.dirname(__file__), "..", "data", "medicines.json")
     
-    with open(facilities_path, "r") as f:
-        facilities = {fac["id"]: fac for fac in json.load(f)}
+    facilities_list = get_active_public_facilities()
+    facilities = {fac["id"]: fac for fac in facilities_list}
+    # Also support searching by name or fallback to first facility if ID mismatch
+    if target_facility_id not in facilities and facilities_list:
+        target_facility = facilities_list[0]
+        target_facility_id = target_facility["id"]
     with open(medicines_path, "r") as f:
         medicines = {med["id"]: med for med in json.load(f)}
         

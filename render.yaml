@@ -11,3 +11,15 @@ services:
         value: gemini-1.5-flash
       - key: GOOGLE_CLOUD_PROJECT
         value: sanjeevani-ai-health-national
+      - key: BIGQUERY_DATASET
+        value: indian_public_health_surveillance
+      - key: FIREBASE_PROJECT_ID
+        value: sanjeevani-health-iot
+      - key: FIREBASE_DATABASE_URL
+        value: https://sanjeevani-health-iot-default-rtdb.asia-southeast1.firebasedatabase.app
+      - key: OPEN_METEO_API_URL
+        value: https://api.open-meteo.com/v1/forecast
+      - key: WHO_GHO_API_URL
+        value: https://ghoapi.azureedge.net/api/Dimension/COUNTRY/DimensionValues
+      - key: DATA_GOV_IN_API_URL
+        value: https://api.data.gov.in/resource

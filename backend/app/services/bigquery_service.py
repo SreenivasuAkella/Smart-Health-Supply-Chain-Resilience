@@ -7,8 +7,7 @@ from ..config import GOOGLE_CLOUD_PROJECT, BIGQUERY_DATASET, GOOGLE_APPLICATION_
 class BigQueryHealthWarehouse:
     """
     Google BigQuery Data Warehouse Connector for India's National Public Health Datasets.
-    Connects to live BigQuery dataset when GCP credentials exist,
-    with an embedded high-performance analytical engine for hackathon evaluation.
+    Connects to live BigQuery dataset when GCP credentials exist.
     """
     def __init__(self, project_id: Optional[str] = None):
         self.project_id = project_id or GOOGLE_CLOUD_PROJECT
@@ -39,7 +38,7 @@ class BigQueryHealthWarehouse:
                 print(f"[BigQuery]: Authenticated successfully with service account key at {creds_path}")
                 return
 
-            # 3. Default Application Credentials (GCP Cloud Run / GKE IAM)
+            # 3. Default Application Credentials
             if self.project_id:
                 self.client = bq_mod.Client(project=self.project_id)
                 print(f"[BigQuery]: Initialized client with project {self.project_id}")
@@ -47,22 +46,33 @@ class BigQueryHealthWarehouse:
             print(f"[BigQuery Notice]: Live GCP BigQuery client could not be initialized ({e}). Using optimized fallback.")
             self.client = None
 
-    def query_morbidity_and_drug_velocity(self, district: str = "Varanasi") -> Dict[str, Any]:
+    def query_morbidity_and_drug_velocity(self, district: Optional[str] = None, search: Optional[str] = None) -> Dict[str, Any]:
         """
-        Executes BigQuery SQL aggregation over millions of historical patient intake records
-        and e-Aushadhi monthly commodity burn rates.
+        Executes BigQuery SQL aggregation over authentic public meteorological
+        and health surveillance records for a single district or all districts.
         """
+        where_clauses = []
+        if district and district.strip() and district.lower() != "all":
+            where_clauses.append(f"LOWER(district) = '{district.strip().lower()}'")
+        if search and search.strip():
+            s = search.strip().lower()
+            where_clauses.append(f"(LOWER(district) LIKE '%{s}%' OR LOWER(state) LIKE '%{s}%')")
+
+        where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
         sql_query = f"""
         SELECT 
             district,
             state,
-            SUM(dengue_cases) as total_dengue_cases,
-            SUM(malaria_cases) as total_malaria_cases,
-            AVG(asv_monthly_burn_rate) as avg_asv_velocity,
-            AVG(cold_chain_excursion_hours) as risk_exposure_hours
+            ROUND(AVG(avg_ambient_temp_c), 1) as avg_temp_c,
+            ROUND(SUM(rainfall_mm), 1) as total_rainfall_mm,
+            ROUND(AVG(relative_humidity_pct), 1) as avg_humidity_pct,
+            ROUND(AVG(surface_pressure_hpa), 1) as avg_surface_pressure,
+            data_source
         FROM `{self.project_id}.{self.dataset_id}.district_morbidity_cube`
-        WHERE district = '{district}'
-        GROUP BY district, state
+        {where_sql}
+        GROUP BY district, state, data_source
+        ORDER BY district ASC
         """
 
         if self.client:
@@ -76,44 +86,70 @@ class BigQueryHealthWarehouse:
                     "data": results
                 }
             except Exception as e:
-                print(f"[BigQuery Notice]: {e}. Using BigQuery analytical pipeline.")
+                print(f"[BigQuery Notice]: {e}")
 
-        # High-Fidelity BigQuery Analytical Fallback
         return {
             "source": f"Google BigQuery Engine ({self.dataset_id}.district_morbidity_cube)",
             "project_id": self.project_id,
             "sql_executed": sql_query.strip(),
-            "query_cost_estimate": "0.002 MB processed (Cached Query Plan)",
-            "records_scanned": "8 Live Surveillance Records",
-            "execution_time_ms": 42,
-            "data": [
-                {
-                    "district": district,
-                    "state": "Uttar Pradesh" if district == "Varanasi" else "National Grid",
-                    "total_dengue_cases": 527,
-                    "total_malaria_cases": 234,
-                    "avg_asv_velocity": 44.85,
-                    "risk_exposure_hours": 1.1
+            "data": []
+        }
+
+    def execute_custom_sql(self, custom_sql: str) -> Dict[str, Any]:
+        """
+        Executes a custom read-only SQL query against the BigQuery health warehouse.
+        """
+        cleaned_sql = custom_sql.strip()
+        # Security sanitization: only allow SELECT queries
+        if not cleaned_sql.lower().startswith("select"):
+            return {
+                "status": "error",
+                "message": "Only read-only SELECT queries are permitted on the public health data warehouse.",
+                "data": []
+            }
+
+        if self.client:
+            try:
+                query_job = self.client.query(cleaned_sql)
+                results = [dict(row) for row in query_job]
+                return {
+                    "status": "success",
+                    "source": f"Live Google BigQuery ({self.project_id})",
+                    "sql_executed": cleaned_sql,
+                    "records_scanned": f"{len(results)} Rows",
+                    "data": results
                 }
-            ]
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "message": str(e),
+                    "sql_executed": cleaned_sql,
+                    "data": []
+                }
+
+        return {
+            "status": "error",
+            "message": "BigQuery client not connected",
+            "data": []
         }
 
     def get_live_district_vulnerabilities(self) -> Dict[str, Any]:
         """
-        Fetches the latest district-level morbidity, rainfall, and flood risk scores
+        Fetches the latest authentic district-level meteorology and environmental records
         from the live BigQuery table.
         """
         sql_query = f"""
         SELECT 
             district,
             state,
-            dengue_cases,
-            malaria_cases,
-            snakebite_cases,
-            asv_monthly_burn_rate,
+            lat,
+            lon,
+            avg_ambient_temp_c,
             rainfall_mm,
-            cold_chain_excursion_hours,
-            flood_risk_score,
+            relative_humidity_pct,
+            surface_pressure_hpa,
+            wind_speed_kmh,
+            weather_code,
             data_source
         FROM `{self.project_id}.{self.dataset_id}.district_morbidity_cube`
         """
@@ -127,13 +163,12 @@ class BigQueryHealthWarehouse:
                         dist = r.get("district")
                         if dist:
                             vulnerabilities[dist] = {
-                                "dengueCases": r.get("dengue_cases", 0),
-                                "malariaCases": r.get("malaria_cases", 0),
-                                "snakebiteCases": r.get("snakebite_cases", 0),
-                                "asvBurnRate": r.get("asv_monthly_burn_rate", 35.0),
-                                "rainfallMm": r.get("rainfall_mm", 50.0),
-                                "coldChainHours": r.get("cold_chain_excursion_hours", 1.0),
-                                "floodRisk": r.get("flood_risk_score", 0.3),
+                                "avgTempC": r.get("avg_ambient_temp_c", 0.0),
+                                "rainfallMm": r.get("rainfall_mm", 0.0),
+                                "humidityPct": r.get("relative_humidity_pct", 0.0),
+                                "surfacePressure": r.get("surface_pressure_hpa", 1013.25),
+                                "windSpeedKmh": r.get("wind_speed_kmh", 0.0),
+                                "weatherCode": r.get("weather_code", 0),
                                 "source": r.get("data_source", "Live BigQuery")
                             }
                     return {"source": "Live Google BigQuery", "districts": vulnerabilities, "raw": results}

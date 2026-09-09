@@ -1,6 +1,11 @@
 import os
 from dotenv import load_dotenv
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+
+load_dotenv(os.path.join(ROOT_DIR, ".env"))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 load_dotenv()
 
 # Google Gemini API Configuration
@@ -38,9 +43,18 @@ else:
 
 # Firebase Configuration
 FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "sanjeevani-health-iot")
-FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL", "https://sanjeevani-health-iot-default-rtdb.firebaseio.com")
+FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL", "https://sanjeevani-health-iot-default-rtdb.asia-southeast1.firebasedatabase.app")
 FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "")
 FIREBASE_AUTH_DOMAIN = os.getenv("FIREBASE_AUTH_DOMAIN", f"{FIREBASE_PROJECT_ID}.firebaseapp.com")
+
+# Public Health, GIS & Meteorology APIs
+OPEN_METEO_API_URL = os.getenv("OPEN_METEO_API_URL", "https://api.open-meteo.com/v1/forecast")
+WHO_GHO_API_URL = os.getenv("WHO_GHO_API_URL", "https://ghoapi.azureedge.net/api/Dimension/COUNTRY/DimensionValues")
+OPEN_DRUG_DATABASE_API_URL = os.getenv("OPEN_DRUG_DATABASE_API_URL", "https://api.fda.gov/drug/label.json")
+PUBLIC_GEOCODING_API_URL = os.getenv("PUBLIC_GEOCODING_API_URL", "https://nominatim.openstreetmap.org/search")
+ISRO_BHUVAN_OPEN_DATA_URL = os.getenv("ISRO_BHUVAN_OPEN_DATA_URL", "https://bhuvan-app1.nrsc.gov.in/api")
+DATA_GOV_IN_API_URL = os.getenv("DATA_GOV_IN_API_URL", "https://api.data.gov.in/resource")
+DATA_GOV_IN_API_KEY = os.getenv("DATA_GOV_IN_API_KEY", "")
 
 # Server Configuration
 PORT = int(os.getenv("PORT", 8000))

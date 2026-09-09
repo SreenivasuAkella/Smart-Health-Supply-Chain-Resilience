@@ -3,7 +3,7 @@ import json
 import os
 import re
 import importlib
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from ..config import GEMINI_API_KEY, GEMINI_MODEL
 
 def analyze_medicine_image(image_bytes: bytes, mime_type: str = "image/jpeg", custom_api_key: Optional[str] = None) -> Dict[str, Any]:
@@ -44,7 +44,7 @@ def analyze_medicine_image(image_bytes: bytes, mime_type: str = "image/jpeg", cu
             types_mod = getattr(genai_mod, "types", None)
             client = genai_mod.Client(api_key=active_key)
             
-            parts = [prompt]
+            parts: List[Any] = [prompt]
             if types_mod and hasattr(types_mod, "Part"):
                 parts.append(types_mod.Part.from_bytes(data=image_bytes, mime_type=mime_type))
             else:
