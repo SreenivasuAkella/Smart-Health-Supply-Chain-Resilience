@@ -34,7 +34,19 @@ def load_copilot_dispatches_from_db() -> List[Dict[str, Any]]:
         except Exception:
             pass
             
-    # Seed default realistic triage records if empty
+    # Seed default realistic triage records with dynamic timestamps relative to now
+    _now = datetime.utcnow()
+
+    def _ts(minutes_ago: int) -> str:
+        from datetime import timedelta
+        return (_now - timedelta(minutes=minutes_ago)).isoformat() + "Z"
+
+    def _time_ago(minutes_ago: int) -> str:
+        if minutes_ago < 60:
+            return f"{minutes_ago} min{'s' if minutes_ago != 1 else ''} ago"
+        hours = minutes_ago // 60
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+
     seed_records = [
         {
             "id": "VOX-DISP-0841",
@@ -47,8 +59,8 @@ def load_copilot_dispatches_from_db() -> List[Dict[str, Any]]:
             "intent": "EMERGENCY_REQUISITION",
             "status": "DISPATCHED",
             "eta": "34 mins",
-            "timestamp": "2026-09-02T14:48:00Z",
-            "time_ago": "4 mins ago",
+            "timestamp": _ts(4),
+            "time_ago": _time_ago(4),
             "color": "emerald",
             "action_summary": "Auto-dispatched 25 ASV vials from Pt. Deen Dayal Upadhyay DH with insulated cold-box GPS tag #TRK-8492"
         },
@@ -63,8 +75,8 @@ def load_copilot_dispatches_from_db() -> List[Dict[str, Any]]:
             "intent": "COLD_CHAIN_ALERT",
             "status": "TECHNICIAN ALERTED",
             "eta": "20 mins",
-            "timestamp": "2026-09-02T14:32:00Z",
-            "time_ago": "18 mins ago",
+            "timestamp": _ts(18),
+            "time_ago": _time_ago(18),
             "color": "amber",
             "action_summary": "SMS & Push SOS dispatched to District Vaccine Cold-Chain Officer (Vellore)"
         },
@@ -79,8 +91,8 @@ def load_copilot_dispatches_from_db() -> List[Dict[str, Any]]:
             "intent": "STOCK_STATUS_CHECK",
             "status": "CONFIRMED",
             "eta": "Immediate",
-            "timestamp": "2026-09-02T14:10:00Z",
-            "time_ago": "42 mins ago",
+            "timestamp": _ts(42),
+            "time_ago": _time_ago(42),
             "color": "cyan",
             "action_summary": "Facility ledger synchronized with e-Aushadhi state cloud repository"
         },
@@ -95,8 +107,8 @@ def load_copilot_dispatches_from_db() -> List[Dict[str, Any]]:
             "intent": "EMERGENCY_REQUISITION",
             "status": "IN TRANSIT",
             "eta": "45 mins",
-            "timestamp": "2026-09-02T13:50:00Z",
-            "time_ago": "1 hour ago",
+            "timestamp": _ts(68),
+            "time_ago": _time_ago(68),
             "color": "indigo",
             "action_summary": "Auto-routed 25 ASV vials from Pune District Central Depot"
         }

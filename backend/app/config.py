@@ -59,3 +59,12 @@ DATA_GOV_IN_API_KEY = os.getenv("DATA_GOV_IN_API_KEY", "")
 # Server Configuration
 PORT = int(os.getenv("PORT", 8000))
 HOST = os.getenv("HOST", "0.0.0.0")
+
+# Google Maps Platform Toggle (Set USE_GOOGLE_MAPS_API=true to enable paid Google Directions, or false for 100% free mode)
+USE_GOOGLE_MAPS_API = os.getenv("USE_GOOGLE_MAPS_API", "false").strip().lower() in ("true", "1", "yes")
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
+
+# FCM Alerts Toggle
+USE_FCM_ALERTS = os.getenv("USE_FCM_ALERTS", "false").strip().lower() in ("true", "1", "yes")
+FCM_SERVER_KEY = os.getenv("FCM_SERVER_KEY", "")
+

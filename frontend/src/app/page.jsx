@@ -40,6 +40,9 @@ export default function Home() {
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  // U5: Stockout early-warning toast
+  const [stockoutToast, setStockoutToast] = useState(null);
+  const stockoutTimerRef = useRef(null);
 
   const isFetchingRef = useRef(false);
 
@@ -74,6 +77,16 @@ export default function Home() {
       if (event.type === 'telemetry' && event.data) {
         setTelemetry(event.data);
       }
+      if (event.type === 'stockout_alert' && event.data) {
+        // U5: Surface early warning as a visible dismissible toast banner
+        setStockoutToast(event.data);
+        if (stockoutTimerRef.current) clearTimeout(stockoutTimerRef.current);
+        stockoutTimerRef.current = setTimeout(() => setStockoutToast(null), 8000);
+      }
+      // M3: Auto-triggered reallocation dispatch — update map with live route
+      if (event.type === 'reallocation' && event.data) {
+        setActiveReallocation(prev => prev ? prev : event.data);
+      }
     });
 
     return () => {
@@ -94,6 +107,38 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+      {/* U5: Live Stockout Early-Warning Toast */}
+      {stockoutToast && (
+        <div className="fixed top-4 right-4 z-[9999] max-w-sm w-full animate-fade-in">
+          <div className="bg-rose-950/95 border border-rose-500/60 rounded-2xl p-4 shadow-2xl backdrop-blur-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                  <span className="text-xs font-bold text-rose-300 uppercase tracking-wide">⚠ Stockout Imminent</span>
+                </div>
+                <p className="text-sm font-semibold text-white">{stockoutToast.facility_name}</p>
+                <p className="text-xs text-rose-300 mt-0.5">{stockoutToast.district}, {stockoutToast.state}</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Supply: <span className="text-rose-300 font-bold">{stockoutToast.medicine_days_of_supply}d remaining</span>
+                </p>
+              </div>
+              <button onClick={() => setStockoutToast(null)} className="text-slate-500 hover:text-white text-lg leading-none">&times;</button>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => { handleTriggerReallocation(stockoutToast.facility_id); setStockoutToast(null); }}
+                className="flex-1 bg-rose-500 hover:bg-rose-400 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-colors"
+              >
+                Trigger Reallocation
+              </button>
+              <button onClick={() => setStockoutToast(null)} className="text-xs text-slate-400 hover:text-white px-2">
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Left Collapsible Sidebar */}
       <Sidebar
         activeTab={activeTab}

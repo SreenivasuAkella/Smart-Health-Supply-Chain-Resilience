@@ -124,10 +124,12 @@ export default function FederatedLearningHub() {
             <span>Decentralized Dataset Volume</span>
             <Database size={16} className="text-cyan-400" />
           </div>
-          <div className="text-2xl font-bold text-white tracking-tight">
-            {federatedData.total_records_trained_across_india}
+           <div className="text-2xl font-bold text-white tracking-tight">
+            {federatedData.total_records_trained_globally || federatedData.total_records_trained_across_india}
           </div>
-          <span className="text-xs text-emerald-400 font-medium">5 Contributing State Enclaves</span>
+          <span className="text-xs text-emerald-400 font-medium">
+            {federatedData.total_contributing_indian_states || 5} State Enclaves + {federatedData.total_brics_partner_nations || 4} BRICS Nations
+          </span>
         </div>
 
         <div className="glass-panel p-5 space-y-1">
@@ -161,7 +163,7 @@ export default function FederatedLearningHub() {
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {federatedData.state_nodes?.map((node, i) => (
+          {(federatedData.indian_state_nodes || federatedData.state_nodes)?.map((node, i) => (
             <div key={i} className="bg-slate-900/80 border border-slate-800 hover:border-indigo-500/40 rounded-xl p-4 space-y-3 transition-all">
               <div className="flex items-start justify-between">
                 <div>
@@ -200,6 +202,60 @@ export default function FederatedLearningHub() {
           ))}
         </div>
       </div>
+
+      {/* BRICS Partner Nations Section */}
+      {federatedData.brics_partner_nodes?.length > 0 && (
+        <div className="glass-panel p-6 space-y-4">
+          <h3 className="font-bold text-white text-sm flex items-center gap-2">
+            <Network size={18} className="text-amber-400" />
+            BRICS Partner Nation Federated Nodes
+            <span className="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded ml-1">REAL WHO GHO DATA</span>
+          </h3>
+          <p className="text-xs text-slate-400">Shared predictive modelling with Brazil, Russia, China and South Africa — WHO GHO doctor/nurse density sourced live via WHO OData API.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {federatedData.brics_partner_nodes.map((node, i) => (
+              <div key={i} className="bg-slate-900/80 border border-amber-500/20 hover:border-amber-500/40 rounded-xl p-4 space-y-3 transition-all">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-bold text-white text-sm">{node.nation}</h4>
+                    <span className="text-xs text-slate-400">{node.nodalAuthority}</span>
+                  </div>
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded">
+                    BRICS Node
+                  </span>
+                </div>
+                <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800/80 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Facility Type:</span>
+                    <span className="font-semibold text-slate-200 text-right max-w-[55%]">{node.facilityType}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Active Facilities:</span>
+                    <span className="font-bold text-white">{node.activeFacilities?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Doctor Density (per 10k):</span>
+                    <span className="font-bold text-cyan-300">{node.doctorDensityPer10k > 0 ? node.doctorDensityPer10k : 'Fetching...'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Client Accuracy:</span>
+                    <span className="font-bold text-emerald-400">{node.clientAccuracy}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">DP Epsilon:</span>
+                    <span className="font-mono text-cyan-300">ε = {node.differentialPrivacyEpsilon}</span>
+                  </div>
+                </div>
+                <div className="text-[11px] text-slate-500">{node.diseaseModellingFocus}</div>
+              </div>
+            ))}
+          </div>
+          <div className="text-xs text-slate-500 flex items-center gap-1.5 pt-1">
+            <ShieldCheck size={12} className="text-amber-400" />
+            <span>WHO GHO API (HWF_0001, HWF_0006) — Zero raw patient data shared across borders</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

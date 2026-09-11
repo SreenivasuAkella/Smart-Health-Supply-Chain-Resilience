@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import inventory, ai_vision, copilot, forecasting, reallocation, telemetry, simulation, analytics, federated, stream, bootstrap
+from .routers import inventory, ai_vision, copilot, forecasting, reallocation, telemetry, simulation, analytics, federated, stream, bootstrap, attendance, alerts, speech, routing
 
 app = FastAPI(
     title="Sanjeevani AI - Smart Health & Supply Chain Resilience API",
@@ -29,6 +29,14 @@ app.include_router(analytics.router)
 app.include_router(federated.router)
 app.include_router(stream.router)
 app.include_router(bootstrap.router)
+# M1: Personnel attendance tracking
+app.include_router(attendance.router)
+# M2: Early warning notification pipeline
+app.include_router(alerts.router)
+# M5: Cloud Speech-to-Text & Text-to-Speech
+app.include_router(speech.router)
+# M6: Google Maps road routing
+app.include_router(routing.router)
 
 @app.get("/")
 def root():
@@ -38,10 +46,12 @@ def root():
         "status": "ONLINE",
         "google_ai_services": {
             "generative_ai": "Google Gemini 1.5/2.0 Flash (Multimodal OCR & Multilingual NLU)",
-            "predictive_ai": "Vertex AI Outbreak & Stockout Forecasting Engine",
-            "voice_and_language": "Cloud Speech & Indian Language Translation (8+ languages)",
-            "geospatial": "Google Maps Platform & Distance Routing",
-            "data_layer": "BigQuery, Firebase Realtime IoT, data.gov.in & IMD Open Portals"
+            "predictive_ai": "Vertex AI Generative AI (gemini-1.5-flash-002 via google-cloud-aiplatform SDK)",
+            "voice_and_language": "Google Cloud Speech-to-Text V1 + Text-to-Speech V1 (8 Indian languages)",
+            "geospatial": "Google Maps Directions API + Leaflet/OSM Visualization",
+            "data_layer": "BigQuery, Firebase Realtime IoT, OpenFDA NLEM, WHO GHO, IMD/NOAA Open Portals",
+            "notifications": "Firebase Cloud Messaging (FCM) + Twilio SMS Early Warning Pipeline",
+            "attendance": "WHO HWF_0001/HWF_0006 + NHSRC HRMIS 2023 PHC Personnel Attendance"
         },
         "docs_url": "/docs"
     }

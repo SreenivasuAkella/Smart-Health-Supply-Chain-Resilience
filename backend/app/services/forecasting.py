@@ -20,6 +20,8 @@ CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 
 _CACHED_AI_MAP: Optional[Dict[str, Dict[str, Any]]] = None
 _CACHED_OUTBREAK_PREDICTIONS: Optional[Dict[str, Any]] = None
+_CACHE_TIMESTAMP: float = 0.0
+_CACHE_TTL_SECONDS: float = 1800.0  # 30-minute TTL — refreshes as IMD/BigQuery data changes
 
 
 def load_ai_vector_cache() -> Dict[str, Dict[str, Any]]:
@@ -119,13 +121,11 @@ def ai_batch_epidemiological_analysis(facilities_with_weather: List[Dict[str, An
 
 
 def compute_outbreak_predictions_internal(facilities: List[Dict[str, Any]]) -> Dict[str, Any]:
-    medicines_path = os.path.join(os.path.dirname(__file__), "..", "data", "medicines.json")
-    if os.path.exists(medicines_path):
-        with open(medicines_path, "r") as f:
-            medicines = json.load(f)
-    else:
-        medicines = []
-        
+    # Use live OpenFDA catalog via medicine_data_service (not stale medicines.json)
+    from .medicine_data_service import get_active_essential_medicines, generate_public_modeled_inventory
+    raw_medicines = get_active_essential_medicines()
+    medicines = generate_public_modeled_inventory({}, facilities) if raw_medicines else []
+    
     # Query live BigQuery data warehouse for latest public health meteorology
     live_bq = bigquery_service.get_live_district_vulnerabilities()
     live_districts = live_bq.get("districts", {})
@@ -236,14 +236,17 @@ def compute_outbreak_predictions_internal(facilities: List[Dict[str, Any]]) -> D
 
 def get_outbreak_predictions(facility_list: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """
-    High-Speed Predictive modeling service with in-memory RAM caching.
-    Returns in < 5ms.
+    High-Speed Predictive modeling service with TTL-bound in-memory RAM caching.
+    Cache is invalidated every 30 minutes to reflect latest IMD / BigQuery weather updates.
     """
-    global _CACHED_OUTBREAK_PREDICTIONS
-    if _CACHED_OUTBREAK_PREDICTIONS is not None:
+    import time
+    global _CACHED_OUTBREAK_PREDICTIONS, _CACHE_TIMESTAMP
+    now = time.time()
+    if _CACHED_OUTBREAK_PREDICTIONS is not None and (now - _CACHE_TIMESTAMP) < _CACHE_TTL_SECONDS:
         return _CACHED_OUTBREAK_PREDICTIONS
 
     facilities = facility_list or get_active_public_facilities()
     result = compute_outbreak_predictions_internal(facilities)
     _CACHED_OUTBREAK_PREDICTIONS = result
+    _CACHE_TIMESTAMP = now
     return result
