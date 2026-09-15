@@ -53,9 +53,8 @@ def generate_reallocation_plan(target_facility_id: str = "PHC-BARAGAON-03", medi
                 fac["lat"], fac["lng"],
                 target_facility["lat"], target_facility["lng"]
             )
-            # Estimate road transit time (average 35 km/h for rural ambulance/insulated courier)
-            est_hours = round(distance_km / 35.0, 2)
-            est_minutes = int(est_hours * 60)
+            # Calculate realistic transit time based on road distance
+            est_minutes = max(2, int(round((distance_km / 36.0) * 60.0)))
             
             candidate_donors.append({
                 "facility_id": fac["id"],
@@ -67,7 +66,7 @@ def generate_reallocation_plan(target_facility_id: str = "PHC-BARAGAON-03", medi
                 "lng": fac["lng"],
                 "available_stock": curr_stock,
                 "distance_km": distance_km,
-                "estimated_transit_minutes": max(15, est_minutes),
+                "estimated_transit_minutes": est_minutes,
                 "cold_chain_type": fac["coldChainType"],
                 "contact": fac["contact"]
             })
@@ -76,23 +75,31 @@ def generate_reallocation_plan(target_facility_id: str = "PHC-BARAGAON-03", medi
     candidate_donors.sort(key=lambda x: x["distance_km"])
     selected_donor = candidate_donors[0] if candidate_donors else None
     
-    # Generate route waypoints for visualization on Leaflet/Google Maps
+    # Calculate real turn-by-turn road network route waypoints via OSRM / Google Maps network
     route_waypoints = []
+    actual_distance_km = selected_donor["distance_km"] if selected_donor else 0
     if selected_donor:
-        # Interpolate 5 intermediate GPS points to simulate realistic highway curve
-        lat1, lng1 = selected_donor["lat"], selected_donor["lng"]
-        lat2, lng2 = target_facility["lat"], target_facility["lng"]
-        for i in range(6):
-            t = i / 5.0
-            cur_lat = lat1 + (lat2 - lat1) * t + (0.015 * math.sin(t * math.pi))
-            cur_lng = lng1 + (lng2 - lng1) * t + (0.010 * math.cos(t * math.pi))
-            route_waypoints.append([round(cur_lat, 5), round(cur_lng, 5)])
+        from .mcp_server import tool_calculate_road_route_and_distance
+        road_calc = tool_calculate_road_route_and_distance(
+            origin_lat=selected_donor["lat"],
+            origin_lng=selected_donor["lng"],
+            dest_lat=target_facility["lat"],
+            dest_lng=target_facility["lng"]
+        )
+        route_waypoints = road_calc.get("route_coordinates", [])
+        if not route_waypoints:
+            route_waypoints = [[selected_donor["lat"], selected_donor["lng"]], [target_facility["lat"], target_facility["lng"]]]
+        if road_calc.get("distance_km"):
+            actual_distance_km = road_calc["distance_km"]
+            selected_donor["distance_km"] = actual_distance_km
+            if road_calc.get("estimated_transit_minutes"):
+                selected_donor["estimated_transit_minutes"] = road_calc["estimated_transit_minutes"]
 
-    # H3: Derive logistics parameters dynamically from medicine storage and distance
+    # Derive logistics parameters dynamically from medicine storage and distance
     storage_temp = medicine.get("storageTemp", "2–8°C")
     is_cold_chain = any(t in storage_temp for t in ["2", "8", "−", "cryo", "freeze"])
-    distance_km = selected_donor["distance_km"] if selected_donor else 0
-    est_transit_hrs = round(distance_km / 35.0, 1) if distance_km else 0
+    distance_km = actual_distance_km
+    est_transit_hrs = round(distance_km / 36.0, 1) if distance_km else 0
     holdover_hours = 72 if not is_cold_chain else (48 if distance_km < 100 else 24)
     transport_mode = (
         "Solar-Cooled Emergency Vaccine Van (SDD-ILR)" if is_cold_chain and distance_km > 50 else

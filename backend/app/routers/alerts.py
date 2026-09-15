@@ -7,6 +7,7 @@ when a Critical Deficit stockout is detected.
 import os
 import json
 import urllib.request
+import urllib.parse
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List

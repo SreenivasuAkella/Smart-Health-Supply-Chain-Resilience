@@ -158,6 +158,86 @@ export async function optimizeReallocationPlan(facilityId = "DH-VAR-001", medici
   }
 }
 
+export async function confirmReallocationDispatch(facilityId = "PHC-BARAGAON-03", medicineId = "MED-ASV-001", quantity = 25) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reallocation/dispatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target_facility_id: facilityId,
+        medicine_id: medicineId,
+        requested_quantity: quantity
+      })
+    });
+    if (!res.ok) throw new Error("Failed to confirm dispatch");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.error("confirmReallocationDispatch error:", err);
+    return null;
+  }
+}
+
+export async function triggerAutoRelocationAgent() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reallocation/auto-relocate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error("Failed to trigger autonomous AI reallocation");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.error("triggerAutoRelocationAgent error:", err);
+    return null;
+  }
+}
+
+export async function fetchReallocationHistory(limit = 50, status = "ALL", search = "") {
+  try {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      ...(status && status !== 'ALL' ? { status } : {}),
+      ...(search ? { search } : {})
+    });
+    const res = await fetch(`${API_BASE_URL}/reallocation/history?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch reallocation history");
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) {
+    console.error("fetchReallocationHistory error:", err);
+    return [];
+  }
+}
+
+export async function fetchVehicleFleet() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reallocation/vehicles`);
+    if (!res.ok) throw new Error("Failed to fetch vehicle fleet");
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) {
+    console.error("fetchVehicleFleet error:", err);
+    return [];
+  }
+}
+
+export async function updateReallocationStatus(dispatchId, newStatus) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reallocation/${dispatchId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!res.ok) throw new Error("Failed to update status");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.error("updateReallocationStatus error:", err);
+    return null;
+  }
+}
+
 export async function analyzeMedicineImage(base64Image, mimeType = "image/jpeg", apiKey = "") {
   try {
     const res = await fetch(`${API_BASE_URL}/ai/vision-scan`, {
@@ -402,6 +482,20 @@ export function subscribeToLiveSSE(onEvent, onError) {
         try {
           const data = JSON.parse(e.data);
           if (onEvent) onEvent({ type: 'stats', data });
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('reallocation', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (onEvent) onEvent({ type: 'reallocation', data });
+        } catch (_) {}
+      });
+
+      eventSource.addEventListener('stockout_alert', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (onEvent) onEvent({ type: 'stockout_alert', data });
         } catch (_) {}
       });
 

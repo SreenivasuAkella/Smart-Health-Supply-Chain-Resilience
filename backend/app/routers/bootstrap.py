@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/overview", tags=["Overview & Bootstrap"])
 
 _MEDICINE_CACHE_TTL_HOURS = 6
 
-def _is_medicine_cache_fresh(medicines: list) -> bool:
+def _is_medicine_cache_fresh(medicines: Any) -> bool:
     """Returns True if the cached medicine list was written within the last 6 hours."""
     if not medicines or not isinstance(medicines, list):
         return False
@@ -65,7 +65,7 @@ def get_dashboard_bootstrap():
             "surveillanceDistricts": surveillance_districts,
             "metadata": {
                 "facilities_count": len(facilities),
-                "medicines_count": len(medicines),
+                "medicines_count": len(medicines) if isinstance(medicines, list) else 0,
                 "sensors_count": telemetry.get("active_sensors_count", 6),
                 "cached": True
             }

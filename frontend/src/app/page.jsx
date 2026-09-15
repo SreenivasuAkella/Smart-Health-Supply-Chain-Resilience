@@ -20,6 +20,7 @@ import {
   fetchColdChainTelemetry, 
   fetchSurveillanceDistricts, 
   optimizeReallocationPlan,
+  confirmReallocationDispatch,
   fetchDashboardBootstrap,
   subscribeToLiveSSE
 } from '../services/api';
@@ -40,9 +41,12 @@ export default function Home() {
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
-  // U5: Stockout early-warning toast
+  // U5: Stockout early-warning toast with throttling & deduplication
   const [stockoutToast, setStockoutToast] = useState(null);
+  const [areAlertsMuted, setAreAlertsMuted] = useState(false);
   const stockoutTimerRef = useRef(null);
+  const lastToastTimeRef = useRef(0);
+  const dismissedFacilitiesRef = useRef(new Set());
 
   const isFetchingRef = useRef(false);
 
@@ -78,37 +82,54 @@ export default function Home() {
         setTelemetry(event.data);
       }
       if (event.type === 'stockout_alert' && event.data) {
-        // U5: Surface early warning as a visible dismissible toast banner
+        // Controlled toast rate: don't spam if muted, dismissed, or within 60s cooldown
+        if (areAlertsMuted) return;
+        const facId = event.data.facility_id;
+        if (facId && dismissedFacilitiesRef.current.has(facId)) return;
+
+        const now = Date.now();
+        if (now - lastToastTimeRef.current < 60000) return; // at most one toast per 60s
+        lastToastTimeRef.current = now;
+
         setStockoutToast(event.data);
         if (stockoutTimerRef.current) clearTimeout(stockoutTimerRef.current);
-        stockoutTimerRef.current = setTimeout(() => setStockoutToast(null), 8000);
+        stockoutTimerRef.current = setTimeout(() => setStockoutToast(null), 7000);
       }
       // M3: Auto-triggered reallocation dispatch — update map with live route
       if (event.type === 'reallocation' && event.data) {
-        setActiveReallocation(prev => prev ? prev : event.data);
+        setActiveReallocation(event.data);
       }
     });
 
     return () => {
       if (unsubscribeSSE) unsubscribeSSE();
     };
-  }, []);
+  }, [areAlertsMuted]);
 
   const handleSaveApiKey = (key) => {
     setGeminiApiKey(key);
     localStorage.setItem('SANJEEVANI_GEMINI_KEY', key);
   };
 
-  const handleTriggerReallocation = async (targetId = "PHC-BARAGAON-03", medId = "MED-ASV-001") => {
-    const plan = await optimizeReallocationPlan(targetId, medId, 25);
-    setActiveReallocation(plan);
-    setActiveTab('map');
+  const handleTriggerReallocation = async (targetId = "PHC-BARAGAON-03", medId = "PUB-MED-001") => {
+    const plan = await confirmReallocationDispatch(targetId, medId, 25);
+    if (plan) {
+      setActiveReallocation(plan);
+      setActiveTab('map');
+    }
+  };
+
+  const handleDismissToast = (facilityId) => {
+    if (facilityId) {
+      dismissedFacilitiesRef.current.add(facilityId);
+    }
+    setStockoutToast(null);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
-      {/* U5: Live Stockout Early-Warning Toast */}
-      {stockoutToast && (
+      {/* U5: Throttled Stockout Early-Warning Toast with Mute / Dismiss */}
+      {stockoutToast && !areAlertsMuted && (
         <div className="fixed top-4 right-4 z-[9999] max-w-sm w-full animate-fade-in">
           <div className="bg-rose-950/95 border border-rose-500/60 rounded-2xl p-4 shadow-2xl backdrop-blur-sm">
             <div className="flex items-start justify-between gap-3">
@@ -121,19 +142,36 @@ export default function Home() {
                 <p className="text-xs text-rose-300 mt-0.5">{stockoutToast.district}, {stockoutToast.state}</p>
                 <p className="text-xs text-slate-400 mt-1">
                   Supply: <span className="text-rose-300 font-bold">{stockoutToast.medicine_days_of_supply}d remaining</span>
+                  {stockoutToast.medicine_name && <span className="text-slate-500"> • {stockoutToast.medicine_name}</span>}
                 </p>
               </div>
-              <button onClick={() => setStockoutToast(null)} className="text-slate-500 hover:text-white text-lg leading-none">&times;</button>
+              <button onClick={() => handleDismissToast(stockoutToast.facility_id)} className="text-slate-500 hover:text-white text-lg leading-none">&times;</button>
             </div>
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-3 items-center">
               <button
-                onClick={() => { handleTriggerReallocation(stockoutToast.facility_id); setStockoutToast(null); }}
+                onClick={() => {
+                  handleTriggerReallocation(stockoutToast.facility_id, stockoutToast.medicine_id);
+                  handleDismissToast(stockoutToast.facility_id);
+                }}
                 className="flex-1 bg-rose-500 hover:bg-rose-400 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-colors"
               >
                 Trigger Reallocation
               </button>
-              <button onClick={() => setStockoutToast(null)} className="text-xs text-slate-400 hover:text-white px-2">
+              <button
+                onClick={() => handleDismissToast(stockoutToast.facility_id)}
+                className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded"
+              >
                 Dismiss
+              </button>
+              <button
+                onClick={() => {
+                  setAreAlertsMuted(true);
+                  setStockoutToast(null);
+                }}
+                className="text-[10px] text-slate-500 hover:text-rose-300 px-1.5 py-1 border border-slate-700/50 rounded"
+                title="Silence alert toasts for this session"
+              >
+                Mute
               </button>
             </div>
           </div>

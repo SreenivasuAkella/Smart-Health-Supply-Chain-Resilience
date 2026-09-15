@@ -32,8 +32,10 @@ def load_ai_vector_cache() -> Dict[str, Dict[str, Any]]:
     if os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE, "r") as f:
-                _CACHED_AI_MAP = json.load(f)
-                return _CACHED_AI_MAP
+                data = json.load(f)
+                if isinstance(data, dict):
+                    _CACHED_AI_MAP = data
+                    return _CACHED_AI_MAP
         except Exception:
             pass
     _CACHED_AI_MAP = {}

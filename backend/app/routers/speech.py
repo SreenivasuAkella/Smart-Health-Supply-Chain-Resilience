@@ -39,7 +39,8 @@ def transcribe_audio(req: SpeechToTextRequest):
     Transcribes voice input using Google Cloud Speech-to-Text V1.
     Supports 8 Indian languages for ASHA worker voice commands.
     """
-    bcp47 = SUPPORTED_LANGUAGE_CODES.get(req.language_code, "hi-IN")
+    lang_code = req.language_code or "hi"
+    bcp47 = SUPPORTED_LANGUAGE_CODES.get(lang_code, "hi-IN")
 
     try:
         from google.cloud import speech
@@ -53,7 +54,8 @@ def transcribe_audio(req: SpeechToTextRequest):
             "audio/wav": speech.RecognitionConfig.AudioEncoding.LINEAR16,
             "audio/ogg": speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
         }
-        encoding = encoding_map.get(req.mime_type, speech.RecognitionConfig.AudioEncoding.WEBM_OPUS)
+        mime = req.mime_type or "audio/webm"
+        encoding = encoding_map.get(mime, speech.RecognitionConfig.AudioEncoding.WEBM_OPUS)
 
         config = speech.RecognitionConfig(
             encoding=encoding,
@@ -93,16 +95,19 @@ def synthesize_speech(req: TextToSpeechRequest):
     Synthesizes speech using Google Cloud Text-to-Speech.
     Returns base64-encoded MP3 audio for playback in the frontend.
     """
-    bcp47 = SUPPORTED_LANGUAGE_CODES.get(req.language_code, "hi-IN")
+    lang_code = req.language_code or "hi"
+    bcp47 = SUPPORTED_LANGUAGE_CODES.get(lang_code, "hi-IN")
 
     try:
         from google.cloud import texttospeech
         client = texttospeech.TextToSpeechClient()
 
         synthesis_input = texttospeech.SynthesisInput(text=req.text)
+        gender_str = req.voice_gender or "FEMALE"
+        gender_enum = getattr(texttospeech.SsmlVoiceGender, gender_str, texttospeech.SsmlVoiceGender.FEMALE)
         voice = texttospeech.VoiceSelectionParams(
             language_code=bcp47,
-            ssml_gender=texttospeech.SsmlVoiceGender[req.voice_gender]
+            ssml_gender=gender_enum
         )
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3

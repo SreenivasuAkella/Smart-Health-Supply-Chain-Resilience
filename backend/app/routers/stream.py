@@ -18,11 +18,18 @@ async def event_generator(request: Request):
     """
     yield f"event: connected\ndata: {json.dumps({'status': 'CONNECTED', 'timestamp': datetime.utcnow().isoformat() + 'Z'})}\n\n"
 
+    last_stockout_alert_time = 0.0
+    last_reallocation_time = 0.0
+    ALERT_COOLDOWN_SECONDS = 90.0
+    REALLOCATION_COOLDOWN_SECONDS = 300.0
+
     while True:
         if await request.is_disconnected():
             break
 
         try:
+            now_ts = datetime.utcnow().timestamp()
+
             # 1. Cold-Chain IoT Telemetry
             telemetry = get_live_telemetry_stream()
             telemetry_payload = {
@@ -55,19 +62,33 @@ async def event_generator(request: Request):
             }
             yield f"event: stats\ndata: {json.dumps(stats_payload)}\n\n"
 
-            # 3. Stockout Alerts — rotate through Critical Deficit PHCs
+            # 3. Stockout Alerts — rate-limited to avoid notification spamming
             critical_phcs = [
                 f for f in facilities
                 if f.get("status") == "Critical Deficit" and f.get("type") == "Primary Health Centre"
             ]
-            if critical_phcs:
-                cycle_idx = int(datetime.utcnow().timestamp() / 3.5) % max(1, len(critical_phcs))
-                alert_fac = critical_phcs[cycle_idx % len(critical_phcs)]
+            if critical_phcs and (now_ts - last_stockout_alert_time >= ALERT_COOLDOWN_SECONDS):
+                cycle_idx = int(now_ts / ALERT_COOLDOWN_SECONDS) % len(critical_phcs)
+                alert_fac = critical_phcs[cycle_idx]
+
+                # Identify the specific medication with low stock at this facility
+                medicines = generate_public_modeled_inventory({}, facilities)
+                target_med = None
+                for med in medicines:
+                    stock = med.get("inventoryByFacility", {}).get(alert_fac.get("id"), 0)
+                    if stock <= 5:
+                        target_med = med
+                        break
+                if not target_med and medicines:
+                    target_med = medicines[0]
+
                 stockout_payload = {
                     "facility_id": alert_fac.get("id"),
                     "facility_name": alert_fac.get("name"),
                     "district": alert_fac.get("district"),
                     "state": alert_fac.get("state"),
+                    "medicine_id": target_med.get("id") if target_med else "MED-ASV-001",
+                    "medicine_name": target_med.get("name") if target_med else "Anti-Snake Venom (ASV)",
                     "medicine_days_of_supply": alert_fac.get("medicine_days_of_supply"),
                     "status": alert_fac.get("status"),
                     "dataSource": alert_fac.get("dataSource"),
@@ -75,34 +96,20 @@ async def event_generator(request: Request):
                     "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
                 yield f"event: stockout_alert\ndata: {json.dumps(stockout_payload)}\n\n"
+                last_stockout_alert_time = now_ts
 
-                # M3: Auto-trigger cross-district reallocation for the most critical PHC every 35s
-                auto_trigger_slot = int(datetime.utcnow().timestamp() / 35)
-                if auto_trigger_slot % 2 == 0 and critical_phcs:
+                # Auto-trigger reallocation at most once every 5 minutes
+                if (now_ts - last_reallocation_time >= REALLOCATION_COOLDOWN_SECONDS):
                     try:
-                        from ..services.reallocation import generate_reallocation_plan
-                        from ..services.medicine_data_service import get_active_essential_medicines
-                        top_phc = critical_phcs[0]
-                        drugs = get_active_essential_medicines()
-                        if drugs:
-                            plan_response = generate_reallocation_plan(
-                                target_facility_id=top_phc["id"],
-                                medicine_id=drugs[0]["id"],
-                                required_quantity=25
-                            )
-                            plan = plan_response.get("data", plan_response) if isinstance(plan_response, dict) else {}
-                            if plan.get("selected_donor"):
-                                reallocation_event = {
-                                    "dispatch_id": plan.get("dispatch_id"),
-                                    "target_facility": plan.get("target_facility", {}).get("name"),
-                                    "donor_facility": plan.get("selected_donor", {}).get("facility_name"),
-                                    "medicine": plan.get("medicine_details", {}).get("name"),
-                                    "distance_km": plan.get("selected_donor", {}).get("distance_km"),
-                                    "eta_minutes": plan.get("selected_donor", {}).get("estimated_transit_minutes"),
-                                    "auto_triggered": True,
-                                    "timestamp": datetime.utcnow().isoformat() + "Z"
-                                }
-                                yield f"event: reallocation\ndata: {json.dumps(reallocation_event)}\n\n"
+                        from ..services.ai_agents_service import run_auto_relocation_pipeline
+                        plan = run_auto_relocation_pipeline(
+                            target_facility_id=alert_fac.get("id"),
+                            medicine_id=target_med.get("id") if target_med else None,
+                            auto_triggered=True
+                        )
+                        if plan and plan.get("selected_donor"):
+                            yield f"event: reallocation\ndata: {json.dumps(plan)}\n\n"
+                            last_reallocation_time = now_ts
                     except Exception:
                         pass
 
