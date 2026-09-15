@@ -11,7 +11,7 @@ import os
 import threading
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-import google.generativeai as genai
+from google import genai as _genai
 from ..config import GEMINI_API_KEY, GEMINI_MODEL
 from .facility_data_service import get_active_public_facilities
 from .bigquery_service import bigquery_service
@@ -66,8 +66,8 @@ def ai_batch_epidemiological_analysis(facilities_with_weather: List[Dict[str, An
         return ai_risk_map
 
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel(GEMINI_MODEL or "gemini-1.5-flash")
+        _client = _genai.Client(api_key=GEMINI_API_KEY)
+        _model_id = GEMINI_MODEL or "gemini-1.5-flash"
 
         simplified_input = []
         for f in to_evaluate:
@@ -97,11 +97,12 @@ def ai_batch_epidemiological_analysis(facilities_with_weather: List[Dict[str, An
           }}
         ]
         """
-        response = model.generate_content(
-            prompt,
-            generation_config={"temperature": 0.1, "max_output_tokens": 600}
+        response = _client.models.generate_content(
+            model=_model_id,
+            contents=prompt,
+            config={"temperature": 0.1, "max_output_tokens": 600}
         )
-        raw_text = response.text.strip() if response.text else ""
+        raw_text = (response.text or "").strip()
         if "```json" in raw_text:
             raw_text = raw_text.split("```json")[1].split("```")[0]
         elif "```" in raw_text:
@@ -113,9 +114,9 @@ def ai_batch_epidemiological_analysis(facilities_with_weather: List[Dict[str, An
                 fac_id = item.get("facility_id")
                 if fac_id:
                     ai_risk_map[fac_id] = item
-                    
+
             save_ai_vector_cache(ai_risk_map)
-    except Exception as e:
+    except Exception:
         # Fallback cleanly without breaking
         pass
 

@@ -40,12 +40,17 @@ def optimize_reallocation(req: ReallocationRequest):
         )
     except Exception as e:
         # Fallback to local road planner
-        plan = generate_reallocation_plan(
+        # generate_reallocation_plan returns a success_response wrapper — unwrap data
+        plan_resp = generate_reallocation_plan(
             target_facility_id=req.target_facility_id or "PHC-BARAGAON-03",
             medicine_id=req.medicine_id or "MED-ASV-001",
             required_quantity=qty
         )
-        return plan
+        plan_data = plan_resp.get("data", plan_resp) if isinstance(plan_resp, dict) else plan_resp
+        return success_response(
+            data=plan_data,
+            message=f"Reallocation plan generated (local engine fallback)."
+        )
 
 @router.post("/dispatch")
 def confirm_dispatch(req: ReallocationRequest):

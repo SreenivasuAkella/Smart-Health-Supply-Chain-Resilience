@@ -12,7 +12,7 @@ import urllib.request
 import urllib.parse
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-import google.generativeai as genai
+from google import genai as _genai
 from ..config import GEMINI_API_KEY, GEMINI_MODEL
 
 OPEN_DRUG_DATABASE_API_URL = "https://api.fda.gov/drug/label.json"
@@ -91,25 +91,30 @@ def ai_analyze_public_drug_label(openfda_result: Optional[Dict[str, Any]], fallb
         "last_synced_utc": datetime.utcnow().isoformat() + "Z"
     }
 
-    # Deep Clinical AI Enrichment with Gemini
+    # Deep Clinical AI Enrichment with Gemini (google.genai SDK)
     if GEMINI_API_KEY:
         try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel(GEMINI_MODEL or "gemini-3.6-flash")
+            _client = _genai.Client(api_key=GEMINI_API_KEY)
+            _model_id = GEMINI_MODEL or "gemini-1.5-flash"
             prompt = f"""
             Analyze this OpenFDA public drug information and return standard clinical inventory parameters:
             - Brand: {brand}, Generic: {generic}, Storage: {storage_text}
             
             Return pure JSON:
             {{
-              "storageTemp": "2°C to 8°C" or "Ambient (15°C to 30°C)",
+              "storageTemp": "2\u00b0C to 8\u00b0C" or "Ambient (15\u00b0C to 30\u00b0C)",
               "criticality": "Ultra-High (Life Saving)" or "High Priority" or "Standard Essential",
               "shelf_life_guidance": "concise clinical instruction",
               "indication_summary": "concise 1-sentence indication"
             }}
             """
-            ai_res = model.generate_content(prompt, generation_config={"temperature": 0.1, "max_output_tokens": 250})
-            clean_json = ai_res.text.replace("```json", "").replace("```", "").strip()
+            ai_res = _client.models.generate_content(
+                model=_model_id,
+                contents=prompt,
+                config={"temperature": 0.1, "max_output_tokens": 250}
+            )
+            raw_text = ai_res.text if hasattr(ai_res, "text") else ""
+            clean_json = raw_text.replace("```json", "").replace("```", "").strip()
             ai_data = json.loads(clean_json)
             base_entry.update(ai_data)
         except Exception:

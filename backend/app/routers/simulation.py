@@ -61,9 +61,9 @@ def _gemini_action_plan(crisis_class: str, facility: Dict, stockout_items: List[
         return actions
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel(GEMINI_MODEL or "gemini-1.5-flash")
+        from google import genai as _genai
+        _client = _genai.Client(api_key=GEMINI_API_KEY)
+        _model_id = GEMINI_MODEL or "gemini-1.5-flash"
 
         stockout_summary = ", ".join(
             f"{i['name']} ({i['current_stock']} units left)" for i in stockout_items[:3]
@@ -82,8 +82,12 @@ Generate exactly 4 specific, actionable AI-driven response steps for the distric
 Return ONLY a JSON array of 4 strings, no markdown, no extra text:
 ["step1", "step2", "step3", "step4"]"""
 
-        response = model.generate_content(prompt, generation_config={"temperature": 0.2, "max_output_tokens": 400})
-        text = response.text.strip()
+        response = _client.models.generate_content(
+            model=_model_id,
+            contents=prompt,
+            config={"temperature": 0.2, "max_output_tokens": 400}
+        )
+        text = (response.text or "").strip()
         if "```" in text:
             text = text.split("```")[1].split("```")[0].strip()
             if text.startswith("json"):
@@ -152,8 +156,10 @@ def trigger_crisis_scenario(req: CrisisScenarioRequest):
     donor = None
     try:
         if crisis_drugs:
-            plan = generate_reallocation_plan(target_id, crisis_drugs[0]["id"], 25)
-            donor = plan.get("selected_donor")
+            plan_resp = generate_reallocation_plan(target_id, crisis_drugs[0]["id"], 25)
+            # generate_reallocation_plan returns a success_response wrapper dict
+            plan_data = plan_resp.get("data", plan_resp) if isinstance(plan_resp, dict) else {}
+            donor = plan_data.get("selected_donor")
     except Exception:
         pass
 

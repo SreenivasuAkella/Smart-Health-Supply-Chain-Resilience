@@ -442,6 +442,79 @@ export async function fetchDashboardBootstrap() {
   }
 }
 
+export async function fetchAttendanceSummary(state = "", page = 1, pageSize = 50) {
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+      ...(state ? { state } : {})
+    });
+    const res = await dedupedFetch(`${API_BASE_URL}/attendance/summary?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch attendance summary");
+    const json = await res.json();
+    return json;
+  } catch (err) {
+    console.error("fetchAttendanceSummary error:", err);
+    return null;
+  }
+}
+
+export async function fetchActiveAlerts(state = "") {
+  try {
+    const params = new URLSearchParams(state ? { state } : {});
+    const res = await dedupedFetch(`${API_BASE_URL}/alerts/active?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch active alerts");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("fetchActiveAlerts error:", err);
+    return { alerts: [], total: 0 };
+  }
+}
+
+export async function staffCheckIn(facilityId, staffId, staffName, role, languageCode = "en") {
+  try {
+    const res = await fetch(`${API_BASE_URL}/attendance/check-in`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        facility_id: facilityId,
+        staff_id: staffId,
+        staff_name: staffName,
+        role: role,
+        language_code: languageCode
+      })
+    });
+    if (!res.ok) throw new Error("Check-in failed");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("staffCheckIn error:", err);
+    return null;
+  }
+}
+
+export async function dispatchEarlyWarning(facilityId, alertType = "STOCKOUT_IMMINENT", daysOfSupply = null) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/alerts/dispatch-early-warning`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        facility_id: facilityId,
+        alert_type: alertType,
+        days_of_supply: daysOfSupply,
+        notify_channels: ["fcm", "firebase"]
+      })
+    });
+    if (!res.ok) throw new Error("Warning dispatch failed");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("dispatchEarlyWarning error:", err);
+    return null;
+  }
+}
+
 /**
  * Connects to the backend Server-Sent Events (SSE) live stream.
  * Automatically receives real-time IoT temperature sensor updates,
@@ -449,15 +522,21 @@ export async function fetchDashboardBootstrap() {
  * 
  * @param {Function} onEvent - Callback for incoming SSE events ({ type, data })
  * @param {Function} onError - Optional error handler
+ * @param {Function} onStatusChange - Optional callback (isConnected: boolean)
  * @returns {Function} cleanup - Function to close the EventSource connection
  */
-export function subscribeToLiveSSE(onEvent, onError) {
+export function subscribeToLiveSSE(onEvent, onError, onStatusChange) {
   if (typeof window === 'undefined') return () => {};
 
   const streamUrl = `${API_BASE_URL}/stream/events`;
   let eventSource = null;
   let retryTimeout = null;
   let isClosed = false;
+  let retryDelay = 3000;
+
+  const notifyStatus = (connected) => {
+    if (onStatusChange) onStatusChange(connected);
+  };
 
   const connect = () => {
     if (isClosed) return;
@@ -465,6 +544,8 @@ export function subscribeToLiveSSE(onEvent, onError) {
       eventSource = new EventSource(streamUrl);
 
       eventSource.addEventListener('connected', (e) => {
+        retryDelay = 3000; // reset backoff on successful connection
+        notifyStatus(true);
         try {
           const data = JSON.parse(e.data);
           if (onEvent) onEvent({ type: 'connected', data });
@@ -507,19 +588,24 @@ export function subscribeToLiveSSE(onEvent, onError) {
       });
 
       eventSource.onerror = (err) => {
+        notifyStatus(false);
         if (onError) onError(err);
         if (eventSource) {
           eventSource.close();
           eventSource = null;
         }
         if (!isClosed) {
-          // Reconnect after 5 seconds with exponential backoff
-          retryTimeout = setTimeout(connect, 5000);
+          // Exponential backoff: 3s → 6s → 12s → max 30s
+          retryTimeout = setTimeout(() => {
+            retryDelay = Math.min(retryDelay * 2, 30000);
+            connect();
+          }, retryDelay);
         }
       };
     } catch (err) {
+      notifyStatus(false);
       if (onError) onError(err);
-      if (!isClosed) retryTimeout = setTimeout(connect, 5000);
+      if (!isClosed) retryTimeout = setTimeout(connect, retryDelay);
     }
   };
 
@@ -527,6 +613,7 @@ export function subscribeToLiveSSE(onEvent, onError) {
 
   return () => {
     isClosed = true;
+    notifyStatus(false);
     if (retryTimeout) clearTimeout(retryTimeout);
     if (eventSource) {
       eventSource.close();

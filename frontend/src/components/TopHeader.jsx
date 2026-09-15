@@ -7,8 +7,7 @@ import {
   Key, 
   Languages, 
   CheckCircle2, 
-  Search, 
-  Bell, 
+  Bell,
   Activity, 
   ShieldAlert, 
   MapPin, 
@@ -16,7 +15,9 @@ import {
   ThermometerSnowflake, 
   Network, 
   Zap, 
-  FileSpreadsheet
+  FileSpreadsheet,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { triggerLiveDatasetSync } from '../services/api';
 
@@ -39,7 +40,8 @@ export default function TopHeader({
   onOpenKeyModal,
   onOpenCopilot,
   isKeyConfigured,
-  onDataRefresh
+  onDataRefresh,
+  sseConnected = true
 }) {
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
@@ -98,7 +100,31 @@ export default function TopHeader({
 
         {/* Right: Quick Action Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
-          
+
+          {/* SSE Live Stream Status Pill */}
+          <div
+            title={sseConnected ? "Live SSE stream connected" : "SSE stream reconnecting..."}
+            className={`hidden sm:flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-full border transition-all duration-500 ${
+              sseConnected
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}
+          >
+            {sseConnected ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <Wifi size={11} />
+                <span>Live</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                <WifiOff size={11} />
+                <span>Reconnecting</span>
+              </>
+            )}
+          </div>
+
           {/* Live Data Sync Button */}
           <button
             onClick={handleSyncPublicData}

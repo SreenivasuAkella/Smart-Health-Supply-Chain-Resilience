@@ -41,6 +41,7 @@ export default function Home() {
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [sseConnected, setSseConnected] = useState(false);
   // U5: Stockout early-warning toast with throttling & deduplication
   const [stockoutToast, setStockoutToast] = useState(null);
   const [areAlertsMuted, setAreAlertsMuted] = useState(false);
@@ -77,29 +78,40 @@ export default function Home() {
     if (storedKey) setGeminiApiKey(storedKey);
 
     // Subscribe to Server-Sent Events (SSE) Live Stream for zero-delay IoT and health telemetry updates
-    const unsubscribeSSE = subscribeToLiveSSE((event) => {
-      if (event.type === 'telemetry' && event.data) {
-        setTelemetry(event.data);
-      }
-      if (event.type === 'stockout_alert' && event.data) {
-        // Controlled toast rate: don't spam if muted, dismissed, or within 60s cooldown
-        if (areAlertsMuted) return;
-        const facId = event.data.facility_id;
-        if (facId && dismissedFacilitiesRef.current.has(facId)) return;
+    const unsubscribeSSE = subscribeToLiveSSE(
+      (event) => {
+        if (event.type === 'telemetry' && event.data) {
+          setTelemetry(event.data);
+        }
+        if (event.type === 'stats' && event.data) {
+          // Stats can update facilities data slices if needed in future
+        }
+        if (event.type === 'stockout_alert' && event.data) {
+          // Controlled toast rate: don't spam if muted, dismissed, or within 60s cooldown
+          if (areAlertsMuted) return;
+          const facId = event.data.facility_id;
+          if (facId && dismissedFacilitiesRef.current.has(facId)) return;
 
-        const now = Date.now();
-        if (now - lastToastTimeRef.current < 60000) return; // at most one toast per 60s
-        lastToastTimeRef.current = now;
+          const now = Date.now();
+          if (now - lastToastTimeRef.current < 60000) return; // at most one toast per 60s
+          lastToastTimeRef.current = now;
 
-        setStockoutToast(event.data);
-        if (stockoutTimerRef.current) clearTimeout(stockoutTimerRef.current);
-        stockoutTimerRef.current = setTimeout(() => setStockoutToast(null), 7000);
+          setStockoutToast(event.data);
+          if (stockoutTimerRef.current) clearTimeout(stockoutTimerRef.current);
+          stockoutTimerRef.current = setTimeout(() => setStockoutToast(null), 7000);
+        }
+        // M3: Auto-triggered reallocation dispatch — update map with live route
+        if (event.type === 'reallocation' && event.data) {
+          setActiveReallocation(event.data);
+        }
+      },
+      (err) => {
+        console.warn('[SSE] Stream error:', err);
+      },
+      (isConnected) => {
+        setSseConnected(isConnected);
       }
-      // M3: Auto-triggered reallocation dispatch — update map with live route
-      if (event.type === 'reallocation' && event.data) {
-        setActiveReallocation(event.data);
-      }
-    });
+    );
 
     return () => {
       if (unsubscribeSSE) unsubscribeSSE();
@@ -204,6 +216,7 @@ export default function Home() {
           onOpenCopilot={() => setIsCopilotOpen(true)}
           isKeyConfigured={Boolean(geminiApiKey)}
           onDataRefresh={loadData}
+          sseConnected={sseConnected}
         />
 
         {/* Tab Viewport */}
