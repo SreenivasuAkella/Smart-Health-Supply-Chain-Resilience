@@ -70,8 +70,15 @@ Thumbs.db
 **/*.swo
 
 # =================================================================
-# Temporary & Scratch
+# Temporary, Scratch & Local Databases
 # =================================================================
 scratch/
 tmp/
 .temp/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+**/reallocations.db
+backend/app/data/*.db
+

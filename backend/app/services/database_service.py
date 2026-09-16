@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from .firebase_service import firebase_service
+from .bigquery_service import bigquery_service
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "reallocations.db")
 
@@ -247,7 +248,7 @@ class ReallocationDatabaseService:
             ))
             conn.commit()
 
-        # Dual-sync to Firebase Realtime Database
+        # 1. Dual-sync to Firebase Realtime Database (Live operational state & UI sync)
         try:
             fb_payload = {
                 "dispatch_id": dispatch_id,
@@ -261,9 +262,16 @@ class ReallocationDatabaseService:
                 "vehicle": vehicle,
                 "route_coordinates": route_coords
             }
-            firebase_service.write_data(f"reallocations/live/{dispatch_id}", fb_payload)
-        except Exception:
-            pass
+            firebase_service.write_data(f"reallocations/{dispatch_id}", fb_payload)
+            firebase_service.write_data("reallocations/latest", fb_payload)
+        except Exception as fb_err:
+            print(f"[Firebase Reallocation Dual-Sync Notice]: {fb_err}")
+
+        # 2. Dual-sync to Google BigQuery (National-scale analytical audit log)
+        try:
+            bigquery_service.insert_reallocation_event(record)
+        except Exception as bq_err:
+            print(f"[BigQuery Reallocation Dual-Sync Notice]: {bq_err}")
 
         return self.get_reallocation(dispatch_id) or record
 
@@ -314,8 +322,17 @@ class ReallocationDatabaseService:
             updated = cursor.rowcount > 0
 
         if updated:
+            rec = self.get_reallocation(dispatch_id)
             try:
-                firebase_service.write_data(f"reallocations/live/{dispatch_id}/status", new_status)
+                firebase_service.write_data(f"reallocations/{dispatch_id}/status", new_status)
+                if rec:
+                    firebase_service.write_data(f"reallocations/{dispatch_id}", rec)
+                    firebase_service.write_data("reallocations/latest", rec)
+            except Exception:
+                pass
+            try:
+                if rec:
+                    bigquery_service.insert_reallocation_event(rec)
             except Exception:
                 pass
         return updated

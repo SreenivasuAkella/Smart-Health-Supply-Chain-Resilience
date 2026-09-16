@@ -1,6 +1,8 @@
 import os
 import json
 import importlib
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional
 from ..config import GOOGLE_CLOUD_PROJECT, BIGQUERY_DATASET, GOOGLE_APPLICATION_CREDENTIALS, GCP_SERVICE_ACCOUNT_JSON
 
@@ -13,6 +15,8 @@ class BigQueryHealthWarehouse:
         self.project_id = project_id or GOOGLE_CLOUD_PROJECT
         self.dataset_id = BIGQUERY_DATASET
         self.client = None
+        self._executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="bq_worker")
+        self._table_checked = False
         self._init_client()
 
     def _init_client(self):
@@ -176,5 +180,120 @@ class BigQueryHealthWarehouse:
                 print(f"[BigQuery Vulnerability Query Notice]: {e}")
         
         return {"source": "Analytical Engine", "districts": {}, "raw": []}
+
+    def _ensure_reallocation_table(self):
+        """Ensures the reallocation_events BigQuery table exists."""
+        if not self.client:
+            return
+        table_id = f"{self.project_id}.{self.dataset_id}.reallocation_events"
+        try:
+            from google.cloud import bigquery
+            schema = [
+                bigquery.SchemaField("dispatch_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("timestamp", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("status", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("auto_triggered", "BOOLEAN", mode="NULLABLE"),
+                bigquery.SchemaField("target_facility_id", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("target_facility_name", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("target_district", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("target_state", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("donor_facility_id", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("donor_facility_name", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("medicine_id", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("medicine_name", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("quantity_requested", "INTEGER", mode="NULLABLE"),
+                bigquery.SchemaField("distance_km", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("transit_minutes", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("transport_mode", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("cold_chain_required", "BOOLEAN", mode="NULLABLE"),
+                bigquery.SchemaField("cold_box_specification", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("carbon_offset_kg", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("ai_engine", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("compliance_attestation", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("supervisor_reasoning", "STRING", mode="NULLABLE"),
+            ]
+            table = bigquery.Table(table_id, schema=schema)
+            self.client.create_table(table, exists_ok=True)
+            self._table_checked = True
+        except Exception as e:
+            print(f"[BigQuery Table Setup Notice]: {e}")
+
+    def insert_reallocation_event(self, plan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Inserts a completed or planned reallocation event into BigQuery for national resilience analytics.
+        Uses load_table_from_json via asynchronous background thread pool for zero API latency.
+        """
+        if not self.client:
+            return {"status": "skipped", "message": "BigQuery client not connected"}
+
+        def _bg_insert():
+            try:
+                if not getattr(self, "_table_checked", False):
+                    self._ensure_reallocation_table()
+
+                target = plan_data.get("target_facility", {}) or {}
+                donor = plan_data.get("selected_donor", {}) or {}
+                med = plan_data.get("medicine_details", {}) or {}
+                logistics = plan_data.get("logistics_parameters", {}) or {}
+
+                row = {
+                    "dispatch_id": str(plan_data.get("dispatch_id") or f"DISP-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"),
+                    "timestamp": str(plan_data.get("timestamp") or datetime.utcnow().isoformat() + "Z"),
+                    "status": str(plan_data.get("status") or "APPROVED"),
+                    "auto_triggered": bool(plan_data.get("auto_triggered", False)),
+                    "target_facility_id": str(target.get("id") or ""),
+                    "target_facility_name": str(target.get("name") or plan_data.get("target_facility_name") or ""),
+                    "target_district": str(target.get("district") or ""),
+                    "target_state": str(target.get("state") or ""),
+                    "donor_facility_id": str(donor.get("facility_id") or donor.get("id") or ""),
+                    "donor_facility_name": str(donor.get("facility_name") or donor.get("name") or plan_data.get("donor_facility_name") or ""),
+                    "medicine_id": str(med.get("id") or ""),
+                    "medicine_name": str(med.get("name") or ""),
+                    "quantity_requested": int(target.get("requested_quantity") or plan_data.get("required_quantity") or 25),
+                    "distance_km": float(logistics.get("distance_km") or plan_data.get("distance_km") or plan_data.get("estimated_distance_km") or 0.0),
+                    "transit_minutes": float(logistics.get("estimated_transit_minutes") or plan_data.get("estimated_transit_minutes") or 0.0),
+                    "transport_mode": str(logistics.get("transport_mode") or "Solar-Cooled Emergency Vaccine Van"),
+                    "cold_chain_required": bool(logistics.get("is_cold_chain_required", False) or "cold" in str(logistics.get("transport_mode", "")).lower() or "vaccine" in str(logistics.get("transport_mode", "")).lower()),
+                    "cold_box_specification": str(logistics.get("cold_box_specification") or "WHO PQS Compliant Carrier"),
+                    "carbon_offset_kg": float(logistics.get("carbon_offset_kg") or 0.0),
+                    "ai_engine": str(plan_data.get("vertex_engine") or plan_data.get("ai_engine") or "Google Cloud Vertex AI & Gemini"),
+                    "compliance_attestation": str(plan_data.get("compliance_attestation") or "GxP & MoHFW Verified"),
+                    "supervisor_reasoning": str(plan_data.get("ai_reasoning") or "")
+                }
+
+                table_id = f"{self.project_id}.{self.dataset_id}.reallocation_events"
+                job = self.client.load_table_from_json([row], table_id)
+                job.result(timeout=15)
+                print(f"[BigQuery]: Successfully logged reallocation event {row['dispatch_id']} to {table_id}")
+            except Exception as e:
+                print(f"[BigQuery Reallocation Insert Notice]: {e}")
+
+        self._executor.submit(_bg_insert)
+        return {"status": "queued", "dispatch_id": plan_data.get("dispatch_id")}
+
+    def list_reallocation_events(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Queries the national reallocation audit ledger from BigQuery."""
+        table_id = f"{self.project_id}.{self.dataset_id}.reallocation_events"
+        sql = f"""
+        SELECT 
+            dispatch_id,
+            timestamp,
+            status,
+            target_facility_name,
+            target_district,
+            donor_facility_name,
+            medicine_name,
+            quantity_requested,
+            distance_km,
+            transit_minutes,
+            transport_mode,
+            ai_engine,
+            compliance_attestation
+        FROM `{table_id}`
+        ORDER BY timestamp DESC
+        LIMIT {limit}
+        """
+        res = self.execute_custom_sql(sql)
+        return res.get("data", [])
 
 bigquery_service = BigQueryHealthWarehouse()

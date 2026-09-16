@@ -16,6 +16,7 @@ from .database_service import reallocation_db
 from .facility_data_service import get_active_public_facilities
 from .medicine_data_service import generate_public_modeled_inventory
 from .firebase_service import firebase_service
+from .bigquery_service import bigquery_service
 
 
 @dataclass
@@ -453,8 +454,24 @@ def tool_commit_reallocation_ledger(dispatch_package: Dict[str, Any]) -> Dict[st
         except Exception:
             pass
 
-    # Save to SQLite DB
+    # 1. Save to SQLite DB (Edge cache & offline resilience)
     saved_record = reallocation_db.save_reallocation(dispatch_package)
+
+    # 2. Mirror to Firebase Realtime Database (Live frontend sync, SSE, GPS tracking)
+    try:
+        disp_id = saved_record.get("dispatch_id")
+        if disp_id:
+            firebase_service.write_data(f"reallocations/{disp_id}", saved_record)
+        firebase_service.write_data("reallocations/latest", saved_record)
+    except Exception as fb_err:
+        print(f"[Firebase Reallocation Mirror Notice]: {fb_err}")
+
+    # 3. Stream to Google BigQuery (National-scale audit ledger & resilience intelligence)
+    try:
+        bigquery_service.insert_reallocation_event(saved_record)
+    except Exception as bq_err:
+        print(f"[BigQuery Reallocation Stream Notice]: {bq_err}")
+
     return {
         "status": "COMMITTED_TO_DATABASE",
         "dispatch_id": saved_record.get("dispatch_id"),
