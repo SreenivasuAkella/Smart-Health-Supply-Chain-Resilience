@@ -6,21 +6,23 @@ from typing import Dict, Any, List, Optional
 from .firebase_service import firebase_service
 from .bigquery_service import bigquery_service
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "reallocations.db")
+# In-Memory Shared Cache URI (Zero physical .db files created on disk)
+CACHE_URI = "file:realloc_cache?mode=memory&cache=shared"
 
 class ReallocationDatabaseService:
     """
-    Persistent SQLite Database & Firebase Dual-Sync Service for Sanjeevani AI Reallocations.
-    Stores complete reallocation details, vehicle fleet telemetry, road distance metrics,
-    route waypoints, and AI agent rationale.
+    High-Speed In-Memory Cache & Dual-Cloud Sync Service for Sanjeevani AI Reallocations.
+    Stores active state in RAM with zero disk footprints.
+    Persists audit ledgers to Google BigQuery and live state to Firebase RTDB.
     """
-    def __init__(self, db_path: str = DB_PATH):
-        self.db_path = db_path
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+    def __init__(self, cache_uri: str = CACHE_URI):
+        self.cache_uri = cache_uri
+        # Persistent anchor keeps the shared in-memory database alive in RAM for the process lifecycle
+        self._anchor = sqlite3.connect(self.cache_uri, uri=True, check_same_thread=False)
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.cache_uri, uri=True, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         return conn
 
