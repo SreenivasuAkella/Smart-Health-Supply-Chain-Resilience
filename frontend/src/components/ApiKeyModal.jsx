@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { X, Key, Check, ShieldCheck, ExternalLink } from 'lucide-react';
+import { X, Key, Check, ShieldCheck, ExternalLink, Sparkles } from 'lucide-react';
 
 export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveKey }) {
   const [inputKey, setInputKey] = useState(apiKey || '');
@@ -14,86 +14,95 @@ export default function ApiKeyModal({ isOpen, onClose, apiKey, onSaveKey }) {
     setTimeout(() => {
       setSavedSuccess(false);
       onClose();
-    }, 900);
+    }, 800);
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay animate-fade-in" onClick={onClose}>
       <div 
-        className="glass-panel" 
-        style={{ width: '100%', maxWidth: '520px', padding: '24px', position: 'relative' }}
+        className="glass-panel w-full max-w-lg p-6 sm:p-7 relative border border-slate-700/80 shadow-2xl rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ padding: '8px', background: 'rgba(56, 189, 248, 0.15)', borderRadius: '10px' }}>
-              <Key size={22} color="#38bdf8" />
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Key size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Configure Google Gemini API Key</h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                Enables live multimodal image analysis and real-time multilingual NLU
+              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                Google Gemini API Key
+              </h3>
+              <p className="text-xs text-slate-400">
+                Powers Multimodal Vision OCR & ASHA Voice Copilot
               </p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-            <X size={20} />
+          <button 
+            onClick={onClose} 
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+          >
+            <X size={18} />
           </button>
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)' }}>
-            Gemini API Key (Google AI Studio):
-          </label>
-          <input
-            type="password"
-            placeholder="AIzaSy..."
-            value={inputKey}
-            onChange={(e) => setInputKey(e.target.value)}
-            style={{
-              width: '100%',
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid var(--border-highlight)',
-              borderRadius: '8px',
-              padding: '10px 14px',
-              color: '#f8fafc',
-              fontSize: '0.9rem',
-              fontFamily: 'var(--font-mono)'
-            }}
-          />
-        </div>
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Gemini API Key (from Google AI Studio):
+            </label>
+            <input
+              type="password"
+              placeholder="AIzaSy..."
+              value={inputKey}
+              onChange={(e) => setInputKey(e.target.value)}
+              className="w-full bg-slate-900/90 border border-slate-700/80 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none font-mono transition-colors"
+            />
+          </div>
 
-        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '10px', padding: '12px', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <ShieldCheck size={16} color="#34d399" />
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#34d399' }}>
-              Zero Friction Fallback Mode
+          <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+            <span className="flex items-center gap-1 text-emerald-400">
+              <ShieldCheck size={13} /> Stored locally in your browser
             </span>
+            <a 
+              href="https://aistudio.google.com/app/apikey" 
+              target="_blank" 
+              rel="noreferrer"
+              className="text-cyan-400 hover:underline flex items-center gap-1"
+            >
+              Get free key <ExternalLink size={11} />
+            </a>
           </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-            If you don't enter an API key, Sanjeevani AI automatically switches to high-fidelity clinical simulation mode so all judging and evaluation flows work flawlessly.
-          </p>
+
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 text-xs text-slate-400 space-y-1">
+            <div className="flex items-center gap-1.5 text-slate-300 font-semibold">
+              <Sparkles size={13} className="text-cyan-400" /> Free Tier Available
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              Google AI Studio provides a free quota for Gemini 1.5 & 2.0 Flash models. Without a key, the app seamlessly runs using cached public Indian health surveillance datasets.
+            </p>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <a
-            href="https://aistudio.google.com/app/apikey"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontSize: '0.8rem', color: '#38bdf8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+          <button 
+            onClick={onClose} 
+            className="btn-secondary text-xs px-4 py-2"
           >
-            <span>Get free key from Google AI Studio</span>
-            <ExternalLink size={13} />
-          </a>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={onClose} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
-              Cancel
-            </button>
-            <button onClick={handleSave} className="btn-primary" style={{ padding: '8px 20px', fontSize: '0.85rem' }}>
-              {savedSuccess ? <><Check size={16} /> Saved!</> : 'Save Configuration'}
-            </button>
-          </div>
+            Cancel
+          </button>
+          <button 
+            onClick={handleSave} 
+            className="btn-primary text-xs px-5 py-2"
+          >
+            {savedSuccess ? (
+              <>
+                <Check size={14} className="text-emerald-300" />
+                <span>Saved & Configured!</span>
+              </>
+            ) : (
+              <span>Save & Activate</span>
+            )}
+          </button>
         </div>
       </div>
     </div>

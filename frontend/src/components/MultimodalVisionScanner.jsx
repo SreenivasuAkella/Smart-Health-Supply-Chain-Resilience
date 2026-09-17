@@ -1,6 +1,9 @@
 'use client';
 import React, { useState } from 'react';
-import { Camera, Upload, Sparkles, CheckCircle2, AlertTriangle, RefreshCw, FileCheck, ShieldCheck, Database } from 'lucide-react';
+import { 
+  Camera, Upload, Sparkles, CheckCircle2, AlertTriangle, RefreshCw, 
+  FileCheck, ShieldCheck, Database, QrCode, ShieldAlert, ArrowRight, Pill, Loader2
+} from 'lucide-react';
 import { scanMedicineWithVision, updateStockLedger } from '../services/api';
 
 export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
@@ -109,8 +112,12 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
     }
 
     if (selectedImage) {
-      const res = await scanMedicineWithVision(selectedImage, apiKey);
-      setScanResult(res);
+      try {
+        const res = await scanMedicineWithVision(selectedImage, apiKey);
+        setScanResult(res);
+      } catch (err) {
+        console.error("Vision scan error:", err);
+      }
     }
     setLoading(false);
   };
@@ -118,27 +125,32 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
   const handleSyncToLedger = async () => {
     if (!scanResult) return;
     setSyncStatus('SYNCING');
-    await updateStockLedger("PHC-BARAGAON-03", "MED-ASV-001", 10, "Gemini Multimodal Intake Scan");
-    setSyncStatus('SUCCESS');
-    if (onStockUpdated) onStockUpdated();
+    try {
+      await updateStockLedger("PHC-BARAGAON-03", "PUB-MED-001", 10, "Gemini Multimodal Intake Scan");
+      setSyncStatus('SUCCESS');
+      if (onStockUpdated) onStockUpdated();
+    } catch (err) {
+      console.error("Sync error:", err);
+      setSyncStatus('ERROR');
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Compact Action Bar with Demo Presets */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
-        <div className="flex items-center gap-2">
+    <div className="space-y-6 animate-fade-in">
+      {/* Action Bar with Demo Presets */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
-            <Sparkles size={13} /> Gemini Multimodal Vision
+            <Sparkles size={13} /> Gemini 1.5 Multimodal Vision
           </span>
-          <span className="hidden sm:inline-block text-xs text-slate-400">
-            Batch OCR &bull; Expiry Verification &bull; Hologram Check
+          <span className="text-xs text-slate-400 hidden sm:inline">
+            Sub-second Batch OCR &bull; Expiry Verification &bull; Anti-Counterfeiting Hologram Check
           </span>
         </div>
 
         {/* 1-Click Clinical Demo Presets */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium hidden md:inline">Demo Samples:</span>
+          <span className="text-xs text-slate-400 font-semibold hidden md:inline">Inspect Sample:</span>
           {samplePresets.map((preset, idx) => (
             <button
               key={idx}
@@ -147,7 +159,11 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
                 setSelectedImage(null);
                 handleRunScan(preset);
               }}
-              className="bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs px-2.5 py-1.5 rounded-lg transition-all"
+              className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all border ${
+                preset.isTampered
+                  ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/30'
+                  : 'btn-secondary'
+              }`}
             >
               {preset.label}
             </button>
@@ -156,38 +172,49 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
       </div>
 
       {/* Main Scanner Workbench */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         
         {/* Upload & Image Viewport */}
         <div className="glass-panel p-6 space-y-4">
-          <h3 className="font-bold text-white text-sm flex items-center gap-2">
-            <Camera size={18} className="text-cyan-400" />
-            Upload Drug Packaging or Vaccine Vial Image
-          </h3>
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                <Camera size={18} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-white font-display">
+                  Medicine Packaging & Ampoule Scanner
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Upload or capture vaccine vial, blister pack, or QR shipment label
+                </p>
+              </div>
+            </div>
+          </div>
 
-          <div className="border-2 border-dashed border-slate-700 hover:border-cyan-500/50 rounded-2xl p-6 text-center transition-all bg-slate-900/50">
+          <div className="border-2 border-dashed border-slate-700/80 hover:border-cyan-500/50 rounded-2xl p-6 text-center transition-all bg-slate-900/40">
             {imagePreview ? (
               <div className="space-y-3">
                 <img 
                   src={imagePreview} 
                   alt="Scanned Medicine" 
-                  className="max-h-56 mx-auto rounded-xl object-contain shadow-lg"
+                  className="max-h-56 mx-auto rounded-xl object-contain shadow-2xl border border-slate-700/60"
                 />
                 <button 
                   onClick={() => { setImagePreview(null); setSelectedImage(null); }}
-                  className="text-xs text-rose-400 hover:underline"
+                  className="text-xs text-rose-400 hover:text-rose-300 font-semibold"
                 >
-                  Remove & Upload Another
+                  Remove & Upload Another Photo
                 </button>
               </div>
             ) : (
-              <label className="cursor-pointer block space-y-3">
-                <div className="w-14 h-14 mx-auto rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <label className="cursor-pointer block space-y-3 py-4">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm">
                   <Upload size={24} />
                 </div>
                 <div>
-                  <span className="text-sm font-semibold text-white">Click to upload photo</span>
-                  <span className="text-xs text-slate-400 block mt-0.5">Supports PNG, JPG, JPEG (Max 10MB)</span>
+                  <span className="text-sm font-bold text-white block">Click to upload medicine photo</span>
+                  <span className="text-xs text-slate-400 mt-1 block">Supports PNG, JPG, WEBP (Direct Camera or Gallery)</span>
                 </div>
                 <input 
                   type="file" 
@@ -199,39 +226,46 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
             )}
           </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleRunScan()}
-              disabled={!selectedImage || loading}
-              className={`w-full ${selectedImage ? 'btn-primary' : 'bg-slate-800 text-slate-500 cursor-not-allowed'} py-3 justify-center text-sm font-semibold rounded-xl`}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin" />
-                  <span>Gemini Multimodal Analyzing...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} />
-                  <span>Run Gemini Vision Analysis</span>
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={() => handleRunScan()}
+            disabled={!selectedImage || loading}
+            className={`w-full ${selectedImage ? 'btn-primary' : 'bg-slate-800/80 text-slate-500 cursor-not-allowed'} py-3 justify-center text-xs font-bold rounded-xl shadow-md`}
+          >
+            {loading ? (
+              <>
+                <Loader2 size={16} className="animate-spin text-cyan-300" />
+                <span>Gemini Multimodal OCR Running...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                <span>Run Gemini Vision Analysis</span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* Extracted Structured Intelligence */}
         <div className="glass-panel p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-700">
-            <h3 className="font-bold text-white text-sm flex items-center gap-2">
-              <FileCheck size={18} className="text-emerald-400" />
-              Clinical Extraction & Authenticity Ledger
-            </h3>
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                <FileCheck size={18} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-white font-display">
+                  Verification & Inspection Ledger
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Automated OCR extraction and counterfeit risk analysis
+                </p>
+              </div>
+            </div>
             {scanResult && (
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+              <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider border ${
                 scanResult.tamper_or_damage_detected 
-                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' 
-                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse' 
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
               }`}>
                 {scanResult.packaging_status}
               </span>
@@ -239,41 +273,41 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
           </div>
 
           {scanResult ? (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fade-in">
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
                   <span className="text-slate-400 block text-[11px]">Brand Name</span>
-                  <span className="font-bold text-white text-sm">{scanResult.brand_name}</span>
+                  <span className="font-bold text-white text-sm block mt-0.5">{scanResult.brand_name}</span>
                 </div>
-                <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
                   <span className="text-slate-400 block text-[11px]">Batch Number</span>
-                  <span className="font-mono font-bold text-cyan-300 text-sm">{scanResult.batch_number}</span>
+                  <span className="font-mono font-bold text-cyan-300 text-sm block mt-0.5">{scanResult.batch_number}</span>
                 </div>
-                <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
                   <span className="text-slate-400 block text-[11px]">Manufacturer</span>
-                  <span className="font-semibold text-slate-200">{scanResult.manufacturer}</span>
+                  <span className="font-semibold text-slate-200 block mt-0.5">{scanResult.manufacturer}</span>
                 </div>
-                <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
                   <span className="text-slate-400 block text-[11px]">Expiry Date</span>
-                  <span className={`font-bold ${scanResult.days_to_expiry < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  <span className={`font-bold block mt-0.5 ${scanResult.days_to_expiry < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                     {scanResult.expiry_date} ({scanResult.days_to_expiry > 0 ? `${scanResult.days_to_expiry}d left` : 'EXPIRED'})
                   </span>
                 </div>
               </div>
 
-              <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 space-y-1 text-xs">
-                <span className="text-slate-400 block text-[11px]">Storage Condition Verified</span>
-                <span className="text-cyan-300 font-medium">{scanResult.storage_condition}</span>
+              <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1 text-xs">
+                <span className="text-slate-400 block text-[11px]">Recommended Cold Chain Storage</span>
+                <span className="text-cyan-300 font-semibold">{scanResult.storage_condition}</span>
               </div>
 
-              <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 space-y-1 text-xs">
+              <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1 text-xs">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-slate-400 text-[11px]">Counterfeit / Tamper Risk Score</span>
-                  <span className={`font-bold ${scanResult.counterfeit_risk_score > 30 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  <span className="text-slate-400 text-[11px] font-semibold">Counterfeit & Tamper Risk Score</span>
+                  <span className={`font-mono font-bold ${scanResult.counterfeit_risk_score > 30 ? 'text-rose-400' : 'text-emerald-400'}`}>
                     {scanResult.counterfeit_risk_score}% Risk
                   </span>
                 </div>
-                <p className="text-slate-300 text-[11px] leading-relaxed">
+                <p className="text-slate-300 text-xs leading-relaxed">
                   {scanResult.verification_notes}
                 </p>
               </div>
@@ -282,12 +316,12 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
                 <button
                   onClick={handleSyncToLedger}
                   disabled={syncStatus === 'SUCCESS'}
-                  className="w-full btn-primary justify-center text-xs py-2.5"
+                  className="w-full btn-primary justify-center text-xs py-2.5 font-semibold"
                 >
                   {syncStatus === 'SUCCESS' ? (
                     <>
-                      <CheckCircle2 size={16} />
-                      <span>Intake Confirmed & Synced to e-Aushadhi (+10 Units)</span>
+                      <CheckCircle2 size={16} className="text-emerald-300" />
+                      <span>Intake Verified & Logged (+10 Units)</span>
                     </>
                   ) : (
                     <>
@@ -299,9 +333,13 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
               )}
             </div>
           ) : (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-xs space-y-2">
-              <ShieldCheck size={36} className="text-slate-600" />
-              <span>Select a quick demo sample or upload a medicine photo to run Gemini Vision.</span>
+            <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-xs space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
+                <ShieldCheck size={26} />
+              </div>
+              <span className="text-center max-w-xs">
+                Select a sample preset above or upload an image to run live Gemini Multimodal Vision analysis.
+              </span>
             </div>
           )}
         </div>
