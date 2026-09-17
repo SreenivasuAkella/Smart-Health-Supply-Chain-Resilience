@@ -260,21 +260,23 @@ export async function analyzeMedicineImage(base64Image, mimeType = "image/jpeg",
 
 export const scanMedicineWithVision = analyzeMedicineImage;
 
-export async function askAshaCopilot(param1, language = "hi", facilityId = "DH-VAR-001", apiKey = "") {
+export async function askAshaCopilot(param1, language = "hi", facilityId = "PHC-BARAGAON-03", apiKey = "", facilityName = "") {
   try {
     let payload = {};
     if (typeof param1 === 'object' && param1 !== null) {
       payload = {
         prompt: param1.prompt || param1.query || "",
         language: param1.language || "hi",
-        facility_id: param1.facilityId || "DH-VAR-001",
-        custom_api_key: param1.apiKey || ""
+        facility_id: param1.facilityId || param1.facility_id || "PHC-BARAGAON-03",
+        facility_name: param1.facilityName || param1.facility_name || "",
+        custom_api_key: param1.apiKey || param1.custom_api_key || ""
       };
     } else {
       payload = {
         prompt: String(param1 || ""),
         language: language,
-        facility_id: facilityId,
+        facility_id: facilityId || "PHC-BARAGAON-03",
+        facility_name: facilityName || "",
         custom_api_key: apiKey
       };
     }
@@ -306,6 +308,64 @@ export async function fetchCopilotHistory() {
 }
 
 export const queryGeminiCopilot = askAshaCopilot;
+
+export async function chatWithAshaCopilot({
+  prompt = "",
+  sessionId = null,
+  language = "hi",
+  facilityId = "PHC-BARAGAON-03",
+  facilityName = "Primary Health Centre Baragaon",
+  history = [],
+  apiKey = ""
+} = {}) {
+  try {
+    const payload = {
+      prompt,
+      session_id: sessionId,
+      language,
+      facility_id: facilityId,
+      facility_name: facilityName,
+      conversation_history: history,
+      api_key: apiKey
+    };
+
+    const res = await fetch(`${API_BASE_URL}/copilot/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Copilot Chat API failed");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("chatWithAshaCopilot error:", err);
+    return askAshaCopilot({ prompt, language, facilityId, facilityName, apiKey });
+  }
+}
+
+export async function fetchCopilotSessions() {
+  try {
+    const res = await dedupedFetch(`${API_BASE_URL}/copilot/sessions`);
+    if (!res.ok) throw new Error("Failed to fetch sessions");
+    const json = await res.json();
+    return json.sessions || [];
+  } catch (err) {
+    console.warn("fetchCopilotSessions fallback:", err);
+    return [];
+  }
+}
+
+export async function fetchCopilotSessionDetail(sessionId) {
+  try {
+    const res = await dedupedFetch(`${API_BASE_URL}/copilot/sessions/${sessionId}`);
+    if (!res.ok) throw new Error("Failed to fetch session detail");
+    const json = await res.json();
+    return json.session || null;
+  } catch (err) {
+    console.warn("fetchCopilotSessionDetail error:", err);
+    return null;
+  }
+}
 
 export async function runCrisisSimulation(crisisType = "MONSOON_FLOOD_ISOLATION", targetFacility = "DH-VAR-001", severity = "HIGH") {
   try {

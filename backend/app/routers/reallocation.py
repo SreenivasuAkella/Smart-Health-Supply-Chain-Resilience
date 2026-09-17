@@ -11,8 +11,8 @@ from ..utils.response_helper import success_response, error_response
 router = APIRouter(prefix="/api/reallocation", tags=["Autonomous Reallocation & Route Optimizer"])
 
 class ReallocationRequest(BaseModel):
-    target_facility_id: Optional[str] = "PHC-BARAGAON-03"
-    medicine_id: Optional[str] = "MED-ASV-001"
+    target_facility_id: Optional[str] = None
+    medicine_id: Optional[str] = None
     required_quantity: Optional[int] = None
     requested_quantity: Optional[int] = None
     urgency: Optional[str] = "CRITICAL"
@@ -28,7 +28,7 @@ def optimize_reallocation(req: ReallocationRequest):
     Runs the multi-agent AI pipeline (Sentinel -> Strategist -> Fleet -> Supervisor)
     with turn-by-turn road navigation, Vertex AI velocity analysis, and cold-chain safety.
     """
-    qty = req.requested_quantity or req.required_quantity or 25
+    qty = req.requested_quantity or req.required_quantity
     try:
         record = run_auto_relocation_pipeline(
             target_facility_id=req.target_facility_id,
@@ -44,8 +44,8 @@ def optimize_reallocation(req: ReallocationRequest):
         # Fallback to local road planner
         # generate_reallocation_plan returns a success_response wrapper — unwrap data
         plan_resp = generate_reallocation_plan(
-            target_facility_id=req.target_facility_id or "PHC-BARAGAON-03",
-            medicine_id=req.medicine_id or "MED-ASV-001",
+            target_facility_id=req.target_facility_id,
+            medicine_id=req.medicine_id,
             required_quantity=qty
         )
         plan_data = plan_resp.get("data", plan_resp) if isinstance(plan_resp, dict) else plan_resp

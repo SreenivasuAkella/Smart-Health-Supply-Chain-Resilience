@@ -296,4 +296,113 @@ class BigQueryHealthWarehouse:
         res = self.execute_custom_sql(sql)
         return res.get("data", [])
 
+    def _ensure_asha_conversation_table(self):
+        """Ensures the asha_copilot_conversations BigQuery table exists."""
+        if not self.client:
+            return
+        table_id = f"{self.project_id}.{self.dataset_id}.asha_copilot_conversations"
+        try:
+            from google.cloud import bigquery
+            schema = [
+                bigquery.SchemaField("session_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("message_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("timestamp", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("role", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("language_code", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("facility_id", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("facility_name", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("user_prompt", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("agent_response_localized", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("agent_response_english", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("intent", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("missing_info_detected", "STRING", mode="REPEATED"),
+                bigquery.SchemaField("missing_info_resolved", "BOOLEAN", mode="NULLABLE"),
+                bigquery.SchemaField("status", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("agents_invoked", "STRING", mode="REPEATED"),
+                bigquery.SchemaField("tools_executed", "STRING", mode="REPEATED"),
+                bigquery.SchemaField("dispatch_id", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("latency_ms", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("ai_engine", "STRING", mode="NULLABLE"),
+            ]
+            table = bigquery.Table(table_id, schema=schema)
+            self.client.create_table(table, exists_ok=True)
+            self._asha_table_checked = True
+        except Exception as e:
+            print(f"[BigQuery ASHA Table Setup Notice]: {e}")
+
+    def insert_asha_conversation_event(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Asynchronously streams an ASHA Copilot conversational turn into Google BigQuery.
+        """
+        if not self.client:
+            return {"status": "skipped", "message": "BigQuery client not connected"}
+
+        def _bg_insert():
+            try:
+                if not getattr(self, "_asha_table_checked", False):
+                    self._ensure_asha_conversation_table()
+
+                row = {
+                    "session_id": str(event_data.get("session_id") or f"SESS-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"),
+                    "message_id": str(event_data.get("message_id") or f"MSG-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"),
+                    "timestamp": str(event_data.get("timestamp") or datetime.utcnow().isoformat() + "Z"),
+                    "role": str(event_data.get("role") or "assistant"),
+                    "language_code": str(event_data.get("language_code") or "hi"),
+                    "facility_id": str(event_data.get("facility_id") or ""),
+                    "facility_name": str(event_data.get("facility_name") or ""),
+                    "user_prompt": str(event_data.get("user_prompt") or ""),
+                    "agent_response_localized": str(event_data.get("agent_response_localized") or ""),
+                    "agent_response_english": str(event_data.get("agent_response_english") or ""),
+                    "intent": str(event_data.get("intent") or "GENERAL_QUERY"),
+                    "missing_info_detected": [str(x) for x in (event_data.get("missing_info_detected") or [])],
+                    "missing_info_resolved": bool(event_data.get("missing_info_resolved", False)),
+                    "status": str(event_data.get("status") or "COMPLETED"),
+                    "agents_invoked": [str(x) for x in (event_data.get("agents_invoked") or [])],
+                    "tools_executed": [str(x) for x in (event_data.get("tools_executed") or [])],
+                    "dispatch_id": str(event_data.get("dispatch_id") or ""),
+                    "latency_ms": float(event_data.get("latency_ms") or 0.0),
+                    "ai_engine": str(event_data.get("ai_engine") or "Google Gemini & Vertex AI Multi-Agent")
+                }
+
+                table_id = f"{self.project_id}.{self.dataset_id}.asha_copilot_conversations"
+                job = self.client.load_table_from_json([row], table_id)
+                job.result(timeout=15)
+                print(f"[BigQuery]: Successfully logged ASHA conversational turn {row['message_id']} to {table_id}")
+            except Exception as e:
+                print(f"[BigQuery ASHA Conversation Insert Notice]: {e}")
+
+        self._executor.submit(_bg_insert)
+        return {"status": "queued", "session_id": event_data.get("session_id")}
+
+    def list_asha_conversation_events(self, session_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """Queries ASHA conversational transcripts from BigQuery."""
+        table_id = f"{self.project_id}.{self.dataset_id}.asha_copilot_conversations"
+        where_clause = f"WHERE session_id = '{session_id}'" if session_id else ""
+        sql = f"""
+        SELECT 
+            session_id,
+            message_id,
+            timestamp,
+            role,
+            language_code,
+            facility_name,
+            user_prompt,
+            agent_response_localized,
+            agent_response_english,
+            intent,
+            missing_info_detected,
+            missing_info_resolved,
+            status,
+            agents_invoked,
+            tools_executed,
+            dispatch_id,
+            latency_ms
+        FROM `{table_id}`
+        {where_clause}
+        ORDER BY timestamp DESC
+        LIMIT {limit}
+        """
+        res = self.execute_custom_sql(sql)
+        return res.get("data", [])
+
 bigquery_service = BigQueryHealthWarehouse()

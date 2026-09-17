@@ -1,6 +1,6 @@
 import math
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 def calculate_haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates great-circle distance between two geographic coordinates in kilometers."""
@@ -12,43 +12,71 @@ def calculate_haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -
     return round(R * c, 2)
 
 
-def generate_reallocation_plan(target_facility_id: str = "PHC-BARAGAON-03", medicine_id: str = "MED-ASV-001", required_quantity: int = 25) -> Dict[str, Any]:
+def generate_reallocation_plan(
+    target_facility_id: Optional[str] = None,
+    medicine_id: Optional[str] = None,
+    required_quantity: Optional[int] = None
+) -> Dict[str, Any]:
     """
     Autonomous Reallocation Optimizer:
     Finds optimal surplus facilities, computes Google Maps compliant transit route & cold-chain compliance window.
+    Completely dynamic: if facility, medicine, or quantity are omitted, discovers the critical deficit node & medicine dynamically.
     """
     from .facility_data_service import get_active_public_facilities
     from .medicine_data_service import get_active_essential_medicines, generate_public_modeled_inventory
     
     facilities_list = get_active_public_facilities()
     facilities = {fac["id"]: fac for fac in facilities_list}
-    # Also support searching by name or fallback to first facility if ID mismatch
-    if target_facility_id not in facilities and facilities_list:
-        target_facility = facilities_list[0]
-        target_facility_id = target_facility["id"]
 
-    # Build live modeled inventory from real OpenFDA catalog
+    # Resolve target facility dynamically
+    if not target_facility_id or target_facility_id not in facilities:
+        if facilities_list:
+            target_facility_id = facilities_list[0]["id"]
+        else:
+            return {"error": "No registered health facilities available"}
+
+    # Build live modeled inventory from real OpenFDA / NLEM catalog
     live_medicines_list = generate_public_modeled_inventory({}, facilities_list)
     medicines = {med["id"]: med for med in live_medicines_list}
 
-    # Fallback: if medicine_id not found by exact match, use the first available medicine
-    if medicine_id not in medicines and live_medicines_list:
-        medicine_id = live_medicines_list[0]["id"]
+    # Resolve target medicine dynamically
+    if not medicine_id or medicine_id not in medicines:
+        # Dynamically discover the medicine with lowest stock at target facility
+        lowest_med = None
+        min_stk = float('inf')
+        for med in live_medicines_list:
+            stk = med.get("inventoryByFacility", {}).get(target_facility_id, 999)
+            if stk < min_stk:
+                min_stk = stk
+                lowest_med = med
+        if lowest_med:
+            medicine_id = lowest_med["id"]
+        elif live_medicines_list:
+            medicine_id = live_medicines_list[0]["id"]
         
     target_facility = facilities.get(target_facility_id)
     medicine = medicines.get(medicine_id)
     
     if not target_facility or not medicine:
         return {"error": "Target facility or medicine not found"}
+
+    target_fac_id: str = str(target_facility["id"])
+    target_med_id: str = str(medicine["id"])
+
+    # Compute required replenishment quantity dynamically if omitted
+    cur_stock = medicine.get("inventoryByFacility", {}).get(target_fac_id, 0)
+    if not required_quantity or required_quantity <= 0:
+        safety_norm = medicine.get("safetyStockThreshold", 20)
+        required_quantity = max(15, (safety_norm * 2) - cur_stock)
         
     # Search potential donor facilities with surplus stock
     candidate_donors = []
     for fac_id, fac in facilities.items():
-        if fac_id == target_facility_id:
+        if fac_id == target_fac_id:
             continue
         curr_stock = medicine["inventoryByFacility"].get(fac_id, 0)
         # Only consider facilities with surplus stock
-        if curr_stock >= (required_quantity + 10):
+        if curr_stock >= (required_quantity + 5):
             distance_km = calculate_haversine_km(
                 fac["lat"], fac["lng"],
                 target_facility["lat"], target_facility["lng"]
@@ -115,16 +143,16 @@ def generate_reallocation_plan(target_facility_id: str = "PHC-BARAGAON-03", medi
     from ..utils.response_helper import success_response
     return success_response(
         data={
-            "dispatch_id": f"DISPATCH-{target_facility_id[-6:].replace('-','')}-{datetime.utcnow().strftime('%Y%m%d%H%M')}",
+            "dispatch_id": f"DISPATCH-{target_fac_id[-6:].replace('-','')}-{datetime.utcnow().strftime('%Y%m%d%H%M')}",
             "timestamp": datetime.utcnow().isoformat() + "Z",  # H1: dynamic UTC timestamp
             "target_facility": {
-                "id": target_facility["id"],
+                "id": target_fac_id,
                 "name": target_facility["name"],
                 "district": target_facility["district"],
                 "state": target_facility["state"],
                 "lat": target_facility["lat"],
                 "lng": target_facility["lng"],
-                "current_stock": medicine["inventoryByFacility"].get(target_facility_id, 0),
+                "current_stock": medicine.get("inventoryByFacility", {}).get(target_fac_id, 0),
                 "requested_quantity": required_quantity
             },
             "selected_donor": selected_donor,

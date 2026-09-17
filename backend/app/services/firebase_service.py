@@ -143,17 +143,31 @@ class FirebaseSyncService:
         }
         return self.write_data(f"telemetry/live/{sensor_id}", payload)
 
-    def verify_asha_auth_token(self, token: Optional[str] = None) -> Dict[str, Any]:
+    def save_copilot_session(self, session_id: str, session_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validates Firebase Auth ID Token for ASHA / PHC field workers.
+        Stores conversational session transcript and context into Firebase Realtime DB.
         """
-        return {
-            "authenticated": True,
-            "uid": "asha-worker-vns-8472",
-            "role": "ASHA_CLUSTER_COORDINATOR",
-            "assigned_district": "Varanasi (Zone B)",
-            "auth_provider": "Firebase Authentication (Google Identity)"
-        }
+        clean_sid = session_id.strip("/")
+        return self.write_data(f"voice_copilot_sessions/{clean_sid}", session_data)
+
+    def get_copilot_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves conversational session transcript from Firebase Realtime DB / memory cache.
+        """
+        clean_sid = session_id.strip("/")
+        return self.read_data(f"voice_copilot_sessions/{clean_sid}")
+
+    def list_copilot_sessions(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """
+        Returns recent conversational sessions from cache.
+        """
+        prefix = "voice_copilot_sessions/"
+        results = []
+        for path, data in self._cached_telemetry.items():
+            if path.startswith(prefix) and isinstance(data, dict):
+                results.append(data)
+        results.sort(key=lambda s: s.get("updated_at", ""), reverse=True)
+        return results[:limit]
 
 firebase_service = FirebaseSyncService()
 firebase_sync_service = firebase_service

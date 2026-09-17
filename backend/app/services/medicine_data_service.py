@@ -113,10 +113,15 @@ def ai_analyze_public_drug_label(openfda_result: Optional[Dict[str, Any]], fallb
                 contents=prompt,
                 config={"temperature": 0.1, "max_output_tokens": 250}
             )
-            raw_text = ai_res.text if hasattr(ai_res, "text") else ""
-            clean_json = raw_text.replace("```json", "").replace("```", "").strip()
-            ai_data = json.loads(clean_json)
-            base_entry.update(ai_data)
+            raw_text: str = getattr(ai_res, "text", "") or ""
+            clean_json: str = raw_text.replace("```json", "").replace("```", "").strip()
+            if clean_json:
+                start = clean_json.find("{")
+                end = clean_json.rfind("}")
+                if start != -1 and end != -1:
+                    ai_data = json.loads(clean_json[start:end+1])
+                    if isinstance(ai_data, dict):
+                        base_entry.update(ai_data)
         except Exception:
             pass
 

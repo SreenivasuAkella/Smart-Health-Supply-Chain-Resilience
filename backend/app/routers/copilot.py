@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException, Request
 from typing import Optional, Any, Dict
-from ..services.gemini_copilot import process_copilot_query, get_copilot_dispatch_history
+from ..services.gemini_copilot import (
+    process_copilot_query,
+    process_copilot_chat,
+    get_copilot_dispatch_history,
+    get_copilot_session_by_id,
+    list_recent_copilot_sessions
+)
 
 router = APIRouter(tags=["Gemini Multilingual Copilot"])
 
@@ -23,13 +29,74 @@ def _get_default_facility() -> Dict[str, str]:
 
 @router.get("/api/copilot/status")
 def copilot_status():
-    return {"status": "ONLINE", "model": "gemini-1.5-flash", "supported_languages": 8}
+    return {
+        "status": "ONLINE",
+        "model": "gemini-1.5-flash",
+        "supported_languages": 8,
+        "capabilities": ["multi-turn-conversational", "dynamic-agent-selection", "slot-clarification", "bigquery-firebase-sync"]
+    }
 
 @router.get("/api/copilot/history")
 @router.get("/api/copilot/dispatches")
+@router.get("/api/ai/copilot/history")
 def copilot_history():
     history = get_copilot_dispatch_history()
     return {"success": True, "dispatches": history, "count": len(history)}
+
+@router.get("/api/copilot/sessions")
+@router.get("/api/copilot/conversations")
+@router.get("/api/ai/copilot/sessions")
+def copilot_sessions():
+    sessions = list_recent_copilot_sessions()
+    return {"success": True, "sessions": sessions, "count": len(sessions)}
+
+@router.get("/api/copilot/sessions/{session_id}")
+@router.get("/api/copilot/conversations/{session_id}")
+@router.get("/api/ai/copilot/sessions/{session_id}")
+def copilot_session_detail(session_id: str):
+    sess = get_copilot_session_by_id(session_id)
+    if not sess:
+        raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+    return {"success": True, "session": sess}
+
+@router.post("/api/copilot/chat")
+@router.post("/api/ai/copilot/chat")
+async def copilot_chat(request: Request):
+    """
+    Conversational GenAI Multi-Turn endpoint.
+    Manages session memory, clarifies missing parameters, picks specialized agents/tools,
+    and returns rich multimodal responses with dual BigQuery and Firebase sync.
+    """
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            body = {}
+
+        prompt_text = body.get("prompt") or body.get("query") or body.get("user_prompt") or ""
+        if isinstance(prompt_text, dict):
+            prompt_text = prompt_text.get("prompt") or prompt_text.get("query") or str(prompt_text)
+
+        session_id = body.get("session_id") or body.get("sessionId")
+        lang_code = body.get("language") or body.get("language_code") or "hi"
+
+        default_fac = _get_default_facility()
+        facility_id = body.get("facility_id") or default_fac["id"]
+        facility_name = body.get("facility_name") or default_fac["name"]
+        conversation_history = body.get("conversation_history") or body.get("history") or []
+        key = body.get("apiKey") or body.get("custom_api_key") or body.get("api_key")
+
+        result = process_copilot_chat(
+            prompt=str(prompt_text),
+            session_id=str(session_id) if session_id else None,
+            language_code=str(lang_code),
+            facility_id=str(facility_id),
+            facility_name=str(facility_name),
+            conversation_history=conversation_history,
+            custom_api_key=key
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/copilot/ask")
 @router.post("/api/copilot/query")
@@ -47,7 +114,6 @@ async def copilot_query(request: Request):
 
         lang_code = body.get("language") or body.get("language_code") or "hi"
 
-        # H4: Resolve default facility from live registry, not hardcoded string
         default_fac = _get_default_facility()
         facility_id = body.get("facility_id") or default_fac["id"]
         facility_name = body.get("facility_name") or default_fac["name"]
