@@ -212,9 +212,12 @@ def tool_scan_stockout_risks(threshold_days: int = 3) -> Dict[str, Any]:
 def tool_find_surplus_donor_nodes(
     target_facility_id: str,
     medicine_id: str,
-    required_quantity: int = 25
+    required_quantity: int = 25,
+    source_facility_id: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Searches and ranks donor facilities holding surplus inventory without compromising their own buffer."""
+    """Searches and ranks donor facilities holding surplus inventory without compromising their own buffer.
+    Supports user-specified source facility or automated nearest-surplus discovery.
+    """
     required_quantity = int(required_quantity or 25)
     facilities_list = get_active_public_facilities()
     facilities_map = {f["id"]: f for f in facilities_list}
@@ -235,34 +238,50 @@ def tool_find_surplus_donor_nodes(
         medicine = medicines_list[0]
 
     candidate_donors = []
+    user_donor = None
+
     for fac_id, fac in facilities_map.items():
         if fac_id == target_facility_id:
             continue
         curr_stock = medicine.get("inventoryByFacility", {}).get(fac_id, 0) if medicine else 0
+        distance_km = calculate_haversine_km(fac["lat"], fac["lng"], target_fac["lat"], target_fac["lng"])
+        est_minutes = max(2, int(round((distance_km / 36.0) * 60.0)))
+        
+        donor_record = {
+            "facility_id": fac["id"],
+            "facility_name": fac["name"],
+            "type": fac.get("type", "Hospital"),
+            "district": fac.get("district", ""),
+            "state": fac.get("state", ""),
+            "lat": fac["lat"],
+            "lng": fac["lng"],
+            "available_stock": curr_stock,
+            "distance_km": distance_km,
+            "estimated_transit_minutes": est_minutes,
+            "cold_chain_type": fac.get("coldChainType", "ILR_SOLAR"),
+            "contact": fac.get("contact", "+91 94501 28471"),
+            "is_user_specified": False
+        }
+
+        if source_facility_id and (fac_id == source_facility_id or str(source_facility_id).lower() in fac["name"].lower() or str(source_facility_id).upper() == fac_id.upper()):
+            donor_record["is_user_specified"] = True
+            donor_record["surplus_sufficient"] = (curr_stock >= required_quantity)
+            user_donor = donor_record
+
         if curr_stock >= (required_quantity + 10):
-            distance_km = calculate_haversine_km(fac["lat"], fac["lng"], target_fac["lat"], target_fac["lng"])
-            est_minutes = max(2, int(round((distance_km / 36.0) * 60.0)))
-            candidate_donors.append({
-                "facility_id": fac["id"],
-                "facility_name": fac["name"],
-                "type": fac.get("type", "Hospital"),
-                "district": fac.get("district", ""),
-                "state": fac.get("state", ""),
-                "lat": fac["lat"],
-                "lng": fac["lng"],
-                "available_stock": curr_stock,
-                "distance_km": distance_km,
-                "estimated_transit_minutes": est_minutes,
-                "cold_chain_type": fac.get("coldChainType", "ILR_SOLAR"),
-                "contact": fac.get("contact", "+91 94501 28471")
-            })
+            candidate_donors.append(donor_record)
 
     candidate_donors.sort(key=lambda x: x["distance_km"])
+    
+    selected_donor = user_donor if user_donor else (candidate_donors[0] if candidate_donors else None)
+    alt_donors = [d for d in candidate_donors if not selected_donor or d["facility_id"] != selected_donor["facility_id"]][:4]
+
     return {
         "target_facility": target_fac,
         "medicine": medicine,
-        "selected_donor": candidate_donors[0] if candidate_donors else None,
-        "alternative_donors": candidate_donors[1:4] if len(candidate_donors) > 1 else []
+        "selected_donor": selected_donor,
+        "is_user_specified": bool(user_donor),
+        "alternative_donors": alt_donors
     }
 
 
@@ -920,6 +939,10 @@ mcp_tool_registry.register_tool(MCPTool(
                 "type": "integer",
                 "description": "Quantity of medication units required.",
                 "default": 25
+            },
+            "source_facility_id": {
+                "type": "string",
+                "description": "Optional user-selected source facility ID or name. If omitted, tool automatically identifies the nearest surplus facility."
             }
         },
         "required": ["target_facility_id", "medicine_id"]

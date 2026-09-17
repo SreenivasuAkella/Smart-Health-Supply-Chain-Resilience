@@ -80,8 +80,10 @@ async def copilot_chat(request: Request):
         lang_code = body.get("language") or body.get("language_code") or "hi"
 
         default_fac = _get_default_facility()
-        facility_id = body.get("facility_id") or default_fac["id"]
-        facility_name = body.get("facility_name") or default_fac["name"]
+        facility_id = body.get("target_facility_id") or body.get("facility_id") or default_fac["id"]
+        facility_name = body.get("target_facility_name") or body.get("facility_name") or default_fac["name"]
+        source_facility_id = body.get("source_facility_id") or body.get("sourceFacilityId") or body.get("donor_facility_id")
+        source_facility_name = body.get("source_facility_name") or body.get("sourceFacilityName") or body.get("donor_facility_name")
         conversation_history = body.get("conversation_history") or body.get("history") or []
         key = body.get("apiKey") or body.get("custom_api_key") or body.get("api_key")
 
@@ -91,6 +93,8 @@ async def copilot_chat(request: Request):
             language_code=str(lang_code),
             facility_id=str(facility_id),
             facility_name=str(facility_name),
+            source_facility_id=str(source_facility_id) if source_facility_id else None,
+            source_facility_name=str(source_facility_name) if source_facility_name else None,
             conversation_history=conversation_history,
             custom_api_key=key
         )
@@ -115,8 +119,10 @@ async def copilot_query(request: Request):
         lang_code = body.get("language") or body.get("language_code") or "hi"
 
         default_fac = _get_default_facility()
-        facility_id = body.get("facility_id") or default_fac["id"]
-        facility_name = body.get("facility_name") or default_fac["name"]
+        facility_id = body.get("target_facility_id") or body.get("facility_id") or default_fac["id"]
+        facility_name = body.get("target_facility_name") or body.get("facility_name") or default_fac["name"]
+        source_facility_id = body.get("source_facility_id") or body.get("sourceFacilityId") or body.get("donor_facility_id")
+        source_facility_name = body.get("source_facility_name") or body.get("sourceFacilityName") or body.get("donor_facility_name")
         key = body.get("apiKey") or body.get("custom_api_key") or body.get("api_key")
 
         result = process_copilot_query(
@@ -124,6 +130,8 @@ async def copilot_query(request: Request):
             language_code=str(lang_code),
             facility_id=str(facility_id),
             facility_name=str(facility_name),
+            source_facility_id=str(source_facility_id) if source_facility_id else None,
+            source_facility_name=str(source_facility_name) if source_facility_name else None,
             custom_api_key=key
         )
         return result

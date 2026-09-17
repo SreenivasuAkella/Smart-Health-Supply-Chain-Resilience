@@ -315,7 +315,7 @@ export async function analyzeMedicineImage(base64Image, mimeType = "image/jpeg",
 
 export const scanMedicineWithVision = analyzeMedicineImage;
 
-export async function askAshaCopilot(param1, language = "hi", facilityId = "PHC-BARAGAON-03", apiKey = "", facilityName = "") {
+export async function askAshaCopilot(param1, language = "hi", facilityId = "PHC-BARAGAON-03", apiKey = "", facilityName = "", sourceFacilityId = "", sourceFacilityName = "") {
   try {
     let payload = {};
     if (typeof param1 === 'object' && param1 !== null) {
@@ -324,6 +324,8 @@ export async function askAshaCopilot(param1, language = "hi", facilityId = "PHC-
         language: param1.language || "hi",
         facility_id: param1.facilityId || param1.facility_id || "PHC-BARAGAON-03",
         facility_name: param1.facilityName || param1.facility_name || "",
+        source_facility_id: param1.sourceFacilityId || param1.source_facility_id || "",
+        source_facility_name: param1.sourceFacilityName || param1.source_facility_name || "",
         custom_api_key: param1.apiKey || param1.custom_api_key || ""
       };
     } else {
@@ -332,6 +334,8 @@ export async function askAshaCopilot(param1, language = "hi", facilityId = "PHC-
         language: language,
         facility_id: facilityId || "PHC-BARAGAON-03",
         facility_name: facilityName || "",
+        source_facility_id: sourceFacilityId || "",
+        source_facility_name: sourceFacilityName || "",
         custom_api_key: apiKey
       };
     }
@@ -370,6 +374,8 @@ export async function chatWithAshaCopilot({
   language = "hi",
   facilityId = "PHC-BARAGAON-03",
   facilityName = "Primary Health Centre Baragaon",
+  sourceFacilityId = null,
+  sourceFacilityName = null,
   history = [],
   apiKey = ""
 } = {}) {
@@ -380,6 +386,8 @@ export async function chatWithAshaCopilot({
       language,
       facility_id: facilityId,
       facility_name: facilityName,
+      source_facility_id: sourceFacilityId,
+      source_facility_name: sourceFacilityName,
       conversation_history: history,
       api_key: apiKey
     };
@@ -394,7 +402,7 @@ export async function chatWithAshaCopilot({
     return json.data || json;
   } catch (err) {
     console.error("chatWithAshaCopilot error:", err);
-    return askAshaCopilot({ prompt, language, facilityId, facilityName, apiKey });
+    return askAshaCopilot({ prompt, language, facilityId, facilityName, sourceFacilityId, sourceFacilityName, apiKey });
   }
 }
 

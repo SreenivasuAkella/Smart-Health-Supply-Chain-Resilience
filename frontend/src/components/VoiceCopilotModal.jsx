@@ -4,9 +4,9 @@ import {
   X, Mic, MicOff, Volume2, VolumeX, Sparkles, Languages,
   ArrowRight, Truck, Radio, Square, RotateCcw, Send, CheckCircle2,
   Clock, ShieldAlert, Cpu, Activity, Layers, ChevronDown, ChevronUp, ChevronRight,
-  HelpCircle, Bot, User, RefreshCw, AlertTriangle
+  HelpCircle, Bot, User, RefreshCw, AlertTriangle, Building2
 } from 'lucide-react';
-import { chatWithAshaCopilot } from '../services/api';
+import { chatWithAshaCopilot, fetchFacilities } from '../services/api';
 
 export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerReallocation }) {
   const [selectedLang, setSelectedLang] = useState('hi');
@@ -19,6 +19,18 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [expandedTraceStep, setExpandedTraceStep] = useState(null);
+
+  const defaultFacilities = [
+    { id: 'DH-AND-001', name: 'Andaman Islands District Headquarters Civil Hospital', district: 'Andaman Islands' },
+    { id: 'PHC-AND-001', name: 'Andaman Islands Block Primary Health Centre', district: 'Andaman Islands' },
+    { id: 'DH-NIC-002', name: 'Nicobar Islands District Headquarters Civil Hospital', district: 'Nicobar Islands' },
+    { id: 'PHC-BARAGAON-03', name: 'Primary Health Centre Baragaon', district: 'Varanasi' },
+    { id: 'PHC-VELLORE-02', name: 'Kaniyambadi PHC', district: 'Vellore' },
+    { id: 'CHC-PUNE-04', name: 'Khed CHC', district: 'Pune' }
+  ];
+  const [facilities, setFacilities] = useState(defaultFacilities);
+  const [selectedFacility, setSelectedFacility] = useState(defaultFacilities[0]);
+  const [selectedSourceFacility, setSelectedSourceFacility] = useState('AUTO_NEAREST_SURPLUS');
 
   const recognitionRef = useRef(null);
   const chatBottomRef = useRef(null);
@@ -81,6 +93,20 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
     return () => {
       stopSpeaking();
       stopListening();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchFacilities(1, 1500)
+      .then(liveFacs => {
+        if (isMounted && liveFacs && Array.isArray(liveFacs) && liveFacs.length > 0) {
+          setFacilities(liveFacs);
+        }
+      })
+      .catch(err => console.warn('Failed to load facilities in modal:', err));
+    return () => {
+      isMounted = false;
     };
   }, []);
 
@@ -222,12 +248,17 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
     setLoading(true);
 
     try {
+      const isAutoSource = !selectedSourceFacility || selectedSourceFacility === 'AUTO_NEAREST_SURPLUS';
+      const sourceFacObj = isAutoSource ? null : facilities.find(f => f.id === selectedSourceFacility);
+
       const res = await chatWithAshaCopilot({
         prompt: textToSend,
         sessionId: sessionId,
         language: selectedLang,
-        facilityId: 'PHC-BARAGAON-03',
-        facilityName: 'Primary Health Centre Baragaon'
+        facilityId: selectedFacility?.id || 'DH-AND-001',
+        facilityName: selectedFacility?.name || 'District Hospital',
+        sourceFacilityId: isAutoSource ? undefined : selectedSourceFacility,
+        sourceFacilityName: sourceFacObj ? sourceFacObj.name : undefined
       });
 
       if (res?.success && res.data) {
@@ -240,6 +271,10 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
           contentEnglish: copilotData.response_text_english || copilotData.clarification_prompt_english,
           status: copilotData.status,
           intent: copilotData.intent,
+          target_facility_name: copilotData.target_facility_name || selectedFacility?.name,
+          source_facility_name: copilotData.source_facility_name,
+          nearest_surplus_donor: copilotData.nearest_surplus_donor,
+          is_user_specified_donor: copilotData.is_user_specified_donor,
           missingSlots: copilotData.missing_slots || [],
           quickReplyOptions: copilotData.quick_reply_options || [],
           recommendedAction: copilotData.recommended_action,
@@ -307,13 +342,53 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
                   GenAI Multi-Agent
                 </span>
               </div>
-              <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
-                <span>PHC Baragaon (Varanasi)</span>
-                <span>•</span>
-                <span className="font-mono text-cyan-300">Session: {sessionId.slice(0, 14)}...</span>
-                <span>•</span>
-                <span className="text-emerald-400 font-semibold">BigQuery + Firebase Sync</span>
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                {/* Target Recipient Selector */}
+                <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 py-1">
+                  <Building2 size={12} className="text-cyan-400 shrink-0" />
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Target:</span>
+                  <select
+                    value={selectedFacility.id}
+                    onChange={(e) => {
+                      const found = facilities.find(f => f.id === e.target.value);
+                      if (found) setSelectedFacility(found);
+                    }}
+                    className="bg-transparent text-[11px] font-semibold text-white focus:outline-none cursor-pointer max-w-[140px] truncate"
+                    title="Recipient health facility needing supplies"
+                  >
+                    {facilities.slice(0, 100).map(f => (
+                      <option key={f.id} value={f.id} className="bg-slate-900 text-white">
+                        {f.name} ({f.district})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Source Donor Selector */}
+                <div className="flex items-center gap-1 bg-slate-900/90 border border-emerald-700/70 rounded-lg px-2 py-1">
+                  <Truck size={12} className="text-emerald-400 shrink-0" />
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Source:</span>
+                  <select
+                    value={selectedSourceFacility}
+                    onChange={(e) => setSelectedSourceFacility(e.target.value)}
+                    className="bg-transparent text-[11px] font-semibold text-emerald-300 focus:outline-none cursor-pointer max-w-[150px] truncate"
+                    title="Supplying donor facility or let AI auto-find nearest surplus"
+                  >
+                    <option value="AUTO_NEAREST_SURPLUS" className="bg-slate-900 text-emerald-400 font-bold">
+                      ⚡ Auto Nearest Surplus (AI)
+                    </option>
+                    {facilities.filter(f => f.id !== selectedFacility.id).slice(0, 60).map(f => (
+                      <option key={`modal-src-${f.id}`} value={f.id} className="bg-slate-900 text-slate-200">
+                        {f.name} ({f.district})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <span className="text-[10px] font-mono text-cyan-400/80 hidden sm:inline">
+                  {sessionId.slice(0, 12)}...
+                </span>
+              </div>
             </div>
           </div>
 
@@ -501,10 +576,34 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
                           {msg.recommendedAction.action_summary}
                         </p>
 
+                        {/* Multi-Facility Route Nodes */}
+                        {(msg.source_facility_name || msg.target_facility_name) && (
+                          <div className="flex items-center gap-1.5 flex-wrap bg-slate-950/70 border border-emerald-500/20 rounded-xl p-2 text-[10px]">
+                            <span className="text-slate-400 font-semibold">Recipient:</span>
+                            <span className="font-bold text-white bg-slate-800 px-1.5 py-0.5 rounded">
+                              {msg.target_facility_name || selectedFacility?.name}
+                            </span>
+                            <ArrowRight size={11} className="text-emerald-400" />
+                            <span className="text-slate-400 font-semibold">Supplying Donor:</span>
+                            <span className="font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                              {msg.source_facility_name || msg.nearest_surplus_donor?.facility_name || 'AI Selected Surplus'}
+                            </span>
+                            {msg.is_user_specified_donor ? (
+                              <span className="text-[9px] bg-indigo-500/20 text-indigo-300 font-bold px-1.5 py-0.5 rounded border border-indigo-500/30">
+                                User Specified
+                              </span>
+                            ) : (
+                              <span className="text-[9px] bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
+                                Nearest Surplus
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                         {onTriggerReallocation && (
                           <button
                             onClick={() => {
-                              onTriggerReallocation('PHC-BARAGAON-03');
+                              onTriggerReallocation(selectedFacility?.id || 'DH-AND-001');
                               if (onClose) onClose();
                             }}
                             className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-1.5 rounded-xl flex items-center justify-center gap-1 transition-all"

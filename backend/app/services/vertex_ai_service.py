@@ -751,6 +751,10 @@ Analyze this clinical conversational turn:
    - current_stock: Integer units remaining if stated (or null).
    - temperature_reading: Float degrees Celsius if cold chain alert (or null).
    - district_name: Target district if mentioned or inferred (or null).
+   - target_facility_name: The requesting/recipient facility name if stated by user (or null to use current facility context).
+   - target_facility_id: Recipient facility ID if known (or null).
+   - source_facility_name: The supplying/donor facility name if user explicitly specified where stock should come from (e.g., "from Port Blair", "send from Nicobar DH", "transfer from G.B. Pant Hospital") (or null to discover nearest surplus facility).
+   - source_facility_id: Supplying/donor facility ID if specified (or null).
 
 4. Missing Slot Detection:
    - If intent is "EMERGENCY_REQUISITION" and medicine_name is missing/unknown:
@@ -791,7 +795,11 @@ Return ONLY valid JSON matching this schema:
     "requested_quantity": <int or null>,
     "current_stock": <int or null>,
     "temperature_reading": <float or null>,
-    "district_name": "<string or null>"
+    "district_name": "<string or null>",
+    "target_facility_name": "<string or null>",
+    "target_facility_id": "<string or null>",
+    "source_facility_name": "<string or null>",
+    "source_facility_id": "<string or null>"
   }},
   "is_clarification_needed": <true|false>,
   "missing_slots": ["<slot_name>"],
@@ -889,11 +897,35 @@ Return ONLY valid JSON matching this schema:
                 med_name = med.get("name")
                 break
 
-        # 2. Dynamic Quantity and Temperature Extraction
+        # 2. Dynamic Quantity, Temperature, and Multi-Facility Extraction
         qtys = [int(x) for x in re.findall(r'\b\d+\b', user_prompt)]
         req_qty = qtys[-1] if qtys else ctx.get("requested_quantity")
         temp_matches = re.findall(r'(\d+(?:\.\d+)?)\s*(?:°\s*c|celsius|degree|अंश|डिग्री|டிகிரி|ഡിഗ്രി)?', lower)
         temp_reading = float(temp_matches[0]) if temp_matches and any(k in lower for k in ["deg", "cels", "temp", "°", "तापमान", "उष्ण", "ताप"]) else ctx.get("temperature_reading")
+
+        # Source and Target Facility extraction
+        source_facility_name = ctx.get("source_facility_name")
+        source_facility_id = ctx.get("source_facility_id")
+        target_facility_name = ctx.get("target_facility_name") or facility_name
+        target_facility_id = ctx.get("target_facility_id") or facility_id
+
+        from_match = re.search(r'(?:from|source|donor|से)\s+([a-zA-Z0-9\.\-\s]+?)(?:to|for|\,|$|\.|\n)', user_prompt, re.IGNORECASE)
+        if from_match:
+            cand_src = from_match.group(1).strip()
+            matched_f = next((f for f in active_facilities if cand_src.lower() in f["name"].lower() or cand_src.lower() in f["id"].lower()), None)
+            if matched_f:
+                source_facility_name = matched_f["name"]
+                source_facility_id = matched_f["id"]
+            elif len(cand_src) > 3:
+                source_facility_name = cand_src
+
+        to_match = re.search(r'(?:to|for|at|के लिए)\s+([a-zA-Z0-9\.\-\s]+?)(?:from|source|\,|$|\.|\n)', user_prompt, re.IGNORECASE)
+        if to_match:
+            cand_tgt = to_match.group(1).strip()
+            matched_tgt = next((f for f in active_facilities if cand_tgt.lower() in f["name"].lower() or cand_tgt.lower() in f["id"].lower()), None)
+            if matched_tgt:
+                target_facility_name = matched_tgt["name"]
+                target_facility_id = matched_tgt["id"]
 
         # 3. Dynamic Intent Determination from Semantic Domain Indicators
         intent = ctx.get("intent")
@@ -996,14 +1028,14 @@ Return ONLY valid JSON matching this schema:
         }
 
         greeting_responses = {
-            "hi": f"नमस्ते! मैं संजीवनी एआई स्वास्थ्य आपूर्ति श्रृंखला सहायक हूँ। मैं {facility_name} के लिए आपातकालीन दवा मांग, शीत-श्रृंखला तापमान अलर्ट, ई-औषधि स्टॉक जांच, महामारी पूर्वानुमान और फ्लीट रूटिंग में आपकी सहायता कर सकता हूँ। आज आपको क्या सहायता चाहिए?",
-            "te": f"నమస్కారం! నేను సంజీవని AI హెల్త్ సప్లై చైన్ అసిస్టెంట్. {facility_name} కొరకు అత్యవసర మందుల రీక్విజిషన్లు, కోల్డ్ చైన్ ఉష్ణోగ్రత హెచ్చరికలు మరియు స్టాక్ ఆడిట్‌లలో మీకు సహాయం చేయగలను. నేడు మీకు ఎలా సహాయపడగలను?",
-            "ta": f"வணக்கம்! நான் சஞ்சீவனி AI சுகாதார விநியோக உதவியாளர். {facility_name} ஆரம்ப சுகாதார நிலையத்திற்கு அவசர மருந்துகள், குளிர்சாதன பெட்டி வெப்பநிலை மற்றும் மருந்து இருப்பு சரிபார்ப்பில் உதவ முடியும். இன்று உங்களுக்கு என்ன உதவி தேவை?",
-            "mr": f"नमस्कार! मी संजीवनी एआय आरोग्य पुरवठा साखळी सहाय्यक आहे. {facility_name} साठी तातडीची औषधे, कोल्ड-चेन तापमान आणि औषध स्टॉक तपासणीत मदत करू शकतो. आज आपल्याला कशी मदत करू?",
-            "bn": f"নমস্কার! আমি সঞ্জীবনী এআই স্বাস্থ্য সরবরাহ সহকারী। {facility_name}-এর জন্য জরুরি ওষুধ, কোল্ড-চেইন তাপমাত্রা এবং স্টক নিরীক্ষায় সাহায্য করতে পারি। আজ আপনাকে কীভাবে সাহায্য করতে পারি?",
-            "kn": f"ನಮಸ್ಕಾರ! ನಾನು ಸಂಜೀವನಿ AI ಆರೋಗ್ಯ ಪೂರೈಕೆ ಸಹಾಯಕ. {facility_name} ಗಾಗಿ ತುರ್ತು ಔಷಧಿಗಳು, ಕೋಲ್ಡ್-ಚೈನ್ ತಾಪಮಾನ ಮತ್ತು ಸ್ಟಾಕ್ ಪರಿಶೀಲನೆಯಲ್ಲಿ ನೆರವಾಗಬಲ್ಲೆ. ಇಂದು ನಿಮಗೆ ಏನು ಸಹಾಯ ಬೇಕು?",
-            "ml": f"നമസ്കാരം! ഞാൻ സഞ്ജീവനി AI ഹെൽത്ത് സപ്ലൈ അസിസ്റ്റന്റ് ആണ്. {facility_name}-ലേക്ക് ആവശ്യമായ അടിയന്തിര മരുന്നുകൾ, കോൾഡ് ചെയിൻ താപനില എന്നിവയിൽ സഹായിക്കാൻ കഴിയും. ഇന്ന് എന്താണ് സഹায়ം വേണ്ടത്?",
-            "en": f"Hello! I am Sanjeevani AI Healthcare Supply Chain Copilot for {facility_name}. I can assist you with emergency medicine requisitions, cold-chain ILR alerts, e-Aushadhi stock audits, epidemic surge forecasts, and vehicle routing. How can I assist you today?"
+            "hi": f"नमस्ते! मैं संजीवनी एआई राष्ट्रीय स्वास्थ्य आपूर्ति श्रृंखला सहायक हूँ (अखिल भारतीय 1,188+ स्वास्थ्य केंद्र नेटवर्क, वर्तमान केंद्र: {facility_name})। मैं किसी भी केंद्र के लिए आपातकालीन दवा मांग, निकटतम अधिशेष (Surplus) अस्पताल से स्वतः स्टॉक पुनःआवंटन, अथवा आपकी पसंद के अस्पताल से दवा स्थानांतरण, शीत-श्रृंखला तापमान अलर्ट और ई-औषधि स्टॉक जांच में आपकी सहायता कर सकता हूँ। आज आपको क्या सहायता चाहिए?",
+            "te": f"నమస్కారం! నేను సంజీవని AI జాతీయ ఆరోగ్య సరఫరా గొలుసు సహాయకుడిని (భారతదేశవ్యాప్తంగా 1,188+ ఆసుపత్రులు, ప్రస్తుత కేంద్రం: {facility_name}). నేను ఏ ఆరోగ్య కేంద్రానికైనా సమీప మిగులు (Surplus) ఆసుపత్రి నుండి అత్యవసర ఔషధాల పునఃపంపిణీ, లేదా మీరు కోరిన ఆసుపత్రి నుండి ఔషధ రవాణా మరియు స్టాక్ ఆడిట్‌లో సహాయపడగలను. నేడు మీకు ఎలా సహాయపడగలను?",
+            "ta": f"வணக்கம்! நான் சஞ்சீவனி AI தேசிய சுகாதார விநியோக உதவியாளர் (இந்தியா முழுவதும் 1,188+ மையங்கள், தற்போதைய மையம்: {facility_name}). அருகிலுள்ள உபரி (Surplus) மருத்துவமனையிலிருந்து அவசர மருந்துகளை வரவழைக்க, அல்லது நீங்கள் குறிப்பிடும் மருத்துவமனையிலிருந்து மறுபங்கீடு செய்ய என்னால் உதவ முடியும். இன்று உங்களுக்கு என்ன உதவி தேவை?",
+            "mr": f"नमस्कार! मी संजीवनी एआय राष्ट्रीय आरोग्य पुरवठा साखळी सहाय्यक आहे (भारतभरातील 1,188+ रुग्णालये, सध्याचे केंद्र: {facility_name}). मी कोणत्याही केंद्रासाठी जवळच्या अतिरिक्त साठा (Surplus) असलेल्या रुग्णालयातून तातडीची औषधे मिळवून देणे, किंवा आपल्या पसंतीच्या रुग्णालयातून औषध हस्तांतरण, कोल्ड-चेन अलर्ट व स्टॉक तपासणीत मदत करू शकतो. आज आपल्याला कशी मदत करू?",
+            "bn": f"নমস্কার! আমি সঞ্জীবনী এআই জাতীয় স্বাস্থ্য সরবরাহ সহকারী (ভারতজুড়ে ১,১৮৮+ কেন্দ্র, বর্তমান কেন্দ্র: {facility_name})। আমি নিকটতম উদ্বৃত্ত (Surplus) হাসপাতাল থেকে জরুরি ওষুধ বরাদ্দ, অথবা আপনার পছন্দের হাসপাতাল থেকে ওষুধ স্থানান্তর এবং স্টক অডিটে সাহায্য করতে পারি। আজ আপনাকে কীভাবে সাহায্য করতে পারি?",
+            "kn": f"ನಮಸ್ಕಾರ! ನಾನು ಸಂಜೀವನಿ AI ರಾಷ್ಟ್ರೀಯ ಆರೋಗ್ಯ ಪೂರೈಕೆ ಸಹಾಯಕ (ಭಾರತದಾದ್ಯಂತ 1,188+ ಆಸ್ಪತ್ರೆಗಳು, ಪ್ರಸ್ತುತ ಕೇಂದ್ರ: {facility_name}). ಸಮೀಪದ ಹೆಚ್ಚುವರಿ ದಾಸ್ತಾನು (Surplus) ಹೊಂದಿರುವ ಆಸ್ಪತ್ರೆಯಿಂದ ತುರ್ತು ಔಷಧ ಮರುಹಂಚಿಕೆ ಅಥವಾ ನೀವು ಆಯ್ಕೆ ಮಾಡಿದ ಆಸ್ಪತ್ರೆಯಿಂದ ಔಷಧ ವರ್ಗಾವಣೆಯಲ್ಲಿ ನೆರವಾಗಬಲ್ಲೆ. ಇಂದು ನಿಮಗೆ ಏನು ಸಹಾಯ ಬೇಕು?",
+            "ml": f"നമസ്കാരം! ഞാൻ സഞ്ജീവനി AI ദേശീയ ആരോഗ്യ വിതരണ അസിസ്റ്റന്റ് ആണ് (ഇന്ത്യയിലുടനീളം 1,188+ കേന്ദ്രങ്ങൾ, നിലവിലെ കേന്ദ്രം: {facility_name}). അടുത്തുള്ള മിച്ച (Surplus) സ്റ്റോക്കുള്ള ആശുപത്രിയിൽ നിന്ന് അടിയന്തര മരുന്നുകൾ ലഭ്യമാക്കാനും നിങ്ങൾ നിർദ്ദേശിക്കുന്ന ആശുപത്രിയിൽ നിന്ന് മരുന്ന് കൈമാറ്റം നടത്താനും സഹായിക്കാം. ഇന്ന് എന്താണ് സഹായം വേണ്ടത്?",
+            "en": f"Hello! I am Sanjeevani AI Healthcare Supply Chain Copilot for the National Health Logistics Network (monitoring 1,188+ healthcare facilities Pan-India, currently focused on {facility_name}). I can find the nearest surplus hospital to dispatch emergency medicines, transfer supplies from a specific facility of your choice, audit e-Aushadhi stock, and monitor cold-chain ILR alerts. Which facility or emergency can I assist you with today?"
         }
 
         if is_clarify:
@@ -1039,7 +1071,11 @@ Return ONLY valid JSON matching this schema:
                 "medicine_id": med_id,
                 "requested_quantity": req_qty or (25 if not is_clarify and intent == "EMERGENCY_REQUISITION" else None),
                 "current_stock": 3 if med_name else None,
-                "temperature_reading": temp_reading or (8.7 if not is_clarify and intent == "COLD_CHAIN_ALERT" else None)
+                "temperature_reading": temp_reading or (8.7 if not is_clarify and intent == "COLD_CHAIN_ALERT" else None),
+                "target_facility_name": target_facility_name,
+                "target_facility_id": target_facility_id,
+                "source_facility_name": source_facility_name,
+                "source_facility_id": source_facility_id
             },
             "is_clarification_needed": is_clarify,
             "missing_slots": missing_slots,

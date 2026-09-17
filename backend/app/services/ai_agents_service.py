@@ -123,14 +123,16 @@ class AllocationStrategistAgent:
         self,
         target_facility_id: str,
         medicine_id: str,
-        required_quantity: int = 25
+        required_quantity: int = 25,
+        source_facility_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Discovers surplus nodes and executes AI multi-criteria donor selection."""
         # 1. Tool execution (MCP Tool -> Agent)
         donor_res = self.registry.call_tool("find_surplus_donor_nodes", {
             "target_facility_id": target_facility_id,
             "medicine_id": medicine_id,
-            "required_quantity": required_quantity
+            "required_quantity": required_quantity,
+            "source_facility_id": source_facility_id
         })
         if donor_res.get("isError"):
             raise RuntimeError(f"Strategist Agent tool execution failed: {donor_res.get('error')}")
@@ -141,16 +143,24 @@ class AllocationStrategistAgent:
         all_candidates = ([raw_selected] if raw_selected else []) + alt_donors
         target_fac = data.get("target_facility") or {}
         medicine = data.get("medicine") or {}
+        is_user_donor = data.get("is_user_specified", False)
 
-        # 2. LLM Reasoning (Agent -> Vertex AI)
-        triage_eval = self.llm.triage_surplus_donors(
-            candidate_donors=all_candidates,
-            target_facility=target_fac,
-            medicine=medicine,
-            required_quantity=required_quantity
-        )
-
-        selected_donor = triage_eval.get("selected_donor")
+        if is_user_donor and raw_selected:
+            selected_donor = raw_selected
+            triage_eval = {
+                "selected_donor": raw_selected,
+                "triage_rationale": f"User-selected donor facility '{raw_selected.get('facility_name')}' prioritized. Buffer check: {raw_selected.get('available_stock', 0)} units available.",
+                "engine": "User Specification via Sanjeevani Multimodal Copilot"
+            }
+        else:
+            # 2. LLM Reasoning (Agent -> Vertex AI)
+            triage_eval = self.llm.triage_surplus_donors(
+                candidate_donors=all_candidates,
+                target_facility=target_fac,
+                medicine=medicine,
+                required_quantity=required_quantity
+            )
+            selected_donor = triage_eval.get("selected_donor") or raw_selected
 
         # 3. Agent Decision Synthesis
         return {
@@ -158,6 +168,7 @@ class AllocationStrategistAgent:
             "target_facility": target_fac,
             "medicine": medicine,
             "selected_donor": selected_donor,
+            "is_user_specified": is_user_donor,
             "alternative_donors": [d for d in all_candidates if d != selected_donor],
             "triage_rationale": triage_eval.get("triage_rationale", ""),
             "engine": triage_eval.get("engine", "Google Cloud Vertex AI")
@@ -366,6 +377,8 @@ class AshaVoiceCopilotAgent:
         language_code: str = "hi",
         facility_id: Optional[str] = None,
         facility_name: Optional[str] = None,
+        source_facility_id: Optional[str] = None,
+        source_facility_name: Optional[str] = None,
         conversation_history: Optional[List[Dict[str, Any]]] = None,
         accumulated_context: Optional[Dict[str, Any]] = None,
         custom_api_key: Optional[str] = None,
@@ -447,6 +460,37 @@ class AshaVoiceCopilotAgent:
         confidence = float(llm_turn.get("confidence", parse_data.get("confidence", 0.95)))
         urgency = llm_turn.get("urgency_level", parse_data.get("urgency_level", "NORMAL"))
         entities = llm_turn.get("extracted_entities") or parse_data.get("extracted_entities") or {}
+
+        # Multi-Facility Resolution: Dynamically detect target and source facilities from prompt/entities
+        extracted_tgt_name = entities.get("target_facility_name")
+        extracted_tgt_id = entities.get("target_facility_id")
+        extracted_src_name = entities.get("source_facility_name") or source_facility_name
+        extracted_src_id = entities.get("source_facility_id") or source_facility_id
+
+        if extracted_tgt_id:
+            tf = next((f for f in active_facilities if f["id"] == extracted_tgt_id), None)
+            if tf:
+                target_fac = tf
+                resolved_fac_id = tf["id"]
+                resolved_fac_name = tf["name"]
+        elif extracted_tgt_name:
+            tf = next((f for f in active_facilities if extracted_tgt_name.lower() in f["name"].lower() or f["name"].lower() in extracted_tgt_name.lower()), None)
+            if tf:
+                target_fac = tf
+                resolved_fac_id = tf["id"]
+                resolved_fac_name = tf["name"]
+
+        resolved_src_fac = None
+        if extracted_src_id:
+            resolved_src_fac = next((f for f in active_facilities if f["id"] == extracted_src_id), None)
+        elif extracted_src_name:
+            resolved_src_fac = next((f for f in active_facilities if extracted_src_name.lower() in f["name"].lower() or f["name"].lower() in extracted_src_name.lower()), None)
+
+        if resolved_src_fac:
+            ctx["source_facility_id"] = resolved_src_fac["id"]
+            ctx["source_facility_name"] = resolved_src_fac["name"]
+        ctx["facility_id"] = resolved_fac_id
+        ctx["facility_name"] = resolved_fac_name
         is_clarify = bool(llm_turn.get("is_clarification_needed", False))
         missing_slots = list(llm_turn.get("missing_slots") or [])
         clinical_rationale = llm_turn.get("clinical_rationale", f"Clinical triage for {resolved_fac_name} under protocol {intent}.")
@@ -602,6 +646,7 @@ class AshaVoiceCopilotAgent:
                     target_facility_id=resolved_fac_id,
                     medicine_id=med_id,
                     required_quantity=req_qty,
+                    source_facility_id=resolved_src_fac["id"] if resolved_src_fac else None,
                     auto_triggered=False
                 )
                 dispatch_order_result = plan
@@ -765,7 +810,7 @@ class AshaVoiceCopilotAgent:
                 "COLD_CHAIN_ALERT": f"चेतावनी: {resolved_fac_name} के आईएलआर रेफ्रिजरेटर में तापमान {temp_reading}°C दर्ज किया गया है। जिला शीत-श्रृंखला तकनीशियन को तत्काल आपातकालीन अलर्ट भेजा गया है। बैकअप आइस-पैक सुरक्षा सक्रिय करें।",
                 "STOCK_STATUS_CHECK": f"संजीवनी एआई सक्रिय है। {resolved_fac_name} के लिए {med_display} का स्टॉक {audit_result.get('current_stock', 15) if audit_result else 15} यूनिट्स e-Aushadhi पर सत्यापित कर लिया गया है। बफर सुरक्षा सक्रिय है।",
                 "EPIDEMIC_GUIDANCE": f"महामारी निगरानी अलर्ट: {resolved_fac_name} पर मौसमी प्रकोप हेतु आवश्यक दवाओं का बफर स्टॉक सत्यापित है। निगरानी सक्रिय है।",
-                "GENERAL_QUERY": f"नमस्ते! मैं संजीवनी एआई स्वास्थ्य आपूर्ति श्रृंखला सहायक हूँ। मैं {resolved_fac_name} के लिए आपातकालीन दवा मांग, शीत-श्रृंखला रेफ्रिजरेटर तापमान अलर्ट और ई-औषधि स्टॉक जांच में आपकी सहायता कर सकता हूँ। आज आपको क्या सहायता चाहिए?"
+                "GENERAL_QUERY": f"नमस्ते! मैं संजीवनी एआई राष्ट्रीय स्वास्थ्य आपूर्ति श्रृंखला सहायक हूँ (अखिल भारतीय 1,188+ स्वास्थ्य केंद्र नेटवर्क, वर्तमान केंद्र: {resolved_fac_name})। मैं किसी भी केंद्र के लिए आपातकालीन दवा मांग, निकटतम अधिशेष (Surplus) अस्पताल से स्वतः स्टॉक पुनःआवंटन, अथवा आपकी पसंद के अस्पताल से दवा स्थानांतरण, शीत-श्रृंखला तापमान अलर्ट और ई-औषधि स्टॉक जांच में आपकी सहायता कर सकता हूँ। आज आपको क्या सहायता चाहिए?"
             },
             "te": {
                 "EMERGENCY_REQUISITION": f"ప్రాథమిక ఆరోగ్య కేంద్రం {resolved_fac_name} కొరకు అత్యవసర {med_display} అభ్యర్థన ({qty_display} యూనిట్లు) ఆమోదించబడింది. {donor_name} నుండి అత్యవసర పునఃపంపిణీ ఆర్డర్ ({disp_id}) సిద్ధం చేయబడింది. అంచనా సమయం: {eta_mins} నిమిషాలు.",
@@ -814,7 +859,7 @@ class AshaVoiceCopilotAgent:
                 "COLD_CHAIN_ALERT": f"CRITICAL ALERT: ILR Cold-chain temperature excursion ({temp_reading}°C) detected at {resolved_fac_name}. District Vaccine Logistics Technician alerted with priority P1 response.",
                 "STOCK_STATUS_CHECK": f"Sanjeevani AI is active. Stock audit for {med_display} verified on e-Aushadhi state cloud repository for {resolved_fac_name}. Buffer levels active.",
                 "EPIDEMIC_GUIDANCE": f"Epidemic Surveillance Guidance: Buffer stock for seasonal vector-borne diseases is verified at {resolved_fac_name}.",
-                "GENERAL_QUERY": f"Hello! I am Sanjeevani AI Healthcare Supply Chain Copilot for {resolved_fac_name}. I can assist you with emergency medicine requisitions (Anti-Snake Venom, Rabies, Paracetamol), cold-chain ILR refrigerator alerts, and e-Aushadhi stock audits. How can I assist you today?"
+                "GENERAL_QUERY": f"Hello! I am Sanjeevani AI Healthcare Supply Chain Copilot for the National Health Logistics Network (monitoring 1,188+ healthcare facilities Pan-India, currently focused on {resolved_fac_name})। I can find the nearest surplus hospital to dispatch emergency medicines, transfer supplies from a specific facility of your choice, audit e-Aushadhi stock, and monitor cold-chain ILR alerts. Which facility or emergency can I assist you with today?"
             }
         }
 
@@ -877,6 +922,17 @@ class AshaVoiceCopilotAgent:
             "language_code": language_code,
             "facility_id": resolved_fac_id,
             "facility_name": resolved_fac_name,
+            "target_facility_id": resolved_fac_id,
+            "target_facility_name": resolved_fac_name,
+            "source_facility_id": (resolved_src_fac["id"] if resolved_src_fac else (dispatch_order_result.get("donor_facility", {}).get("facility_id") if dispatch_order_result else None)),
+            "source_facility_name": (resolved_src_fac["name"] if resolved_src_fac else donor_name),
+            "is_user_specified_donor": bool(resolved_src_fac or (dispatch_order_result and dispatch_order_result.get("is_user_specified"))),
+            "nearest_surplus_donor": {
+                "facility_name": donor_name,
+                "distance_km": (dispatch_order_result.get("route_details", {}).get("distance_km") or dispatch_order_result.get("distance_km") if dispatch_order_result else None),
+                "estimated_transit_minutes": eta_mins,
+                "is_user_specified": bool(resolved_src_fac)
+            } if dispatch_order_result else None,
             "extracted_entities": entities,
             "accumulated_context": ctx,
             "recommended_action": {
@@ -929,6 +985,7 @@ class SupplyChainSupervisorAgent:
         target_facility_id: Optional[str] = None,
         medicine_id: Optional[str] = None,
         required_quantity: Optional[int] = None,
+        source_facility_id: Optional[str] = None,
         auto_triggered: bool = True
     ) -> Dict[str, Any]:
         """Orchestrates autonomous crisis reallocation lifecycle with auditable trace."""
@@ -1045,7 +1102,8 @@ class SupplyChainSupervisorAgent:
         strat_out = self.strategist.evaluate_allocation(
             target_facility_id=target_fac["id"],
             medicine_id=target_med["id"],
-            required_quantity=required_quantity
+            required_quantity=required_quantity,
+            source_facility_id=source_facility_id
         )
         selected_donor = strat_out.get("selected_donor")
 
@@ -1245,6 +1303,8 @@ def run_asha_voice_pipeline(
     language_code: str = "hi",
     facility_id: Optional[str] = None,
     facility_name: Optional[str] = None,
+    source_facility_id: Optional[str] = None,
+    source_facility_name: Optional[str] = None,
     custom_api_key: Optional[str] = None,
     session_id: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
@@ -1258,6 +1318,8 @@ def run_asha_voice_pipeline(
         language_code=language_code,
         facility_id=facility_id,
         facility_name=facility_name,
+        source_facility_id=source_facility_id,
+        source_facility_name=source_facility_name,
         conversation_history=conversation_history,
         accumulated_context=accumulated_context,
         custom_api_key=custom_api_key,

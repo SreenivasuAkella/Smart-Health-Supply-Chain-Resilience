@@ -13,7 +13,8 @@ import {
   queryGeminiCopilot, 
   fetchCopilotHistory,
   fetchCopilotSessions,
-  fetchCopilotSessionDetail 
+  fetchCopilotSessionDetail,
+  fetchFacilities 
 } from '../services/api';
 
 export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
@@ -37,15 +38,20 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  const facilitiesList = [
+  const defaultFacilities = [
+    { id: 'DH-AND-001', name: 'Andaman Islands District Headquarters Civil Hospital', district: 'Andaman Islands', state: 'Andaman & Nicobar' },
+    { id: 'PHC-AND-001', name: 'Andaman Islands Block Primary Health Centre', district: 'Andaman Islands', state: 'Andaman & Nicobar' },
+    { id: 'DH-NIC-002', name: 'Nicobar Islands District Headquarters Civil Hospital', district: 'Nicobar Islands', state: 'Andaman & Nicobar' },
+    { id: 'PHC-NIC-002', name: 'Nicobar Islands Block Primary Health Centre', district: 'Nicobar Islands', state: 'Andaman & Nicobar' },
     { id: 'PHC-BARAGAON-03', name: 'Primary Health Centre Baragaon', district: 'Varanasi', state: 'Uttar Pradesh' },
     { id: 'PHC-VELLORE-02', name: 'Kaniyambadi PHC', district: 'Vellore', state: 'Tamil Nadu' },
     { id: 'PHC-MEDCHAL-01', name: 'Ghatkesar PHC', district: 'Medchal', state: 'Telangana' },
     { id: 'CHC-PUNE-04', name: 'Khed CHC', district: 'Pune', state: 'Maharashtra' },
-    { id: 'PHC-DAR-001', name: 'Darjeeling Community Health Centre', district: 'Darjeeling', state: 'West Bengal' },
-    { id: 'PHC-AND-001', name: 'Andaman Islands Block PHC', district: 'South Andaman', state: 'Andaman & Nicobar' }
+    { id: 'PHC-DAR-001', name: 'Darjeeling Community Health Centre', district: 'Darjeeling', state: 'West Bengal' }
   ];
-  const [selectedFacility, setSelectedFacility] = useState(facilitiesList[0]);
+  const [facilities, setFacilities] = useState(defaultFacilities);
+  const [selectedFacility, setSelectedFacility] = useState(defaultFacilities[0]);
+  const [selectedSourceFacility, setSelectedSourceFacility] = useState('AUTO_NEAREST_SURPLUS');
 
   const supportedLanguages = [
     { code: 'hi', bcp47: 'hi-IN', name: 'हिन्दी (Hindi)', flag: '🇮🇳', region: 'North / Central India' },
@@ -60,19 +66,21 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
 
   const quickPromptsByLang = {
     hi: [
-      { text: "हमारे पास केवल 3 शीशियां एंटी-वेनम बची हैं, तत्काल 25 शीशियां भेजें", label: "🐍 आपातकालीन एंटी-वेनम मांग", urgency: "CRITICAL" },
-      { text: "पीएचसी बड़ागांव के रेफ्रिजरेटर का तापमान 8.7°C हो गया है", label: "❄️ कोल्ड-चेन तापमान अलर्ट", urgency: "HIGH" },
-      { text: "हमारे केंद्र पर आवश्यक दवाओं की तत्काल जरूरत है", label: "❓ अधूरी जानकारी (संवाद जांच)", urgency: "NORMAL" }
+      { text: "एंटी-वेनम की 25 शीशियों के लिए निकटतम अधिशेष (Surplus) अस्पताल खोजें और पुनःआवंटन करें", label: "🐍 निकटतम अधिशेष अस्पताल से मांग", urgency: "CRITICAL" },
+      { text: "निकोबार जिला अस्पताल से अंडमान जिला अस्पताल में 20 एंटी-वेनम शीशियां भेजें", label: "🏥 अस्पताल से अस्पताल स्टॉक ट्रांसफर", urgency: "CRITICAL" },
+      { text: "हमारे केंद्र के आईएलआर रेफ्रिजरेटर का तापमान 8.7°C हो गया है", label: "❄️ कोल्ड-चेन तापमान अलर्ट", urgency: "HIGH" },
+      { text: "हमारे केंद्र पर आवश्यक दवाओं की आपातकालीन स्थिति जांचें", label: "📊 स्टॉक ऑडिट व अधिशेष खोज", urgency: "NORMAL" }
     ],
     en: [
-      { text: "We only have 3 vials of Anti-Snake Venom left, dispatch 25 vials urgently from district hospital", label: "🐍 Emergency ASV Requisition", urgency: "CRITICAL" },
-      { text: "Cold chain ILR temperature breached 8.7°C at PHC Baragaon", label: "❄️ Cold-Chain Excursion SOS", urgency: "HIGH" },
-      { text: "Our health facility has an emergency, send supplies quickly!", label: "❓ Missing Info (Conversational Triage)", urgency: "NORMAL" }
+      { text: "Find nearest surplus facility holding 25 vials of Anti-Snake Venom and dispatch emergency reallocation", label: "🐍 Nearest Surplus ASV Requisition", urgency: "CRITICAL" },
+      { text: "Transfer 20 vials of Anti-Snake Venom from Nicobar Islands DH to Andaman Islands DH", label: "🏥 Inter-Hospital Stock Transfer", urgency: "CRITICAL" },
+      { text: "Cold chain ILR temperature breached 8.7°C at our facility", label: "❄️ Cold-Chain Excursion SOS", urgency: "HIGH" },
+      { text: "Audit emergency stock across facilities and find nearest donor nodes", label: "📊 Multi-Facility Stock Audit", urgency: "NORMAL" }
     ],
     te: [
-      { text: "మా వద్ద కేవలం 3 యాంటీ-స్నేక్ వెనమ్ వైల్స్ మాత్రమే మిగిలాయి, అత్యవసరంగా 25 పంపండి", label: "🐍 అత్యవసర యాంటీ-వెనమ్ అభ్యర్థన", urgency: "CRITICAL" },
+      { text: "సమీప మిగులు ఆసుపత్రి నుండి 25 యాంటీ-స్నేక్ వెనమ్ వైల్స్ అత్యవసరంగా పంపండి", label: "🐍 సమీప మిగులు ఆసుపత్రి రీక్విజిషన్", urgency: "CRITICAL" },
       { text: "కోల్డ్ చైన్ ఐస్-లైన్డ్ రిఫ్రిజిరేటర్ ఉష్ణోగ్రత 8.7°C దాటింది", label: "❄️ కోల్డ్ చైన్ హెచ్చరిక", urgency: "HIGH" },
-      { text: "మా కేంద్రానికి అత్యవసర ఔషధాల సరఫరా కావాలి", label: "❓ సంభాషణ సంభాషణ", urgency: "NORMAL" }
+      { text: "మా కేంద్రానికి అత్యవసర ఔషధాల సరఫరా కావాలి", label: "❓ బహుళ ఆసుపత్రుల బదిలీ", urgency: "NORMAL" }
     ],
     ta: [
       { text: "எங்களிடம் 3 பாம்புக்கடி விஷமுறிவு மருந்துகள் மட்டுமே உள்ளன, உடனடியாக 25 அனுப்பவும்", label: "🐍 அவசர விஷமுறிவு மருந்து", urgency: "CRITICAL" },
@@ -126,6 +134,15 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
       }
     } catch (e) {
       console.warn("Failed to load sessions:", e);
+    }
+
+    try {
+      const liveFacs = await fetchFacilities(1, 1500);
+      if (liveFacs && Array.isArray(liveFacs) && liveFacs.length > 0) {
+        setFacilities(liveFacs);
+      }
+    } catch (e) {
+      console.warn("Failed to load facilities:", e);
     }
   };
 
@@ -285,12 +302,18 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
     setMessages(prev => [...prev, userMsg]);
 
     try {
+      const srcFacObj = selectedSourceFacility !== 'AUTO_NEAREST_SURPLUS'
+        ? facilities.find(f => f.id === selectedSourceFacility)
+        : null;
+
       const result = await chatWithAshaCopilot({
         prompt: textToSend,
         sessionId: sessionId,
         language: selectedLang,
         facilityId: selectedFacility.id,
         facilityName: selectedFacility.name,
+        sourceFacilityId: srcFacObj ? srcFacObj.id : null,
+        sourceFacilityName: srcFacObj ? srcFacObj.name : null,
         history: messages,
         apiKey: apiKey
       });
@@ -318,6 +341,12 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
           recommended_action: result.recommended_action,
           dispatch_package: result.dispatch_package,
           cold_chain_incident: result.cold_chain_incident,
+          target_facility_name: result.target_facility_name || selectedFacility.name,
+          target_facility_id: result.target_facility_id || selectedFacility.id,
+          source_facility_name: result.source_facility_name || (result.recommended_action?.suggested_source_facility),
+          source_facility_id: result.source_facility_id,
+          nearest_surplus_donor: result.nearest_surplus_donor,
+          is_user_specified_donor: result.is_user_specified_donor,
           execution_trace: result.execution_trace || [],
           agents_invoked: result.agents_invoked || [],
           tools_executed: result.tools_executed || [],
@@ -372,19 +401,42 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
 
         {/* Facility Selector & Controls */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {/* Active Facility Context Dropdown */}
-          <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-700/80 rounded-xl px-2.5 py-1.5 shadow-sm">
+          {/* Target / Recipient Facility Dropdown */}
+          <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-700/80 rounded-xl px-2.5 py-1.5 shadow-sm">
             <Building2 size={13} className="text-cyan-400 shrink-0" />
+            <span className="text-[10px] uppercase font-bold text-slate-400 hidden sm:inline">Target:</span>
             <select
               value={selectedFacility.id}
               onChange={(e) => {
-                const found = facilitiesList.find(f => f.id === e.target.value);
+                const found = facilities.find(f => f.id === e.target.value);
                 if (found) setSelectedFacility(found);
               }}
-              className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer pr-1 max-w-[170px] truncate"
+              title="Recipient health facility needing supplies"
             >
-              {facilitiesList.map(f => (
+              {facilities.slice(0, 80).map(f => (
                 <option key={f.id} value={f.id} className="bg-slate-900 text-white">
+                  {f.name} ({f.district})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Supplying / Source Facility Dropdown */}
+          <div className="flex items-center gap-1.5 bg-slate-950/80 border border-emerald-700/60 rounded-xl px-2.5 py-1.5 shadow-sm">
+            <Truck size={13} className="text-emerald-400 shrink-0" />
+            <span className="text-[10px] uppercase font-bold text-slate-400 hidden sm:inline">Source:</span>
+            <select
+              value={selectedSourceFacility}
+              onChange={(e) => setSelectedSourceFacility(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-emerald-300 focus:outline-none cursor-pointer pr-1 max-w-[190px] truncate"
+              title="Supplying facility or let AI find nearest surplus"
+            >
+              <option value="AUTO_NEAREST_SURPLUS" className="bg-slate-900 text-emerald-400 font-bold">
+                ⚡ Auto Nearest Surplus (AI)
+              </option>
+              {facilities.filter(f => f.id !== selectedFacility.id).slice(0, 60).map(f => (
+                <option key={`src-${f.id}`} value={f.id} className="bg-slate-900 text-slate-200">
                   {f.name} ({f.district})
                 </option>
               ))}
@@ -741,6 +793,33 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                             <p className="text-xs text-slate-200">
                               {msg.recommended_action.action_summary}
                             </p>
+
+                            {/* Inter-Facility Route Nodes (Recipient & Supplying Donor) */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-950/80 p-2.5 rounded-xl border border-emerald-500/20 text-xs">
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+                                  <Building2 size={11} className="text-cyan-400" /> Recipient (Target Facility):
+                                </span>
+                                <span className="font-bold text-slate-100 block truncate">
+                                  {msg.target_facility_name || selectedFacility.name}
+                                </span>
+                              </div>
+                              <div className="space-y-0.5 sm:border-l sm:border-slate-800 sm:pl-2.5">
+                                <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+                                  <Truck size={11} className="text-emerald-400" /> Supplying Donor Node:
+                                </span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-emerald-300 truncate">
+                                    {msg.source_facility_name || msg.recommended_action?.suggested_source_facility || 'District Surplus Hospital'}
+                                  </span>
+                                  {msg.is_user_specified_donor ? (
+                                    <span className="text-[9px] bg-blue-500/20 text-blue-300 font-semibold px-1.5 py-0.5 rounded border border-blue-500/40">User Specified</span>
+                                  ) : (
+                                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-semibold px-1.5 py-0.5 rounded border border-emerald-500/40">Nearest Surplus</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
 
                             <div className="pt-2 border-t border-emerald-500/20 flex flex-wrap items-center justify-between gap-2 text-xs">
                               <div className="flex items-center gap-3 text-slate-300">

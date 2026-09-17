@@ -195,6 +195,8 @@ def process_copilot_query(
     language_code: str = "hi",
     facility_id: str = "PHC-BARAGAON-03",
     facility_name: str = "Primary Health Centre Baragaon",
+    source_facility_id: Optional[str] = None,
+    source_facility_name: Optional[str] = None,
     custom_api_key: Optional[str] = None
 ) -> Dict[str, Any]:
     """
@@ -210,6 +212,8 @@ def process_copilot_query(
             language_code=language_code,
             facility_id=facility_id,
             facility_name=facility_name,
+            source_facility_id=source_facility_id,
+            source_facility_name=source_facility_name,
             custom_api_key=custom_api_key
         )
         if agentic_result:
@@ -286,6 +290,8 @@ def process_copilot_chat(
     language_code: str = "hi",
     facility_id: str = "PHC-BARAGAON-03",
     facility_name: str = "Primary Health Centre Baragaon",
+    source_facility_id: Optional[str] = None,
+    source_facility_name: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     custom_api_key: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -322,6 +328,8 @@ def process_copilot_chat(
             language_code=language_code,
             facility_id=facility_id,
             facility_name=facility_name,
+            source_facility_id=source_facility_id,
+            source_facility_name=source_facility_name,
             custom_api_key=custom_api_key,
             session_id=sid,
             conversation_history=session["messages"],
