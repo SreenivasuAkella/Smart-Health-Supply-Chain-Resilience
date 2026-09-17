@@ -125,25 +125,20 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="glass-panel p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="bg-cyan-500/20 text-cyan-300 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
-              <Sparkles size={13} /> Gemini 1.5 Multimodal Vision API
-            </span>
-          </div>
-          <h2 className="text-xl font-bold text-white">
-            Multimodal Medicine & Vaccine Inspection Scanner
-          </h2>
-          <p className="text-xs text-slate-400 max-w-2xl mt-0.5">
-            Instant camera OCR to verify batch numbers, compute expiry lead-time, authenticate security holograms, and flag counterfeit batches before clinic intake.
-          </p>
+      {/* Compact Action Bar with Demo Presets */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+            <Sparkles size={13} /> Gemini Multimodal Vision
+          </span>
+          <span className="hidden sm:inline-block text-xs text-slate-400">
+            Batch OCR &bull; Expiry Verification &bull; Hologram Check
+          </span>
         </div>
 
         {/* 1-Click Clinical Demo Presets */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">Quick Demo Samples:</span>
+          <span className="text-xs text-slate-400 font-medium hidden md:inline">Demo Samples:</span>
           {samplePresets.map((preset, idx) => (
             <button
               key={idx}
@@ -152,7 +147,7 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
                 setSelectedImage(null);
                 handleRunScan(preset);
               }}
-              className="bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-2.5 py-1.5 rounded-lg transition-all"
+              className="bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 text-xs px-2.5 py-1.5 rounded-lg transition-all"
             >
               {preset.label}
             </button>

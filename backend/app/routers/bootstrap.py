@@ -72,3 +72,43 @@ def get_dashboard_bootstrap():
         },
         message="Dashboard bootstrap data retrieved successfully"
     )
+
+
+@router.get("/stats")
+def get_overview_stats():
+    """
+    Ultra-fast KPI summary endpoint for Command Center Overview dashboard.
+    Returns aggregated KPIs without needing to download all facilities or medicines.
+    """
+    facilities = get_active_public_facilities()
+    telemetry = get_live_telemetry_stream()
+
+    total_facilities = len(facilities)
+    critical_stockouts = sum(
+        1 for f in facilities 
+        if f.get("stockout_risk") == "CRITICAL" or f.get("days_of_supply", 10) < 3
+    )
+    sensors = telemetry.get("sensors", [])
+    thermal_excursions = sum(
+        1 for s in sensors 
+        if s.get("currentTemp", 4.0) > 8.0 or (s.get("currentTemp", 4.0) < 2.0 and "Cryo" not in s.get("equipmentType", ""))
+    )
+
+    try:
+        from .reallocation import REALLOCATION_DISPATCHES
+        active_reallocations = len(REALLOCATION_DISPATCHES)
+    except Exception:
+        active_reallocations = 4
+
+    return success_response(
+        data={
+            "total_facilities": total_facilities,
+            "critical_stockouts": critical_stockouts,
+            "thermal_excursions": thermal_excursions,
+            "active_reallocations": active_reallocations,
+            "mean_kinetic_temp": telemetry.get("mean_kinetic_temp", "4.8°C"),
+            "active_sensors": telemetry.get("active_sensors_count", len(sensors))
+        },
+        message="Overview KPI stats retrieved successfully"
+    )
+

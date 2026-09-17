@@ -53,6 +53,41 @@ export async function fetchFacilities(page = 1, pageSize = 1200, filters = {}) {
   }
 }
 
+export async function fetchFacilitiesPaginated(page = 1, pageSize = 50, filters = {}) {
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+      ...(filters.state ? { state: filters.state } : {}),
+      ...(filters.district ? { district: filters.district } : {}),
+      ...(filters.search ? { search: filters.search } : {}),
+      ...(filters.status && filters.status !== 'ALL' ? { status: filters.status } : {})
+    });
+    const res = await dedupedFetch(`${API_BASE_URL}/inventory/facilities?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch facilities");
+    const json = await res.json();
+    return {
+      items: Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []),
+      pagination: json.pagination || { 
+        page, 
+        page_size: pageSize, 
+        total_records: json.data?.length || 0, 
+        total_pages: Math.ceil((json.data?.length || 0) / pageSize) || 1, 
+        has_next: false, 
+        has_prev: false 
+      },
+      metadata: json.metadata || {}
+    };
+  } catch (err) {
+    console.error("fetchFacilitiesPaginated error:", err);
+    return { 
+      items: [], 
+      pagination: { page, page_size: pageSize, total_records: 0, total_pages: 1, has_next: false, has_prev: false },
+      metadata: {}
+    };
+  }
+}
+
 export async function fetchMedicines(page = 1, pageSize = 100, search = "") {
   try {
     const params = new URLSearchParams({
@@ -67,6 +102,26 @@ export async function fetchMedicines(page = 1, pageSize = 100, search = "") {
   } catch (err) {
     console.error("fetchMedicines error:", err);
     return [];
+  }
+}
+
+export async function fetchMedicinesPaginated(page = 1, pageSize = 25, search = "") {
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+      ...(search ? { search } : {})
+    });
+    const res = await dedupedFetch(`${API_BASE_URL}/inventory/medicines?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch medicines");
+    const json = await res.json();
+    return {
+      items: Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []),
+      pagination: json.pagination || { page, page_size: pageSize, total_records: json.data?.length || 0, total_pages: 1, has_next: false, has_prev: false }
+    };
+  } catch (err) {
+    console.error("fetchMedicinesPaginated error:", err);
+    return { items: [], pagination: { page, page_size: pageSize, total_records: 0, total_pages: 1, has_next: false, has_prev: false } };
   }
 }
 

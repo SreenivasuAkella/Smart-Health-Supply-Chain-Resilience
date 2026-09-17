@@ -1,10 +1,11 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   FileSpreadsheet, Search, Filter, Plus, CheckCircle2, ShieldCheck, 
-  Database, Building2, Globe, Thermometer, AlertCircle, Sparkles, RefreshCw
+  Database, Building2, Globe, Thermometer, AlertCircle, Sparkles, RefreshCw,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { updateStockLedger } from '../services/api';
+import { updateStockLedger, fetchMedicinesPaginated, fetchFacilities } from '../services/api';
 
 // Deterministic mock stock generator for newly mapped OSM facilities
 function getDeterministicStock(facilityId, facilityType, med) {
@@ -23,46 +24,102 @@ function getDeterministicStock(facilityId, facilityType, med) {
   return base + variance;
 }
 
-export default function InventoryLedger({ isLoading = false, medicines = [], facilities = [], onRefresh }) {
+export default function InventoryLedger({ 
+  isLoading: parentLoading = false, 
+  medicines: initialMedicines = [], 
+  facilities: initialFacilities = [], 
+  onRefresh 
+}) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedFacilityId, setSelectedFacilityId] = useState('PHC-BARAGAON-03');
   const [updatingId, setUpdatingId] = useState(null);
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [loading, setLoading] = useState(false);
+  const [medicinesData, setMedicinesData] = useState(initialMedicines);
+  const [facilitiesList, setFacilitiesList] = useState(initialFacilities);
+  const [pagination, setPagination] = useState({
+    total_records: initialMedicines.length || 0,
+    page: 1,
+    page_size: 25,
+    total_pages: Math.ceil((initialMedicines.length || 1) / 25),
+    has_next: false,
+    has_prev: false
+  });
+
+  // Debounce search input by 300ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Load facilities for facility selector if not provided by parent
+  useEffect(() => {
+    if (!facilitiesList || facilitiesList.length === 0) {
+      fetchFacilities(1, 100).then(facs => {
+        if (facs && facs.length > 0) setFacilitiesList(facs);
+      });
+    }
+  }, [facilitiesList]);
+
+  // Load paginated medicines independently
+  const loadPaginatedMedicines = useCallback(async (pg, size, query) => {
+    setLoading(true);
+    try {
+      const res = await fetchMedicinesPaginated(pg, size, query);
+      if (res && res.items) {
+        setMedicinesData(res.items);
+        if (res.pagination) {
+          setPagination(res.pagination);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading paginated medicines:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPaginatedMedicines(page, pageSize, debouncedSearch);
+  }, [page, pageSize, debouncedSearch, loadPaginatedMedicines]);
+
   const selectedFacility = useMemo(() => {
-    return facilities.find(f => f.id === selectedFacilityId) || facilities[0] || { 
+    return facilitiesList.find(f => f.id === selectedFacilityId) || facilitiesList[0] || { 
       id: "PHC-BARAGAON-03", 
       name: "PHC Baragaon", 
       district: "Varanasi",
       type: "Primary Health Centre"
     };
-  }, [facilities, selectedFacilityId]);
+  }, [facilitiesList, selectedFacilityId]);
 
   const categories = useMemo(() => {
     const set = new Set(['All']);
-    medicines.forEach(m => {
+    medicinesData.forEach(m => {
       if (m.category) set.add(m.category);
     });
     return Array.from(set);
-  }, [medicines]);
+  }, [medicinesData]);
 
   const filteredMedicines = useMemo(() => {
-    return medicines.filter(m => {
-      const q = searchTerm.toLowerCase();
-      const matchesSearch = !q || 
-        m.name?.toLowerCase().includes(q) || 
-        m.id?.toLowerCase().includes(q) || 
-        m.generic_name?.toLowerCase().includes(q) ||
-        m.nlemCode?.toLowerCase().includes(q);
+    return medicinesData.filter(m => {
       const matchesCategory = selectedCategory === 'All' || m.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      return matchesCategory;
     });
-  }, [medicines, searchTerm, selectedCategory]);
+  }, [medicinesData, selectedCategory]);
 
   const handleQuickAdd = async (facilityId, medId) => {
     setUpdatingId(`${facilityId}-${medId}`);
     try {
       await updateStockLedger(facilityId, medId, 10, "Manual Procurement Intake");
+      loadPaginatedMedicines(page, pageSize, debouncedSearch);
       if (onRefresh) onRefresh();
     } catch (e) {
       console.warn("Update stock notice:", e);
@@ -71,15 +128,35 @@ export default function InventoryLedger({ isLoading = false, medicines = [], fac
     }
   };
 
-  if (isLoading && medicines.length === 0) {
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= (pagination.total_pages || 1)) {
+      setPage(newPage);
+    }
+  };
+
+  const isPageLoading = loading || (parentLoading && medicinesData.length === 0);
+
+  if (isPageLoading && medicinesData.length === 0) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="glass-panel p-6 border border-slate-800 space-y-4">
-          <div className="skeleton w-1/3 h-7 rounded-lg" />
-          <div className="skeleton w-full h-10 rounded-xl" />
-          <div className="space-y-3 pt-4">
+        <div className="glass-panel overflow-hidden border border-slate-800/90 rounded-2xl shadow-2xl">
+          <div className="p-3.5 sm:p-4 bg-slate-900/60 border-b border-slate-800/80 space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <div className="skeleton w-36 h-5 rounded-lg" />
+                <div className="skeleton w-36 h-5 rounded-lg" />
+              </div>
+              <div className="skeleton w-32 h-4 rounded" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+              <div className="sm:col-span-5 skeleton h-9 rounded-xl" />
+              <div className="sm:col-span-4 skeleton h-9 rounded-xl" />
+              <div className="sm:col-span-3 skeleton h-9 rounded-xl" />
+            </div>
+          </div>
+          <div className="p-4 space-y-3">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="skeleton w-full h-14 rounded-xl" />
+              <div key={i} className="skeleton w-full h-12 rounded-xl" />
             ))}
           </div>
         </div>
@@ -87,29 +164,32 @@ export default function InventoryLedger({ isLoading = false, medicines = [], fac
     );
   }
 
+  const startRecord = pagination.total_records === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endRecord = Math.min(page * pageSize, pagination.total_records || medicinesData.length);
+
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Unified Table Card Container with Integrated Toolbar */}
       <div className="glass-panel overflow-hidden border border-slate-800/90 rounded-2xl shadow-2xl">
-        {/* Top Header & Integrated Filter Bar */}
-        <div className="p-5 sm:p-6 bg-slate-900/60 border-b border-slate-800/80 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                  <Database size={12} /> NLEM 2022 & WHO EML
+        {/* Top Integrated Filter Bar */}
+        <div className="p-3.5 sm:p-4 bg-slate-900/60 border-b border-slate-800/80 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] px-2.5 py-0.5 rounded-lg font-semibold flex items-center gap-1">
+                <Database size={12} /> NLEM 2022 & WHO EML
+              </span>
+              <span className="bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[11px] px-2.5 py-0.5 rounded-lg font-semibold flex items-center gap-1">
+                <Globe size={12} /> e-Aushadhi Cloud Sync
+              </span>
+              {loading && (
+                <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
+                  <RefreshCw size={10} className="animate-spin" /> Loading...
                 </span>
-                <span className="bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                  <Globe size={12} /> e-Aushadhi Cloud Sync
-                </span>
-              </div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-                National Essential Medicines Inventory Ledger
-              </h2>
+              )}
             </div>
 
             <div className="text-xs text-slate-400 font-medium">
-              Showing <span className="text-cyan-400 font-bold">{filteredMedicines.length}</span> of {medicines.length} Commodities
+              Showing <span className="text-cyan-400 font-bold">{startRecord}–{endRecord}</span> of {pagination.total_records || medicinesData.length} Commodities
             </div>
           </div>
 
@@ -135,7 +215,7 @@ export default function InventoryLedger({ isLoading = false, medicines = [], fac
                 onChange={(e) => setSelectedFacilityId(e.target.value)}
                 className="bg-transparent text-cyan-300 text-xs focus:outline-none font-semibold w-full truncate cursor-pointer"
               >
-                {facilities.map((fac) => (
+                {facilitiesList.map((fac) => (
                   <option key={fac.id} value={fac.id} className="bg-slate-900 text-slate-200">
                     {fac.name} ({fac.district || fac.state})
                   </option>
@@ -143,33 +223,35 @@ export default function InventoryLedger({ isLoading = false, medicines = [], fac
               </select>
             </div>
 
-            {/* Category Filter (3 cols) */}
+            {/* Category Filter Dropdown (3 cols) */}
             <div className="sm:col-span-3 flex items-center gap-2 bg-slate-950/80 border border-slate-700/80 rounded-xl px-3 py-1.5 overflow-hidden">
-              <Filter size={13} className="text-slate-400 shrink-0" />
+              <Filter size={14} className="text-indigo-400 shrink-0" />
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-transparent text-slate-200 text-xs focus:outline-none w-full truncate cursor-pointer"
+                className="bg-transparent text-slate-200 text-xs focus:outline-none font-medium w-full truncate cursor-pointer"
               >
-                {categories.map((c, i) => (
-                  <option key={i} value={c} className="bg-slate-900 text-slate-200">{c}</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat} className="bg-slate-900 text-slate-200">
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
         </div>
 
-        {/* 100% Fit Zero-Scroll Table with Vertical Column Dividers */}
-        <div className="w-full">
-          <table className="w-full text-left table-fixed border-collapse">
+        {/* Dense Ledger Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 font-bold uppercase text-[10px] tracking-wider divide-x divide-slate-800/80">
-                <th className="py-3 px-4 w-[32%]">Commodity & Classification</th>
-                <th className="py-3 px-3 w-[20%]">Storage & Criticality</th>
-                <th className="py-3 px-3 w-[20%] text-cyan-300 bg-cyan-950/20">
-                  <div className="flex items-center gap-1">
-                    <Building2 size={11} className="text-cyan-400" />
-                    <span className="truncate">Facility Stock ({selectedFacility.name.slice(0, 14)}...)</span>
+              <tr className="border-b border-slate-800/80 bg-slate-900/40 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <th className="py-3 px-4 w-[38%]">Medicine & Clinical Form</th>
+                <th className="py-3 px-3 w-[18%]">Thermal / Risk</th>
+                <th className="py-3 px-3 w-[16%] bg-cyan-950/20 text-cyan-300">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 size={12} className="text-cyan-400 shrink-0" />
+                    <span className="truncate">{selectedFacility.name?.split(' ')[0] || 'Node'} Stock</span>
                   </div>
                 </th>
                 <th className="py-3 px-3 w-[15%]">National Reserve</th>
@@ -180,7 +262,7 @@ export default function InventoryLedger({ isLoading = false, medicines = [], fac
               {filteredMedicines.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-10 text-center text-slate-400 text-xs">
-                    No medicines match the search criteria.
+                    {loading ? "Loading medicines catalog..." : "No medicines match the search criteria."}
                   </td>
                 </tr>
               ) : (
@@ -280,6 +362,56 @@ export default function InventoryLedger({ isLoading = false, medicines = [], fac
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        <div className="p-3.5 sm:p-4 bg-slate-900/60 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3 text-slate-400">
+            <span>
+              Page <span className="font-bold text-white">{page}</span> of{' '}
+              <span className="font-bold text-white">{pagination.total_pages || 1}</span>
+            </span>
+            <span className="text-slate-600">|</span>
+            <div className="flex items-center gap-1.5">
+              <span>Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="bg-slate-950 border border-slate-700/80 text-cyan-300 px-2 py-0.5 rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page <= 1 || loading}
+              className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white px-3 py-1.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
+            >
+              <ChevronLeft size={14} />
+              <span>Previous</span>
+            </button>
+            <span className="px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-300 font-mono font-bold border border-cyan-500/20">
+              {page}
+            </span>
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page >= (pagination.total_pages || 1) || loading}
+              className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white px-3 py-1.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
+            >
+              <span>Next</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

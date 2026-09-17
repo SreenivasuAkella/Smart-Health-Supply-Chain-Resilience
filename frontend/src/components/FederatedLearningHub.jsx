@@ -30,14 +30,13 @@ export default function FederatedLearningHub() {
   if (loading || !federatedData) {
     return (
       <div className="space-y-6 animate-pulse">
-        {/* Header Skeleton */}
-        <div className="glass-panel p-6 border border-slate-800 space-y-3">
-          <div className="flex gap-2">
-            <div className="skeleton w-48 h-6 rounded-full" />
-            <div className="skeleton w-36 h-6 rounded-full" />
+        {/* Compact Action Bar Skeleton */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <div className="skeleton w-44 h-6 rounded-lg" />
+            <div className="skeleton w-32 h-6 rounded-lg" />
           </div>
-          <div className="skeleton w-2/3 h-7 rounded-lg" />
-          <div className="skeleton w-full max-w-2xl h-4 rounded" />
+          <div className="skeleton w-40 h-8 rounded-xl" />
         </div>
 
         {/* 3 Metric Cards */}
@@ -86,35 +85,28 @@ export default function FederatedLearningHub() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="glass-panel p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="bg-indigo-500/20 text-indigo-300 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
-              <Network size={13} /> Multi-State Federated AI (FedAvg + DP)
-            </span>
-            <span className="bg-emerald-500/20 text-emerald-300 text-xs px-3 py-1 rounded-full font-semibold">
-              Global Round: #{federatedData.global_federated_round}
-            </span>
-          </div>
-          <h2 className="text-xl font-bold text-white">
-            Federated Health Resource & Shared Predictive Modelling Hub
-          </h2>
-          <p className="text-xs text-slate-400 max-w-2xl mt-0.5">
-            Enables cross-state outbreak intelligence sharing between Uttar Pradesh, Bihar, Assam, Maharashtra, and Kerala without exposing raw patient PII or clinic confidential data.
-          </p>
+      {/* Compact Action & Status Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+            <Network size={13} /> FedAvg + Differential Privacy
+          </span>
+          <span className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold">
+            Global Round #{federatedData.global_federated_round}
+          </span>
+          <span className="hidden sm:inline-block text-xs text-slate-400">
+            Zero-PII Encrypted Gradients across 5 State Enclaves
+          </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleTriggerFedAvg}
-            disabled={syncingRound}
-            className="btn-primary text-xs px-4 py-2"
-          >
-            <RefreshCw size={14} className={syncingRound ? "animate-spin" : ""} />
-            <span>{syncingRound ? 'Aggregating Model Gradients...' : 'Trigger Federated Aggregation'}</span>
-          </button>
-        </div>
+        <button
+          onClick={handleTriggerFedAvg}
+          disabled={syncingRound}
+          className="btn-primary text-xs px-3.5 py-1.5 shrink-0"
+        >
+          <RefreshCw size={13} className={syncingRound ? "animate-spin" : ""} />
+          <span>{syncingRound ? 'Aggregating Gradients...' : 'Trigger Federated Aggregation'}</span>
+        </button>
       </div>
 
       {/* Global Model Metrics Cards */}

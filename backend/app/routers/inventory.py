@@ -27,11 +27,29 @@ def get_all_facilities(
     page_size: int = Query(50, ge=1, le=5000, description="Records per page"),
     state: Optional[str] = Query(None, description="Filter by state"),
     district: Optional[str] = Query(None, description="Filter by district"),
-    search: Optional[str] = Query(None, description="Search by facility name")
+    search: Optional[str] = Query(None, description="Search by facility name"),
+    status: Optional[str] = Query(None, description="Filter by status (CRITICAL, MODERATE, BED_SURGE)")
 ):
     # 1. Fetch from Firebase cache if available, or fallback to OSM directory
     fb_facs = firebase_service.read_data("inventory/facilities")
     facs = fb_facs if (fb_facs and isinstance(fb_facs, list) and len(fb_facs) > 0) else get_active_public_facilities()
+
+    # Precalculate national aggregates from the complete 1,188 facility network
+    total_facs_count = len(facs)
+    national_aggregates = {
+        "total_facilities": total_facs_count,
+        "critical_deficits": sum(1 for f in facs if f.get("status") == "Critical Deficit"),
+        "moderate_deficits": sum(1 for f in facs if f.get("status") == "Moderate Deficit"),
+        "total_beds": sum(f.get("bedCapacity", 20) for f in facs),
+        "occupied_beds": sum(f.get("bedsOccupied", 15) for f in facs),
+        "oxygen_beds": sum(f.get("oxygenBedsAvailable", 5) for f in facs),
+        "icu_beds": sum(f.get("icuBedsAvailable", 2) for f in facs),
+        "doctors_on_duty": sum(f.get("doctorsOnDuty", 1) for f in facs),
+        "doctors_total": sum(f.get("doctorsTotal", 2) for f in facs),
+        "nurses_on_duty": sum(f.get("nursesOnDuty", 3) for f in facs),
+        "asha_active": sum(f.get("ashaActiveCount", 10) for f in facs),
+        "daily_patient_footfall": sum(f.get("dailyPatientFootfall", 120) for f in facs)
+    }
 
     # Apply filters
     filtered = facs
@@ -40,7 +58,19 @@ def get_all_facilities(
     if district:
         filtered = [f for f in filtered if district.lower() in f.get("district", "").lower()]
     if search:
-        filtered = [f for f in filtered if search.lower() in f.get("name", "").lower() or search.lower() in f.get("id", "").lower()]
+        s = search.lower()
+        filtered = [
+            f for f in filtered 
+            if s in f.get("name", "").lower() or s in f.get("id", "").lower() or s in f.get("district", "").lower() or s in f.get("state", "").lower()
+        ]
+    if status and status != 'ALL':
+        st = status.upper()
+        if st in ('CRITICAL', 'CRITICAL DEFICIT'):
+            filtered = [f for f in filtered if f.get("status") == "Critical Deficit"]
+        elif st in ('MODERATE', 'MODERATE DEFICIT'):
+            filtered = [f for f in filtered if f.get("status") == "Moderate Deficit"]
+        elif st == 'BED_SURGE':
+            filtered = [f for f in filtered if f.get("bedCapacity") and (f.get("bedsOccupied", 0) / max(1, f.get("bedCapacity", 1))) > 0.85]
 
     return paginated_response(
         items=filtered,
@@ -51,7 +81,9 @@ def get_all_facilities(
             "source": "OpenStreetMap / National Health Registry (BigQuery & Firebase)",
             "state_filter": state,
             "district_filter": district,
-            "search_query": search
+            "search_query": search,
+            "status_filter": status,
+            "national_aggregates": national_aggregates
         }
     )
 

@@ -294,17 +294,15 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   if (isLoading && facilities.length === 0) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="glass-panel p-4 border border-slate-800 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="skeleton w-10 h-10 rounded-lg" />
-            <div className="space-y-1.5">
-              <div className="skeleton w-64 h-5" />
-              <div className="skeleton w-48 h-3" />
-            </div>
+        {/* Compact Map Control Bar Skeleton */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <div className="skeleton w-48 h-6 rounded-lg" />
+            <div className="skeleton w-36 h-4 rounded" />
           </div>
           <div className="flex gap-2">
-            <div className="skeleton w-44 h-8 rounded-lg" />
-            <div className="skeleton w-36 h-8 rounded-lg" />
+            <div className="skeleton w-36 h-7 rounded-lg" />
+            <div className="skeleton w-28 h-7 rounded-lg" />
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -327,23 +325,15 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
   return (
     <div className="space-y-4">
-      {/* Map Control Bar */}
-      <div className="glass-panel p-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-500/40 rounded-xl shadow-lg shadow-cyan-500/10">
-            <Navigation size={22} className="text-cyan-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-white text-base">Autonomous AI Relocation & Road Route Engine</h3>
-              <span className="bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Sparkles size={11} className="text-cyan-400" /> 4-Agent Sentinel
-              </span>
-            </div>
-            <p className="text-xs text-slate-400">
-              Live multi-node health grid across {facilities.length} healthcare centers & national corridors
-            </p>
-          </div>
+      {/* Compact Map Control Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+            <Navigation size={13} className="text-cyan-400" /> 4-Agent Sentinel Routing
+          </span>
+          <span className="text-xs text-slate-400 hidden sm:inline">
+            {facilities.length} Healthcare Nodes &bull; Flood Risk Corridors
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

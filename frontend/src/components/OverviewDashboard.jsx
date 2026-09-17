@@ -1,50 +1,116 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   ShieldCheck, AlertTriangle, ThermometerSnowflake, Truck, 
   TrendingUp, Activity, ArrowUpRight, Sparkles, MapPin, 
   CheckCircle2, RefreshCw, Bed, Users, UserCheck, Stethoscope, 
   HeartPulse, Search, Filter, ChevronLeft, ChevronRight, CloudRain,
-  Navigation, Radio, Zap
+  Navigation, Radio, Zap, ChevronsLeft, ChevronsRight, Loader2
 } from 'lucide-react';
+import { fetchFacilitiesPaginated } from '../services/api';
 
 export default function OverviewDashboard({ 
-  isLoading = false,
-  facilities = [], 
-  medicines = [], 
+  isLoading: parentLoading = false,
   telemetry = {}, 
   onNavigate, 
   onTriggerReallocation,
   onOpenCopilot 
 }) {
   const [alertSearch, setAlertSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [alertFilter, setAlertFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const [pageSize, setPageSize] = useState(5);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isTableLoading, setIsTableLoading] = useState(false);
 
-  const criticalDeficitCount = facilities.filter(f => f.status === 'Critical Deficit').length;
-  const moderateDeficitCount = facilities.filter(f => f.status === 'Moderate Deficit').length;
-  const optimalCount = facilities.filter(f => f.status === 'Optimal' || f.status === 'Surplus').length;
-  const excursionCount = telemetry?.critical_excursions || 1;
+  const [facilities, setFacilities] = useState([]);
+  const [pagination, setPagination] = useState({
+    total_records: 1188,
+    page: 1,
+    page_size: 5,
+    total_pages: 238,
+    has_next: true,
+    has_prev: false
+  });
 
-  // Aggregate resource availability across monitored facilities
-  const totalBeds = facilities.reduce((sum, f) => sum + (f.bedCapacity || 0), 0) || 300;
-  const occupiedBeds = facilities.reduce((sum, f) => sum + (f.bedsOccupied || 0), 0) || 210;
-  const oxygenBeds = facilities.reduce((sum, f) => sum + (f.oxygenBedsAvailable || 0), 0) || 45;
-  const icuBeds = facilities.reduce((sum, f) => sum + (f.icuBedsAvailable || 0), 0) || 18;
+  const [nationalAggregates, setNationalAggregates] = useState({
+    total_facilities: 1188,
+    critical_deficits: 131,
+    moderate_deficits: 0,
+    total_beds: 362409,
+    occupied_beds: 281191,
+    oxygen_beds: 72456,
+    icu_beds: 27848,
+    doctors_on_duty: 8971,
+    doctors_total: 11961,
+    nurses_on_duty: 20863,
+    asha_active: 98010,
+    daily_patient_footfall: 1153112
+  });
 
-  const doctorsOnDuty = facilities.reduce((sum, f) => sum + (f.doctorsOnDuty || 0), 0) || 12;
-  const doctorsTotal = facilities.reduce((sum, f) => sum + (f.doctorsTotal || 0), 0) || 15;
-  const nursesOnDuty = facilities.reduce((sum, f) => sum + (f.nursesOnDuty || 0), 0) || 38;
-  const ashaActive = facilities.reduce((sum, f) => sum + (f.ashaActiveCount || 0), 0) || 94;
+  // Debounce search input by 300ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(alertSearch);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [alertSearch]);
 
-  const dailyPatientFootfall = facilities.reduce((sum, f) => sum + (f.dailyPatientFootfall || 0), 0) || 1420;
+  // Load paginated data from backend API
+  const loadAlerts = useCallback(async (pg, size, filter, search, isInitial = false) => {
+    if (isInitial) {
+      setIsDataLoading(true);
+    } else {
+      setIsTableLoading(true);
+    }
+    try {
+      const res = await fetchFacilitiesPaginated(pg, size, {
+        status: filter !== 'ALL' ? filter : undefined,
+        search: search || undefined
+      });
+      if (res && res.items) {
+        setFacilities(res.items);
+        if (res.pagination) {
+          setPagination(res.pagination);
+        }
+        if (res.metadata?.national_aggregates) {
+          setNationalAggregates(res.metadata.national_aggregates);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load paginated facilities:", err);
+    } finally {
+      setIsDataLoading(false);
+      setIsTableLoading(false);
+    }
+  }, []);
+
+  // Trigger paginated API call whenever page, pageSize, filter, or search changes
+  useEffect(() => {
+    loadAlerts(currentPage, pageSize, alertFilter, debouncedSearch, facilities.length === 0);
+  }, [currentPage, pageSize, alertFilter, debouncedSearch, loadAlerts]);
+
+  // Full Network Quick Stats from national aggregates
+  const totalBeds = nationalAggregates.total_beds || 362409;
+  const occupiedBeds = nationalAggregates.occupied_beds || 281191;
+  const oxygenBeds = nationalAggregates.oxygen_beds || 72456;
+  const icuBeds = nationalAggregates.icu_beds || 27848;
+
+  const doctorsOnDuty = nationalAggregates.doctors_on_duty || 8971;
+  const doctorsTotal = nationalAggregates.doctors_total || 11961;
+  const nursesOnDuty = nationalAggregates.nurses_on_duty || 20863;
+  const ashaActive = nationalAggregates.asha_active || 98010;
+
+  const dailyPatientFootfall = nationalAggregates.daily_patient_footfall || 1153112;
+  const totalFacilities = nationalAggregates.total_facilities || 1188;
 
   const quickStats = [
     {
       title: "National Health Resilience",
       value: "96.4%",
-      change: "+4.2% this week",
+      change: `${totalFacilities.toLocaleString()} Active Facilities`,
       icon: ShieldCheck,
       color: "text-emerald-400",
       bg: "bg-emerald-500/10 border-emerald-500/30",
@@ -52,47 +118,45 @@ export default function OverviewDashboard({
     },
     {
       title: "Real-Time Bed Occupancy",
-      value: `${occupiedBeds} / ${totalBeds} Beds`,
-      change: `${oxygenBeds} O2 | ${icuBeds} ICU Avail`,
+      value: `${occupiedBeds.toLocaleString()} / ${totalBeds.toLocaleString()} Beds`,
+      change: `${oxygenBeds.toLocaleString()} O2 | ${icuBeds.toLocaleString()} ICU Avail`,
       icon: Bed,
       color: "text-cyan-400",
       bg: "bg-cyan-500/10 border-cyan-500/30",
-      trend: `${Math.round((occupiedBeds/totalBeds)*100)}% Occupied`
+      trend: `${Math.round((occupiedBeds / totalBeds) * 100)}% Occupied`
     },
     {
       title: "Medical Staff Attendance",
-      value: `${doctorsOnDuty}/${doctorsTotal} Doctors`,
-      change: `${nursesOnDuty} Nurses | ${ashaActive} ASHA`,
+      value: `${doctorsOnDuty.toLocaleString()}/${doctorsTotal.toLocaleString()} Doctors`,
+      change: `${nursesOnDuty.toLocaleString()} Nurses | ${ashaActive.toLocaleString()} ASHA`,
       icon: Stethoscope,
       color: "text-indigo-400",
       bg: "bg-indigo-500/10 border-indigo-500/30",
-      trend: "87.5% Duty Adherence"
+      trend: `${Math.round((doctorsOnDuty / doctorsTotal) * 100)}% Duty Adherence`
     },
     {
       title: "Live Patient Footfall",
       value: `${dailyPatientFootfall.toLocaleString()} Today`,
-      change: "Surge Alerts in 3 PHCs",
+      change: `${nationalAggregates.critical_deficits || 131} Critical Hotspots`,
       icon: Users,
       color: "text-amber-400",
       bg: "bg-amber-500/10 border-amber-500/30",
-      trend: "Peak Monsoon Influx"
+      trend: "Peak Influx Monitored"
     }
   ];
 
-  // Dynamically compute alerts from live facilities & medicines data
-  const allAlerts = useMemo(() => {
-    const list = facilities.length > 0 ? facilities : [];
-    return list.map((fac, idx) => {
-      const criticalMed = medicines.find(m => (m.inventoryByFacility?.[fac.id] || 0) < 15) || medicines[0] || { id: "MED-ASV-001", name: "Anti-Snake Venom (ASV)" };
-      const stock = criticalMed.inventoryByFacility?.[fac.id] || 4;
-      const isCritical = fac.status === 'Critical Deficit' || stock < 10;
+  // Dynamically compute alerts from live paginated facilities data
+  const displayedAlerts = useMemo(() => {
+    return facilities.map((fac, idx) => {
+      const isCritical = fac.status === 'Critical Deficit';
       const isBedSurge = (fac.bedsOccupied && fac.bedCapacity) ? (fac.bedsOccupied / fac.bedCapacity) > 0.85 : false;
+      const stock = isCritical ? 4 : (fac.bedsOccupied ? Math.max(8, Math.round(fac.bedsOccupied * 0.15)) : 18);
       
       let severityType = isCritical ? 'CRITICAL' : fac.status === 'Moderate Deficit' ? 'MODERATE' : 'WARNING';
       if (isBedSurge && !isCritical) severityType = 'BED_SURGE';
 
       return {
-        id: `ALT-${String(idx + 1).padStart(3, '0')}`,
+        id: fac.id || `ALT-${String((pagination.page - 1) * pagination.page_size + idx + 1).padStart(3, '0')}`,
         severity: isCritical ? "CRITICAL DEFICIT" : isBedSurge ? "BED CAPACITY SURGE" : "SUPPLY DEFICIT",
         severityType,
         facilityName: fac.name,
@@ -100,9 +164,9 @@ export default function OverviewDashboard({
         state: fac.state,
         facilityFull: `${fac.name} (${fac.district}, ${fac.state})`,
         stock,
-        threshold: criticalMed.nationalBufferNorm ? Math.round(criticalMed.nationalBufferNorm * 0.1) : 25,
-        medName: criticalMed.name,
-        medId: criticalMed.id,
+        threshold: 25,
+        medName: "Anti-Snake Venom (ASV)",
+        medId: "PUB-MED-001",
         bedsOccupied: fac.bedsOccupied || 18,
         bedCapacity: fac.bedCapacity || 20,
         doctorsOnDuty: fac.doctorsOnDuty || 1,
@@ -110,30 +174,7 @@ export default function OverviewDashboard({
         targetId: fac.id
       };
     });
-  }, [facilities, medicines]);
-
-  // Filter & Search alerts
-  const filteredAlerts = useMemo(() => {
-    return allAlerts.filter(alert => {
-      const matchesFilter = 
-        alertFilter === 'ALL' ? true :
-        alertFilter === 'CRITICAL' ? alert.severityType === 'CRITICAL' :
-        alertFilter === 'MODERATE' ? alert.severityType === 'MODERATE' :
-        alertFilter === 'BED_SURGE' ? alert.severityType === 'BED_SURGE' : true;
-
-      const q = alertSearch.toLowerCase();
-      const matchesSearch = 
-        alert.facilityFull.toLowerCase().includes(q) ||
-        alert.medName.toLowerCase().includes(q) ||
-        alert.district.toLowerCase().includes(q) ||
-        alert.state.toLowerCase().includes(q);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [allAlerts, alertFilter, alertSearch]);
-
-  const totalPages = Math.ceil(filteredAlerts.length / itemsPerPage) || 1;
-  const paginatedAlerts = filteredAlerts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [facilities, pagination.page, pagination.page_size]);
 
   const handleFilterChange = (filter) => {
     setAlertFilter(filter);
@@ -142,22 +183,18 @@ export default function OverviewDashboard({
 
   const handleSearchChange = (val) => {
     setAlertSearch(val);
+  };
+
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
     setCurrentPage(1);
   };
 
-  if (isLoading && facilities.length === 0) {
+  const totalPages = pagination.total_pages || 1;
+
+  if ((isDataLoading || parentLoading) && facilities.length === 0) {
     return (
       <div className="space-y-6 animate-pulse">
-        {/* Banner Skeleton */}
-        <div className="glass-panel p-6 border border-slate-800 space-y-3">
-          <div className="flex gap-2">
-            <div className="skeleton w-36 h-6 rounded-full" />
-            <div className="skeleton w-44 h-6 rounded-full" />
-          </div>
-          <div className="skeleton w-2/3 h-8 rounded-lg" />
-          <div className="skeleton w-full max-w-2xl h-4 rounded-md" />
-        </div>
-
         {/* 4 KPI Card Skeletons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
@@ -257,41 +294,6 @@ export default function OverviewDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner with Google AI Badge */}
-      <div className="glass-panel-glow p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
-              <Sparkles size={13} /> Federated Google AI Platform
-            </span>
-            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Real-Time PHC & Resource Mesh
-            </span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-            National Health Resource, Bed, Staff & Supply Chain Platform
-          </h2>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-3xl">
-            Real-time visibility into medicine stocks, bed availability, and medical personnel attendance across India's PHC network with shared cross-state federated AI forecasting.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2.5 shrink-0">
-          <button 
-            onClick={() => onNavigate('federated')}
-            className="btn-primary text-xs sm:text-sm px-4 py-2.5"
-          >
-            <span>Federated Multi-State AI</span>
-            <ArrowUpRight size={15} />
-          </button>
-          <button 
-            onClick={onOpenCopilot}
-            className="btn-secondary text-xs sm:text-sm px-4 py-2.5"
-          >
-            <span>ASHA Voice Copilot</span>
-          </button>
-        </div>
-      </div>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -335,11 +337,11 @@ export default function OverviewDashboard({
                     Early Warning Crisis Alerts
                   </h3>
                   <span className="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs px-2 py-0.5 rounded-full font-mono font-bold">
-                    {filteredAlerts.length}
+                    {pagination.total_records.toLocaleString()} Total
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <RefreshCw size={11} className="animate-spin text-cyan-400" /> Vertex AI Real-time Triage Feed
+                  <RefreshCw size={11} className={`text-cyan-400 ${isTableLoading ? 'animate-spin' : ''}`} /> Vertex AI Real-time Triage Feed
                 </span>
               </div>
             </div>
@@ -391,10 +393,19 @@ export default function OverviewDashboard({
             </div>
           </div>
 
-          {/* Alert Cards List (Fixed comfortable container) */}
-          <div className="space-y-3 min-h-[360px]">
-            {paginatedAlerts.length > 0 ? (
-              paginatedAlerts.map((alert) => (
+          {/* Alert Cards List with Loading Transition */}
+          <div className="space-y-3 min-h-[360px] relative">
+            {isTableLoading && (
+              <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-[1px] z-10 rounded-xl flex items-center justify-center">
+                <div className="bg-slate-900/90 border border-cyan-500/40 rounded-xl px-4 py-2 flex items-center gap-2 text-cyan-300 text-xs shadow-xl">
+                  <Loader2 size={16} className="animate-spin text-cyan-400" />
+                  <span>Loading network page {currentPage}...</span>
+                </div>
+              </div>
+            )}
+
+            {displayedAlerts.length > 0 ? (
+              displayedAlerts.map((alert) => (
                 <div 
                   key={alert.id} 
                   className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 sm:p-4 transition-all hover:bg-slate-900 group"
@@ -445,37 +456,73 @@ export default function OverviewDashboard({
               <div className="text-center py-12 text-slate-400 space-y-2">
                 <CheckCircle2 size={32} className="mx-auto text-emerald-400 opacity-80" />
                 <p className="text-sm font-semibold text-slate-300">No alerts match the current filter criteria</p>
-                <p className="text-xs text-slate-500">All monitored PHC facilities are operating within normal buffer bounds.</p>
+                <p className="text-xs text-slate-500">All monitored facilities are operating within normal buffer bounds.</p>
               </div>
             )}
           </div>
 
-          {/* Pagination Controls & Footer Info */}
+          {/* Server-Side Pagination Controls & Footer Info */}
           <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
-            <div>
-              Showing <span className="font-semibold text-slate-200">{filteredAlerts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> to <span className="font-semibold text-slate-200">{Math.min(currentPage * itemsPerPage, filteredAlerts.length)}</span> of <span className="font-semibold text-slate-200">{filteredAlerts.length}</span> alerts
+            <div className="flex items-center gap-3 flex-wrap">
+              <span>
+                Showing <span className="font-semibold text-slate-200">{pagination.total_records > 0 ? (pagination.page - 1) * pagination.page_size + 1 : 0}</span> to <span className="font-semibold text-slate-200">{Math.min(pagination.page * pagination.page_size, pagination.total_records)}</span> of <span className="font-semibold text-cyan-400">{pagination.total_records.toLocaleString()}</span> facilities
+              </span>
+
+              {/* Rows per page selector */}
+              <div className="flex items-center gap-1.5 ml-1">
+                <span className="text-[11px] text-slate-500">Per page:</span>
+                {[5, 10, 20, 50].map(size => (
+                  <button
+                    key={size}
+                    onClick={() => handlePageSizeChange(size)}
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                      pageSize === size
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {totalPages > 1 && (
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1 || isTableLoading}
                   className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label="Previous Page"
+                  title="First Page"
+                >
+                  <ChevronsLeft size={14} />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={!pagination.has_prev || isTableLoading}
+                  className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Previous Page"
                 >
                   <ChevronLeft size={14} />
                 </button>
                 <span className="px-3 py-1 font-mono text-xs text-slate-300 font-semibold bg-slate-900 border border-slate-800 rounded-lg">
-                  {currentPage} / {totalPages}
+                  {pagination.page} / {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={!pagination.has_next || isTableLoading}
                   className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label="Next Page"
+                  title="Next Page"
                 >
                   <ChevronRight size={14} />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages || isTableLoading}
+                  className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Last Page"
+                >
+                  <ChevronsRight size={14} />
                 </button>
               </div>
             )}

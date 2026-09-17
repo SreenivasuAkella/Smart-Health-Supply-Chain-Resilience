@@ -38,14 +38,13 @@ export default function ColdChainDigitalTwin() {
   if (loading || !telemetryData) {
     return (
       <div className="space-y-6 animate-pulse">
-        {/* Header Skeleton */}
-        <div className="glass-panel p-6 border border-slate-800 space-y-3">
-          <div className="flex gap-2">
-            <div className="skeleton w-44 h-6 rounded-full" />
-            <div className="skeleton w-48 h-6 rounded-full" />
+        {/* Compact Status Bar Skeleton */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <div className="skeleton w-44 h-6 rounded-lg" />
+            <div className="skeleton w-48 h-6 rounded-lg" />
           </div>
-          <div className="skeleton w-1/2 h-7 rounded-lg" />
-          <div className="skeleton w-full max-w-xl h-4 rounded" />
+          <div className="skeleton w-36 h-8 rounded-xl" />
         </div>
 
         {/* 6 Sensor Cards Skeletons */}
@@ -91,34 +90,27 @@ export default function ColdChainDigitalTwin() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="glass-panel p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="bg-cyan-500/20 text-cyan-300 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
-              <Radio size={13} className="text-cyan-400 animate-pulse" /> Firebase Real-Time IoT Bridge
-            </span>
-            <span className="bg-emerald-500/20 text-emerald-300 text-xs px-3 py-1 rounded-full font-semibold">
-              Live Sensor Influx: {telemetryData.active_sensors_count} Units
-            </span>
-          </div>
-          <h2 className="text-xl font-bold text-white">
-            Cold-Chain Digital Twin & Thermal Excursion Watchdog
-          </h2>
-          <p className="text-xs text-slate-400 max-w-2xl mt-0.5">
-            Monitors real-time ILR and walk-in freezer temperatures, calculating kinetic potency degradation (MKT) and preventing vaccine spoilage.
-          </p>
+      {/* Compact Status & Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+            <Radio size={13} className="text-cyan-400 animate-pulse" /> Firebase IoT Telemetry
+          </span>
+          <span className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold">
+            {telemetryData.active_sensors_count} Active Sensors Monitored
+          </span>
+          <span className="hidden sm:inline-block text-xs text-slate-400">
+            Thermal Watchdog &bull; Mean Kinetic Temp (MKT)
+          </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSendSOS}
-            className="btn-danger text-xs px-4 py-2"
-          >
-            <Wrench size={14} />
-            <span>{dispatchAlertSent ? 'Technicians Alerted!' : 'Emergency Tech SOS'}</span>
-          </button>
-        </div>
+        <button
+          onClick={handleSendSOS}
+          className="btn-danger text-xs px-3.5 py-1.5 shrink-0"
+        >
+          <Wrench size={13} />
+          <span>{dispatchAlertSent ? 'Technicians Alerted!' : 'Emergency Tech SOS'}</span>
+        </button>
       </div>
 
       {/* Sensor Units Grid */}

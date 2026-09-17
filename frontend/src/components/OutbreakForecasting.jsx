@@ -132,15 +132,17 @@ export default function OutbreakForecasting({ onTriggerReallocation }) {
   if (loading && !forecastData) {
     return (
       <div className="space-y-6 animate-pulse">
-        {/* Header Skeleton */}
-        <div className="glass-panel p-6 border border-slate-800 space-y-3">
-          <div className="flex gap-2 flex-wrap">
-            <div className="skeleton w-48 h-6 rounded-full" />
-            <div className="skeleton w-36 h-6 rounded-full" />
-            <div className="skeleton w-32 h-6 rounded-full" />
+        {/* Compact Control Bar Skeleton */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="skeleton w-44 h-6 rounded-lg" />
+            <div className="skeleton w-28 h-6 rounded-lg" />
+            <div className="skeleton w-28 h-6 rounded-lg" />
           </div>
-          <div className="skeleton w-2/3 h-7 rounded-lg" />
-          <div className="skeleton w-full max-w-2xl h-4 rounded" />
+          <div className="flex items-center gap-2">
+            <div className="skeleton w-36 h-8 rounded-xl" />
+            <div className="skeleton w-24 h-8 rounded-xl" />
+          </div>
         </div>
 
         {/* 3 Critical Stockout Alert Skeletons */}
@@ -197,36 +199,28 @@ export default function OutbreakForecasting({ onTriggerReallocation }) {
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="glass-panel p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="bg-emerald-500/20 text-emerald-300 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5 border border-emerald-500/30">
-              <Database size={13} /> Live Google BigQuery + Gemini 3.6 Flash
-            </span>
-            <span className="bg-cyan-500/20 text-cyan-300 text-xs px-3 py-1 rounded-full font-semibold">
-              Horizon: 14 to 30 Days
-            </span>
-            <span className="bg-indigo-500/20 text-indigo-300 text-xs px-3 py-1 rounded-full font-semibold">
-              Confidence: {forecastData?.confidence_interval || "96.2%"}
-            </span>
-          </div>
-          <h2 className="text-xl font-bold text-white">
-            Epidemic Outbreak & Stockout Risk Forecasting Engine
-          </h2>
-          <p className="text-xs text-slate-400 max-w-2xl mt-0.5">
-            Real-time bio-climatic vector transmission analysis powered by Google Gemini AI, IMD meteorology grids, and BigQuery warehouse telemetry.
-          </p>
+      {/* Compact Control & Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+            <Database size={13} /> BigQuery + Gemini Forecasting
+          </span>
+          <span className="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold">
+            Horizon: 14-30d
+          </span>
+          <span className="bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold">
+            Confidence: {forecastData?.confidence_interval || "96.2%"}
+          </span>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           {/* District Filter Dropdown */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5">
-            <Filter size={14} className="text-cyan-400" />
+          <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-700/80 rounded-xl px-3 py-1.5">
+            <Filter size={13} className="text-cyan-400" />
             <select
               value={selectedDistrict}
               onChange={handleDistrictChange}
-              className="bg-transparent text-xs text-white outline-none cursor-pointer"
+              className="bg-transparent text-xs text-white outline-none cursor-pointer font-medium"
             >
               {POPULAR_DISTRICTS.map((d, i) => (
                 <option key={i} value={d.value} className="bg-slate-900 text-white">
@@ -239,11 +233,11 @@ export default function OutbreakForecasting({ onTriggerReallocation }) {
           <button
             onClick={handleManualSync}
             disabled={syncing}
-            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 text-xs font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm"
+            className="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/80 text-cyan-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-sm"
           >
-            <RefreshCw size={14} className={syncing ? "animate-spin text-cyan-400" : ""} />
-            <span>{syncing ? "Syncing..." : syncSuccess ? "Synced!" : "Sync Live Feeds"}</span>
-            {syncSuccess && <CheckCircle2 size={14} className="text-emerald-400" />}
+            <RefreshCw size={13} className={syncing ? "animate-spin text-cyan-400" : ""} />
+            <span>{syncing ? "Syncing..." : syncSuccess ? "Synced!" : "Sync Feeds"}</span>
+            {syncSuccess && <CheckCircle2 size={13} className="text-emerald-400" />}
           </button>
         </div>
       </div>

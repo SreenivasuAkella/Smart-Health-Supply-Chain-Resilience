@@ -359,93 +359,72 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
 
   return (
     <div className="space-y-6 animate-fadeIn max-w-[1600px] mx-auto pb-10">
-      {/* Top Banner with Google AI Architecture Badges */}
-      <div className="glass-panel p-6 border border-slate-800 relative overflow-hidden rounded-3xl shadow-2xl">
-        <div className="absolute -right-16 -top-16 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute right-32 -bottom-16 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Compact Action & Control Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="bg-gradient-to-r from-cyan-500/15 to-indigo-500/15 border border-cyan-500/30 text-cyan-300 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+            <Sparkles size={13} className="text-cyan-400" /> Multi-Turn GenAI + MCP
+          </span>
+          <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+            <Layers size={13} className="text-emerald-400" /> 8 Indian Languages
+          </span>
+        </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 via-teal-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 p-3.5 shrink-0">
-              <Headphones size={28} className="text-white" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-                  ASHA & PHC Conversational Voice Copilot
-                </h1>
-                <span className="bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 border border-cyan-500/40 text-cyan-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <Sparkles size={11} className="text-cyan-400" /> Multi-Turn GenAI + MCP
-                </span>
-                <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <Layers size={11} className="text-emerald-400" /> BigQuery & Firebase Synced
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
-                Frontline conversational clinical triage and automated emergency medicine reallocation across 8 Indian languages. Proactively clarifies missing details before executing multi-agent corridors.
-              </p>
-            </div>
-          </div>
-
-          {/* Facility Selector & Quick Global Audio Controls */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {/* Active Facility Context Dropdown */}
-            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-2xl px-3 py-1.5 shadow-sm">
-              <Building2 size={15} className="text-cyan-400 shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Node Facility</span>
-                <select
-                  value={selectedFacility.id}
-                  onChange={(e) => {
-                    const found = facilitiesList.find(f => f.id === e.target.value);
-                    if (found) setSelectedFacility(found);
-                  }}
-                  className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-1"
-                >
-                  {facilitiesList.map(f => (
-                    <option key={f.id} value={f.id} className="bg-slate-900 text-white">
-                      {f.name} ({f.district})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Audio Toggle */}
-            <button
-              onClick={() => {
-                if (isPlayingAudio) stopSpeaking();
-                setAutoSpeak(!autoSpeak);
+        {/* Facility Selector & Controls */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Active Facility Context Dropdown */}
+          <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-700/80 rounded-xl px-2.5 py-1.5 shadow-sm">
+            <Building2 size={13} className="text-cyan-400 shrink-0" />
+            <select
+              value={selectedFacility.id}
+              onChange={(e) => {
+                const found = facilitiesList.find(f => f.id === e.target.value);
+                if (found) setSelectedFacility(found);
               }}
-              className={`text-xs px-3.5 py-2 rounded-2xl flex items-center gap-2 border font-bold transition-all shadow-sm ${
-                autoSpeak 
-                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25' 
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
+              className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer pr-1"
             >
-              {autoSpeak ? (
-                <>
-                  <Volume2 size={15} className="text-cyan-400 animate-pulse" />
-                  <span>Voice: ON</span>
-                </>
-              ) : (
-                <>
-                  <VolumeX size={15} className="text-slate-400" />
-                  <span>Voice: MUTED</span>
-                </>
-              )}
-            </button>
-
-            {/* New Session Button */}
-            <button
-              onClick={startNewSession}
-              className="text-xs px-3.5 py-2 rounded-2xl flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 font-bold transition-all"
-              title="Reset conversation state and start new clinical triage session"
-            >
-              <PlusCircle size={14} className="text-emerald-400" />
-              <span>New Session</span>
-            </button>
+              {facilitiesList.map(f => (
+                <option key={f.id} value={f.id} className="bg-slate-900 text-white">
+                  {f.name} ({f.district})
+                </option>
+              ))}
+            </select>
           </div>
+
+          {/* Audio Toggle */}
+          <button
+            onClick={() => {
+              if (isPlayingAudio) stopSpeaking();
+              setAutoSpeak(!autoSpeak);
+            }}
+            className={`text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 border font-semibold transition-all shadow-sm ${
+              autoSpeak 
+                ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25' 
+                : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {autoSpeak ? (
+              <>
+                <Volume2 size={13} className="text-cyan-400 animate-pulse" />
+                <span>Voice: ON</span>
+              </>
+            ) : (
+              <>
+                <VolumeX size={13} className="text-slate-400" />
+                <span>Voice: MUTED</span>
+              </>
+            )}
+          </button>
+
+          {/* New Session Button */}
+          <button
+            onClick={startNewSession}
+            className="text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/80 text-slate-200 font-semibold transition-all"
+            title="Reset conversation state and start new clinical triage session"
+          >
+            <PlusCircle size={13} className="text-emerald-400" />
+            <span>New Session</span>
+          </button>
         </div>
       </div>
 

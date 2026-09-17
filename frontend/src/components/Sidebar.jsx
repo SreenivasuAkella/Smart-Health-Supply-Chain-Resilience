@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
   Activity, 
   MapPin, 
@@ -129,9 +130,11 @@ export default function Sidebar({
               {category.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                const targetPath = item.id === 'overview' ? '/' : `/${item.id}`;
                 return (
-                  <button
+                  <Link
                     key={item.id}
+                    href={targetPath}
                     onClick={() => {
                       setActiveTab(item.id);
                       setMobileOpen(false);
@@ -179,7 +182,7 @@ export default function Sidebar({
                     {isCollapsed && isActive && (
                       <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-5 bg-cyan-400 rounded-r-full shadow-glow-cyan" />
                     )}
-                  </button>
+                  </Link>
                 );
               })}
             </div>
