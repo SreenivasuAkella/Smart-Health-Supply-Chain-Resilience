@@ -8,10 +8,12 @@ import {
   ChevronDown, ChevronUp, Layers, Bot, Building2, ExternalLink, Navigation,
   MessageSquare, User, HelpCircle, History, PlusCircle, Thermometer, Box,
   Camera, UploadCloud, FileText, AlertOctagon, Image as ImageIcon, X,
-  Search, Check, Pill, MapPin, Gauge, ShieldCheck
+  Search, Check, Pill, MapPin, Gauge, ShieldCheck, Save, Database
 } from 'lucide-react';
 import { 
   chatWithAshaCopilot,
+  streamCopilotChat,
+  saveCopilotResponse,
   fetchCopilotSessions,
   fetchCopilotSessionDetail,
   fetchFacilities 
@@ -123,6 +125,13 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
 
   const [mounted, setMounted] = useState(false);
 
+  // Streaming progress state
+  const [streamingStatus, setStreamingStatus] = useState(null); // { message, step, total }
+  const [streamingStep, setStreamingStep] = useState(0);
+
+  // Save-to-DB toast state: { msgId: string, state: 'idle'|'saving'|'saved'|'error' }
+  const [saveState, setSaveState] = useState({});
+
   // Conversational session management
   const [sessionId, setSessionId] = useState('');
   const [messages, setMessages] = useState([]);
@@ -138,6 +147,37 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   const fileInputRef = useRef(null);
 
   const [selectedFacility, setSelectedFacility] = useState(null);
+
+  // Save a copilot response to Firebase + BigQuery on demand
+  const handleSaveToDb = async (msg) => {
+    const mid = msg.id;
+    setSaveState(prev => ({ ...prev, [mid]: 'saving' }));
+    try {
+      await saveCopilotResponse({
+        sessionId: sessionId || null,
+        messageId: mid,
+        userPrompt: messages.find(m => m.role === 'user')?.content || '',
+        languageCode: selectedLang,
+        facilityId: selectedFacility?.id || msg.target_facility_id || null,
+        facilityName: selectedFacility?.name || msg.target_facility_name || null,
+        responseTextLocalized: msg.content || '',
+        responseTextEnglish: msg.content_english || '',
+        intent: msg.intent || 'GENERAL_QUERY',
+        status: msg.status || 'COMPLETED',
+        agentsInvoked: msg.agents_invoked || [],
+        toolsExecuted: msg.tools_executed || [],
+        recommendedAction: msg.recommended_action || null,
+        aiEngine: 'Google Gemini & Vertex AI'
+      });
+      setSaveState(prev => ({ ...prev, [mid]: 'saved' }));
+      // Auto-reset after 3s
+      setTimeout(() => setSaveState(prev => ({ ...prev, [mid]: 'idle' })), 3000);
+    } catch (err) {
+      console.error('Save to DB error:', err);
+      setSaveState(prev => ({ ...prev, [mid]: 'error' }));
+      setTimeout(() => setSaveState(prev => ({ ...prev, [mid]: 'idle' })), 3000);
+    }
+  };
 
   const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -529,6 +569,8 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
     setInputText('');
     clearAttachedImage();
     setLoading(true);
+    setStreamingStatus(null);
+    setStreamingStep(0);
 
     const userMsgId = `USER-${Date.now()}`;
     const userMsg = {
@@ -545,7 +587,7 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
     setMessages(prev => [...prev, userMsg]);
 
     try {
-      const result = await chatWithAshaCopilot({
+      const result = await streamCopilotChat({
         prompt: textToSend || (currentImageName ? `Please analyze this clinical asset: ${currentImageName}` : "Clinical inspection request"),
         sessionId: sessionId,
         language: selectedLang,
@@ -555,7 +597,13 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
         sourceFacilityName: null,
         history: messages,
         apiKey: apiKey,
-        imageBase64: currentImage
+        imageBase64: currentImage,
+        onEvent: (event) => {
+          if (event.type === 'status' && event.data) {
+            setStreamingStatus(event.data);
+            setStreamingStep(event.data.step || 0);
+          }
+        }
       });
 
       if (result) {
@@ -640,6 +688,8 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
       setMessages(prev => [...prev, errMsg]);
     } finally {
       setLoading(false);
+      setStreamingStatus(null);
+      setStreamingStep(0);
     }
   };
 
@@ -863,34 +913,69 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                           )}
                         </div>
 
-                        <button
-                          onClick={() => {
-                            if (isPlayingThis) {
-                              stopSpeaking();
-                            } else {
-                              speakText(msg.content, selectedLang, msg.id);
-                            }
-                          }}
-                          className={`text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold transition-all ${
-                            isPlayingThis
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
-                              : 'bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700'
-                          }`}
-                        >
-                          {isPlayingThis ? (
-                            <>
-                              <Square size={10} className="fill-rose-300" />
-                              <span>Stop Audio</span>
-                            </>
-                          ) : (
-                            <>
-                              <Volume2 size={12} className="text-cyan-400" />
-                              <span>Play Audio</span>
-                            </>
-                          )}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Save to DB Button */}
+                          {(() => {
+                            const st = saveState[msg.id] || 'idle';
+                            return (
+                              <button
+                                onClick={() => handleSaveToDb(msg)}
+                                disabled={st === 'saving' || st === 'saved'}
+                                title={st === 'saved' ? 'Saved to Firebase & BigQuery' : 'Save this response to database'}
+                                className={`text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold transition-all duration-300 border ${
+                                  st === 'saved'
+                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 cursor-default'
+                                    : st === 'saving'
+                                    ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 animate-pulse cursor-wait'
+                                    : st === 'error'
+                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 hover:border-indigo-500/50 hover:text-indigo-300'
+                                }`}
+                              >
+                                {st === 'saved' ? (
+                                  <><CheckCircle2 size={11} className="text-emerald-400" /><span>Saved</span></>
+                                ) : st === 'saving' ? (
+                                  <><Database size={11} className="animate-spin" /><span>Saving...</span></>
+                                ) : st === 'error' ? (
+                                  <><AlertTriangle size={11} /><span>Retry</span></>
+                                ) : (
+                                  <><Save size={11} /><span>Save to DB</span></>
+                                )}
+                              </button>
+                            );
+                          })()}
+
+                          {/* Play Audio Button */}
+                          <button
+                            onClick={() => {
+                              if (isPlayingThis) {
+                                stopSpeaking();
+                              } else {
+                                speakText(msg.content, selectedLang, msg.id);
+                              }
+                            }}
+                            className={`text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold transition-all ${
+                              isPlayingThis
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+                                : 'bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700'
+                            }`}
+                          >
+                            {isPlayingThis ? (
+                              <>
+                                <Square size={10} className="fill-rose-300" />
+                                <span>Stop Audio</span>
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 size={12} className="text-cyan-400" />
+                                <span>Play Audio</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
+
 
                     {/* Primary Localized Response Text */}
                     <p className="text-xs sm:text-sm font-medium leading-relaxed">
@@ -1283,15 +1368,30 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
 
           {/* Loading Indicator */}
           {loading && (
-            <div className="flex items-center gap-3 p-3.5 bg-slate-900/90 border border-slate-800 rounded-2xl max-w-sm animate-pulse shadow-lg">
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce"></span>
-                <span className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.15s]"></span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.3s]"></span>
+            <div className="flex flex-col gap-2 p-3.5 bg-slate-900/90 border border-cyan-500/30 rounded-2xl max-w-md shadow-lg shadow-cyan-500/10 animate-fade-in">
+              {/* Step progress bar */}
+              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-700 ease-out"
+                  style={{ width: `${streamingStep ? Math.round((streamingStep / (streamingStatus?.total || 5)) * 100) : 10}%` }}
+                />
               </div>
-              <span className="text-xs font-semibold text-cyan-300">
-                GenAI Multi-Agent Swarm orchestrating triage...
-              </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="w-1.5 h-3 rounded-full bg-cyan-400 animate-bounce" />
+                  <span className="w-1.5 h-5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.15s]" />
+                  <span className="w-1.5 h-4 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.3s]" />
+                  <span className="w-1.5 h-6 rounded-full bg-cyan-500 animate-bounce [animation-delay:0.45s]" />
+                </div>
+                <span className="text-xs font-semibold text-cyan-300 leading-snug">
+                  {streamingStatus?.message || 'GenAI Multi-Agent Swarm orchestrating triage...'}
+                </span>
+                {streamingStatus?.step && (
+                  <span className="ml-auto text-[10px] font-mono text-slate-500 shrink-0">
+                    {streamingStatus.step}/{streamingStatus.total}
+                  </span>
+                )}
+              </div>
             </div>
           )}
           <div ref={messagesEndRef} />

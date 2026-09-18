@@ -1,5 +1,140 @@
 [
   {
+    "id": "VOX-DISP-0880",
+    "dispatch_id": "DISP-DI003-20260918182813",
+    "worker": "Frontline Health Officer (ASHA)",
+    "facility": "Rajiv Gandhi Institute of Medical Sciences, Adilabad",
+    "facility_id": "DH-ADI-003",
+    "language": "English",
+    "language_code": "en",
+    "prompt": "We need 25 vials of Anti-Snake Venom urgently",
+    "intent": "EMERGENCY_REQUISITION",
+    "status": "DISPATCHED",
+    "eta": "292 mins",
+    "timestamp": "2026-09-18T18:28:19.087175Z",
+    "time_ago": "Just now",
+    "color": "emerald",
+    "action_summary": "Auto-dispatched 25 units of Snake Antivenin (SNAKE ANTIVENIN) via Solar-Cooled ILR Van with GPS tracking DISP-DI003-20260918182813.",
+    "response_localized": "Rajiv Gandhi Institute of Medical Sciences, Adilabad \u0915\u0947 \u0932\u093f\u090f \u0905\u0928\u0941\u0930\u094b\u0927 (EMERGENCY_REQUISITION) \u0938\u092b\u0932\u0924\u093e\u092a\u0942\u0930\u094d\u0935\u0915 \u0938\u0924\u094d\u092f\u093e\u092a\u093f\u0924 \u0915\u093f\u092f\u093e \u0917\u092f\u093e\u0964",
+    "response_english": "Request under protocol EMERGENCY_REQUISITION successfully verified and scheduled for Rajiv Gandhi Institute of Medical Sciences, Adilabad.",
+    "execution_trace": [
+      {
+        "step_number": 1,
+        "agent_name": "AshaVoiceCopilotAgent",
+        "mcp_tool_called": "asha_conversational_intake",
+        "action_summary": "Clinical conversational intake in 'en': Identified intent EMERGENCY_REQUISITION (Urgency: CRITICAL). Clinical autonomous workflow validated for Rajiv Gandhi Institute of Medical Sciences, Adilabad under protocol EMERGENCY_REQUISITION.",
+        "duration_ms": 3346.94,
+        "timestamp": "2026-09-18T18:27:59.847069Z",
+        "details": {
+          "intent": "EMERGENCY_REQUISITION",
+          "confidence": 0.95,
+          "urgency": "CRITICAL",
+          "entities": {
+            "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+            "medicine_id": "PUB-MED-001",
+            "requested_quantity": 25,
+            "current_stock": 3,
+            "temperature_reading": null,
+            "state_name": null,
+            "district_name": null,
+            "target_facility_name": "Rajiv Gandhi Institute of Medical Sciences, Adilabad",
+            "target_facility_id": "DH-ADI-003",
+            "source_facility_name": "Rajiv Gandhi Institute of Medical Sciences, Adilabad",
+            "source_facility_id": "DH-ADI-003"
+          },
+          "is_clarification_needed": false,
+          "missing_slots": [],
+          "clinical_rationale": "Clinical autonomous workflow validated for Rajiv Gandhi Institute of Medical Sciences, Adilabad under protocol EMERGENCY_REQUISITION.",
+          "engine": null,
+          "model": null
+        }
+      },
+      {
+        "step_number": 2,
+        "agent_name": "StockoutSentinelAgent",
+        "mcp_tool_called": "asha_audit_node_inventory",
+        "action_summary": "Audited local inventory at Rajiv Gandhi Institute of Medical Sciences, Adilabad: 450 units left (128.6 days supply). Status: ADEQUATE.",
+        "duration_ms": 4.52,
+        "timestamp": "2026-09-18T18:27:59.851595Z",
+        "details": {
+          "facility_id": "DH-ADI-003",
+          "facility_name": "Rajiv Gandhi Institute of Medical Sciences, Adilabad",
+          "medicine_id": "PUB-MED-001",
+          "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+          "current_stock": 450,
+          "daily_consumption_burn": 3.5,
+          "days_of_supply_remaining": 128.6,
+          "is_deficit": false,
+          "buffer_status": "ADEQUATE",
+          "recommended_reorder_qty": 0,
+          "storage_requirement": "2\u00b0C to 8\u00b0C"
+        }
+      },
+      {
+        "step_number": 3,
+        "agent_name": "AllocationStrategistAgent",
+        "mcp_tool_called": "find_surplus_donor_nodes",
+        "action_summary": "Identified and triaged surplus donor node 'Chandrapur District Headquarters Civil Hospital'. Selected nearest surplus donor node Chandrapur District Headquarters Civil Hospital (104.4 km).",
+        "duration_ms": 3156.31,
+        "timestamp": "2026-09-18T18:28:16.177248Z",
+        "details": {
+          "donor_id": "DH-CHA-313",
+          "triage_rationale": "Selected nearest surplus donor node Chandrapur District Headquarters Civil Hospital (104.4 km).",
+          "engine": "Deterministic Distance Triage Engine"
+        }
+      },
+      {
+        "step_number": 4,
+        "agent_name": "FleetRoutingAgent",
+        "mcp_tool_called": "allocate_medical_vehicle & calculate_road_route_and_distance",
+        "action_summary": "Assigned Solar-Cooled ILR Van (UP-65-MED-8492); road distance 174.96 km, ETA 292 mins. Fleet AI verified Solar-Cooled ILR Van: 174.96 km road corridor (292 mins ETA at 36.0 km/h) is safely within the 24.0h thermal envelope for Snake Antivenin (SNAKE ANTIVENIN).",
+        "duration_ms": 3862.28,
+        "timestamp": "2026-09-18T18:28:16.177252Z",
+        "details": {
+          "vehicle_id": "VEH-SDD-01",
+          "distance_km": 174.96,
+          "fleet_ai_assessment": "Fleet AI verified Solar-Cooled ILR Van: 174.96 km road corridor (292 mins ETA at 36.0 km/h) is safely within the 24.0h thermal envelope for Snake Antivenin (SNAKE ANTIVENIN).",
+          "thermal_safety_rating": "OPTIMAL",
+          "engine": "Deterministic Fleet Evaluation Engine"
+        }
+      },
+      {
+        "step_number": 5,
+        "agent_name": "SupplyChainSupervisorAgent",
+        "mcp_tool_called": "vertex_ai_clinical_decision_engine",
+        "action_summary": "Authorized emergency dispatch via Sanjeevani Clinical Supervisor Protocol (Rule Engine Fallback). Cold-chain safety factor: 4.9x.",
+        "duration_ms": 3212.39,
+        "timestamp": "2026-09-18T18:28:16.177253Z",
+        "details": {
+          "engine": "Sanjeevani Clinical Supervisor Protocol (Rule Engine Fallback)",
+          "model": "rule-engine-fallback",
+          "quality_signoff": true
+        }
+      },
+      {
+        "step_number": 6,
+        "agent_name": "LedgerExecutionAgent",
+        "mcp_tool_called": "verify_ledger_preconditions & commit_reallocation_ledger",
+        "action_summary": "Preconditions verified (PASSED). Audited GxP compliance via Deterministic Compliance Engine and committed dispatch DISP-DI003-20260918182813 to master ledger. Ledger AI verified dispatch DISP-DI003-20260918182813: 100% compliance with MoHFW cold-chain handling and GxP good distribution practices.",
+        "duration_ms": 2825.5,
+        "timestamp": "2026-09-18T18:28:16.177255Z",
+        "details": {
+          "dispatch_id": "DISP-DI003-20260918182813",
+          "preconditions_passed": true,
+          "compliance_attestation": "Ledger AI verified dispatch DISP-DI003-20260918182813: 100% compliance with MoHFW cold-chain handling and GxP good distribution practices.",
+          "standards_adherence": [
+            "NCCMIS_MoHFW",
+            "WHO_PQS_E004",
+            "GxP_Good_Distribution"
+          ],
+          "engine": "Deterministic Compliance Engine"
+        }
+      }
+    ],
+    "total_agents_involved": 6,
+    "agentic_flow": true
+  },
+  {
     "id": "VOX-DISP-0879",
     "dispatch_id": "DISP-ND001-20260918125721",
     "worker": "Frontline Health Officer (ASHA)",

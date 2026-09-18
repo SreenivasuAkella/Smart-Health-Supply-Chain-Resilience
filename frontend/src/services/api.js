@@ -410,6 +410,148 @@ export async function chatWithAshaCopilot({
   }
 }
 
+/**
+ * Streaming version of chatWithAshaCopilot using SSE (Server-Sent Events).
+ * Calls onEvent(event) for each SSE event received.
+ * Event shape: { type: "status"|"result"|"error", data: {...} }
+ * Returns a Promise that resolves with the final result payload.
+ */
+export async function streamCopilotChat({
+  prompt = "",
+  sessionId = null,
+  language = "hi",
+  facilityId = null,
+  facilityName = null,
+  sourceFacilityId = null,
+  sourceFacilityName = null,
+  history = [],
+  apiKey = "",
+  imageBase64 = null,
+  mimeType = "image/jpeg",
+  onEvent = () => {}
+} = {}) {
+  const payload = {
+    prompt,
+    session_id: sessionId,
+    language,
+    facility_id: facilityId,
+    facility_name: facilityName,
+    source_facility_id: sourceFacilityId,
+    source_facility_name: sourceFacilityName,
+    conversation_history: history,
+    api_key: apiKey,
+    image_base64: imageBase64,
+    image_mime_type: mimeType
+  };
+
+  return new Promise(async (resolve, reject) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/copilot/chat/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Streaming endpoint error: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      let finalResult = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data:")) continue;
+          try {
+            const json = JSON.parse(trimmed.slice(5).trim());
+            onEvent(json);
+            if (json.type === "result") {
+              finalResult = json.data;
+            }
+            if (json.type === "error") {
+              console.error("Copilot stream error event:", json.data);
+            }
+          } catch (parseErr) {
+            console.warn("SSE parse error:", parseErr, trimmed);
+          }
+        }
+      }
+
+      resolve(finalResult);
+    } catch (err) {
+      console.error("streamCopilotChat fetch error:", err);
+      // Fall back to non-streaming
+      try {
+        const fallback = await chatWithAshaCopilot({ prompt, sessionId, language, facilityId, facilityName, sourceFacilityId, sourceFacilityName, history, apiKey, imageBase64, mimeType });
+        onEvent({ type: "result", data: fallback });
+        resolve(fallback);
+      } catch (fallbackErr) {
+        reject(fallbackErr);
+      }
+    }
+  });
+}
+
+/**
+ * Explicitly saves a Copilot response to Firebase + BigQuery.
+ * Called by the "Save to DB" button on assistant message cards.
+ */
+export async function saveCopilotResponse({
+  sessionId = null,
+  messageId = null,
+  userPrompt = "",
+  languageCode = "hi",
+  facilityId = null,
+  facilityName = null,
+  responseTextLocalized = "",
+  responseTextEnglish = "",
+  intent = "GENERAL_QUERY",
+  status = "COMPLETED",
+  agentsInvoked = [],
+  toolsExecuted = [],
+  recommendedAction = null,
+  aiEngine = "Google Gemini & Vertex AI"
+} = {}) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/copilot/save-response`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: sessionId,
+        message_id: messageId,
+        user_prompt: userPrompt,
+        language_code: languageCode,
+        facility_id: facilityId,
+        facility_name: facilityName,
+        response_text_localized: responseTextLocalized,
+        response_text_english: responseTextEnglish,
+        intent,
+        status,
+        agents_invoked: agentsInvoked,
+        tools_executed: toolsExecuted,
+        recommended_action: recommendedAction,
+        ai_engine: aiEngine
+      })
+    });
+    if (!res.ok) throw new Error("Save response API failed");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("saveCopilotResponse error:", err);
+    throw err;
+  }
+}
+
 export async function preemptActiveDispatch({
   dispatchId,
   targetFacilityId,

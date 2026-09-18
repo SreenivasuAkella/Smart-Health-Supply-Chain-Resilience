@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import re
+import time
 import uuid
 import importlib
 from datetime import datetime, timedelta
@@ -10,6 +11,7 @@ from ..config import GEMINI_API_KEY, GEMINI_MODEL
 from .medicine_data_service import get_active_essential_medicines
 from .facility_data_service import get_active_public_facilities
 from .openfda_service import get_openfda_clinical_insights
+from .ai_logger import log_ai_response, SOURCE_VISION, STATUS_SUCCESS, STATUS_FALLBACK, STATUS_ERROR
 
 VISION_INSPECTOR_SYSTEM_INSTRUCTION = """
 You are Sanjeevani AI's Clinical Multimodal Vision Inspector & Autonomous Agent Coordinator for India's National Health Supply Chain (NHM / e-Aushadhi).
@@ -141,6 +143,8 @@ def analyze_multimodal_health_image(
         seen = set()
         models_to_try = [m for m in candidate_models if m and not (m in seen or seen.add(m))]
 
+        _t0 = time.monotonic()
+
         # 1. Try google-genai SDK across resilient candidate models
         try:
             genai_mod = importlib.import_module("google.genai")
@@ -164,7 +168,17 @@ def analyze_multimodal_health_image(
                     if match:
                         parsed = json.loads(match.group(0))
                         parsed["ai_engine_used"] = f"Google Gemini ({m} Multimodal Vision)"
-                        return _normalize_vision_response(parsed, active_key=active_key)
+                        result = _normalize_vision_response(parsed, active_key=active_key)
+                        log_ai_response(
+                            source=SOURCE_VISION,
+                            prompt=prompt[:300],
+                            response=result,
+                            model_used=m,
+                            status=STATUS_SUCCESS,
+                            latency_ms=(time.monotonic() - _t0) * 1000,
+                            metadata={"mime_type": mime_type, "sdk": "google-genai", "hint": user_context_hint},
+                        )
+                        return result
                 except Exception as m_err:
                     continue
         except Exception as err1:
@@ -186,7 +200,17 @@ def analyze_multimodal_health_image(
                     if match:
                         parsed = json.loads(match.group(0))
                         parsed["ai_engine_used"] = f"Google Gemini ({m} Multimodal Vision)"
-                        return _normalize_vision_response(parsed, active_key=active_key)
+                        result = _normalize_vision_response(parsed, active_key=active_key)
+                        log_ai_response(
+                            source=SOURCE_VISION,
+                            prompt=prompt[:300],
+                            response=result,
+                            model_used=m,
+                            status=STATUS_SUCCESS,
+                            latency_ms=(time.monotonic() - _t0) * 1000,
+                            metadata={"mime_type": mime_type, "sdk": "google-generativeai", "hint": user_context_hint},
+                        )
+                        return result
                 except Exception:
                     continue
         except Exception as err2:
@@ -205,12 +229,33 @@ def analyze_multimodal_health_image(
                     if match:
                         parsed = json.loads(match.group(0))
                         parsed["ai_engine_used"] = "Google Cloud Vertex AI (gemini-1.5-flash-002 Vision)"
-                        return _normalize_vision_response(parsed, active_key=active_key)
+                        result = _normalize_vision_response(parsed, active_key=active_key)
+                        log_ai_response(
+                            source=SOURCE_VISION,
+                            prompt=prompt[:300],
+                            response=result,
+                            model_used="gemini-1.5-flash-002",
+                            status=STATUS_SUCCESS,
+                            latency_ms=(time.monotonic() - _t0) * 1000,
+                            metadata={"sdk": "vertex-ai", "hint": user_context_hint},
+                        )
+                        return result
         except Exception:
             pass
 
-    # Dynamic fallback grounded in live database catalog or unverified placeholder
-    return _generate_dynamic_grounded_fallback(user_context_hint)
+    # Dynamic fallback — all SDK paths failed
+    _t0_fb = time.monotonic()
+    fallback_result = _generate_dynamic_grounded_fallback(user_context_hint)
+    log_ai_response(
+        source=SOURCE_VISION,
+        prompt=user_context_hint or "(no hint)",
+        response=fallback_result,
+        model_used="Dynamic Grounded Vision Agent",
+        status=STATUS_FALLBACK,
+        latency_ms=(time.monotonic() - _t0_fb) * 1000,
+        metadata={"reason": "all_sdk_paths_failed", "hint": user_context_hint},
+    )
+    return fallback_result
 
 
 def _normalize_vision_response(parsed: Dict[str, Any], active_key: Optional[str] = None) -> Dict[str, Any]:

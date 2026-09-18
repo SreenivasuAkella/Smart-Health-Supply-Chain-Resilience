@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import inventory, ai_vision, copilot, forecasting, reallocation, telemetry, simulation, analytics, federated, stream, bootstrap, attendance, alerts, speech, routing, mcp
+from .routers import inventory, ai_vision, copilot, forecasting, reallocation, telemetry, simulation, analytics, federated, stream, bootstrap, attendance, alerts, speech, routing, mcp, logs
 
 app = FastAPI(
     title="Sanjeevani AI - Smart Health & Supply Chain Resilience API",
@@ -39,6 +39,8 @@ app.include_router(speech.router)
 app.include_router(routing.router)
 # MCP: Model Context Protocol Tool Server
 app.include_router(mcp.router)
+# AI Response Logs
+app.include_router(logs.router)
 
 @app.get("/")
 def root():
