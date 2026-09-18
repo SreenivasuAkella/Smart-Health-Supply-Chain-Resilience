@@ -1,11 +1,9 @@
 import json
 import os
-import importlib
 import time
 import uuid
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from ..config import GEMINI_API_KEY, GEMINI_MODEL
 from .firebase_service import firebase_sync_service
 from .bigquery_service import bigquery_service
 
@@ -131,9 +129,9 @@ def save_copilot_dispatches_to_db(records: List[Dict[str, Any]]):
 def record_voice_interaction(
     user_prompt: str,
     language_code: str,
-    facility_id: str,
-    facility_name: str,
-    result: Dict[str, Any]
+    facility_id: Optional[str] = None,
+    facility_name: Optional[str] = None,
+    result: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """Records the voice copilot interaction into the database."""
     dispatches = load_copilot_dispatches_from_db()
@@ -141,8 +139,9 @@ def record_voice_interaction(
     disp_num = len(dispatches) + 842
     disp_id = f"VOX-DISP-0{disp_num}"
     
-    intent = result.get("intent", "EMERGENCY_REQUISITION")
-    action = result.get("recommended_action", {})
+    res = result or {}
+    intent = res.get("intent", "EMERGENCY_REQUISITION")
+    action = res.get("recommended_action", {})
     action_type = action.get("action_type", "CREATE_DISPATCH_ORDER")
     realloc_dispatch_id = action.get("dispatch_id")
     
@@ -153,8 +152,8 @@ def record_voice_interaction(
         "id": disp_id,
         "dispatch_id": realloc_dispatch_id or disp_id,
         "worker": "Frontline Health Officer (ASHA)",
-        "facility": facility_name,
-        "facility_id": facility_id,
+        "facility": facility_name or "Not Specified",
+        "facility_id": facility_id or "UNKNOWN",
         "language": LANGUAGE_NAMES.get(language_code, language_code),
         "language_code": language_code,
         "prompt": user_prompt,
@@ -165,10 +164,10 @@ def record_voice_interaction(
         "time_ago": "Just now",
         "color": color,
         "action_summary": action.get("action_summary", "Autonomous multi-agent clinical workflow triggered"),
-        "response_localized": result.get("response_text_localized", ""),
-        "response_english": result.get("response_text_english", ""),
-        "execution_trace": result.get("execution_trace", []),
-        "total_agents_involved": result.get("total_agents_involved", 1),
+        "response_localized": res.get("response_text_localized", ""),
+        "response_english": res.get("response_text_english", ""),
+        "execution_trace": res.get("execution_trace", []),
+        "total_agents_involved": res.get("total_agents_involved", 1),
         "agentic_flow": True
     }
     
@@ -193,8 +192,8 @@ def get_copilot_dispatch_history() -> List[Dict[str, Any]]:
 def process_copilot_query(
     user_prompt: str,
     language_code: str = "hi",
-    facility_id: str = "PHC-BARAGAON-03",
-    facility_name: str = "Primary Health Centre Baragaon",
+    facility_id: Optional[str] = None,
+    facility_name: Optional[str] = None,
     source_facility_id: Optional[str] = None,
     source_facility_name: Optional[str] = None,
     custom_api_key: Optional[str] = None
@@ -284,7 +283,6 @@ def get_or_create_session(
     facility_name: Optional[str] = None,
     language_code: str = "hi"
 ) -> Dict[str, Any]:
-    global _SESSIONS_CACHE
     if not _SESSIONS_CACHE:
         _SESSIONS_CACHE.update(load_copilot_sessions_from_db())
 
@@ -392,8 +390,8 @@ def process_copilot_chat(
         agent_result = process_copilot_query(
             user_prompt=prompt,
             language_code=language_code,
-            facility_id=active_facility_id or "PHC-BARAGAON-03",
-            facility_name=active_facility_name or "Primary Health Centre Baragaon",
+            facility_id=active_facility_id,
+            facility_name=active_facility_name,
             custom_api_key=custom_api_key
         )
         agent_result["session_id"] = sid
@@ -448,7 +446,7 @@ def process_copilot_chat(
     try:
         firebase_sync_service.save_copilot_session(sid, session)
         if agent_result.get("recommended_action", {}).get("action_type") == "CREATE_DISPATCH_ORDER":
-            record_voice_interaction(prompt, language_code, active_facility_id or "PHC-BARAGAON-03", active_facility_name or "Primary Health Centre Baragaon", agent_result)
+            record_voice_interaction(prompt, language_code, active_facility_id or "", active_facility_name or "", agent_result)
     except Exception as fb_err:
         print(f"[Firebase Session Save Notice]: {fb_err}")
 
@@ -460,8 +458,8 @@ def process_copilot_chat(
             "timestamp": asst_msg["timestamp"],
             "role": "assistant",
             "language_code": language_code,
-            "facility_id": active_facility_id or "PHC-BARAGAON-03",
-            "facility_name": active_facility_name or "Primary Health Centre Baragaon",
+            "facility_id": active_facility_id or "",
+            "facility_name": active_facility_name or "",
             "user_prompt": prompt,
             "agent_response_localized": asst_msg["content"],
             "agent_response_english": asst_msg.get("content_english", ""),
@@ -493,7 +491,6 @@ def process_copilot_chat(
 
 
 def get_copilot_session_by_id(session_id: str) -> Optional[Dict[str, Any]]:
-    global _SESSIONS_CACHE
     if not _SESSIONS_CACHE:
         _SESSIONS_CACHE.update(load_copilot_sessions_from_db())
 
@@ -516,7 +513,6 @@ def get_copilot_session_by_id(session_id: str) -> Optional[Dict[str, Any]]:
 
 
 def list_recent_copilot_sessions(limit: int = 20) -> List[Dict[str, Any]]:
-    global _SESSIONS_CACHE
     if not _SESSIONS_CACHE:
         _SESSIONS_CACHE.update(load_copilot_sessions_from_db())
 

@@ -671,7 +671,7 @@ Return ONLY valid JSON:
         Zero hardcoded entity lists or keyword dictionaries.
         """
         from .medicine_data_service import get_active_essential_medicines
-        from .facility_data_service import get_active_public_facilities, search_facilities_by_state_and_district
+        from .facility_data_service import get_active_public_facilities
 
         history = list(conversation_history or [])
         ctx = dict(accumulated_context or {})
@@ -694,21 +694,34 @@ Return ONLY valid JSON:
             "You are Sanjeevani AI — the Multilingual Clinical Voice & Chat Copilot for India's National Health Mission (NHM) "
             "and e-Aushadhi autonomous supply network. Your role is FRONTLINE_CLINICAL_COPILOT_TRIAGE. "
             "You assist frontline health workers (ASHAs, ANMs, Medical Officers) speaking 8 Indian languages "
-            "(Hindi: hi, Telugu: te, Tamil: ta, Marathi: mr, Bengali: bn, Kannada: kn, Malayalam: ml, English: en). "
-            "You orchestrate autonomous agents and database tools across all operational modules: "
-            "1. EMERGENCY_REQUISITION: Autonomous drug reallocations from regional surplus donor hospitals. "
-            "2. COLD_CHAIN_ALERT: Refrigerator/ILR temperature breaches (>8°C or <2°C) and power failure SOS. "
-            "3. STOCK_STATUS_CHECK: e-Aushadhi real-time facility inventory audits & days-of-supply checks. "
-            "4. EPIDEMIC_FORECAST: 14–30 day epidemiological disease surge forecasts (Dengue, Malaria, flood impact). "
-            "5. FLEET_ROUTING_CHECK: Emergency transport distance, vehicle allocation, cold-box holdover. "
-            "6. FACILITY_BED_CAPACITY: Hospital/PHC bed occupancy (total, occupied, ICU, oxygen) and daily patient footfall. "
-            "7. STAFF_ATTENDANCE: On-duty health workers (ASHA, ANM, Medical Officers) and roster tracking. "
-            "8. FACILITY_RECOMMENDATION & RESOLUTION: Conversational facility binding. The user can directly provide their facility name, "
-            "or provide their State and District so you can recommend matching facilities in that location. "
-            "If the user makes a clinical request but no facility is set, politely ask for their Facility Name OR State and District. "
-            "9. GENERAL_QUERY: Professional clinical guidance, platform orientation, greetings. "
-            "CRITICAL: Be agentic, empathetic, and conversational. Always formulate responses in the user's native language/script ({language_code}). "
-            "Never invent fake medicines or rigid hardcoded scripts."
+            "(Hindi: hi, Telugu: te, Tamil: ta, Marathi: mr, Bengali: bn, Kannada: kn, Malayalam: ml, English: en).\n\n"
+            "CRITICAL ZERO-ASSUMPTION BEHAVIORAL PROTOCOLS:\n"
+            "1. ZERO HALLUCINATION / ZERO PREMATURE ASSUMPTION:\n"
+            "   - NEVER assume or hallucinate a facility if the user has not explicitly provided one and Active Facility Context is NOT_YET_SPECIFIED. Keep target_facility_name and target_facility_id as null.\n"
+            "   - NEVER assume a specific medicine, quantity, or clinical condition when the user speaks in general terms (e.g., 'need help', 'supplies shortage', 'emergency', 'hi', 'namaste').\n"
+            "2. GREETINGS & CASUAL INTERACTION HANDLING:\n"
+            "   - When the user sends a greeting or salutation (e.g. 'hi', 'hello', 'hey', 'namaste', 'vanakkam', 'namaskaram', 'pranam', 'adaab', 'good morning', 'good evening', 'help', etc.) WITHOUT an explicit medical dispatch request:\n"
+            "     * Intent MUST ALWAYS BE classified as 'GENERAL_QUERY'. Never classify a greeting as 'FACILITY_SELECTION' or 'EMERGENCY_REQUISITION'.\n"
+            "     * target_facility_name MUST BE null (do not bind or assume any facility).\n"
+            "     * is_clarification_needed MUST BE false, and missing_slots MUST BE [].\n"
+            "     * Formulate a warm, respectful greeting in their language ({language_code}), introduce Sanjeevani Copilot, briefly highlight the 4 core capabilities:\n"
+            "       1) 🚨 Emergency Medicine Requisitions (Anti-Snake Venom, Rabies, Insulin, etc.)\n"
+            "       2) ❄️ Cold-Chain ILR Temperature Alerts & Refrigerator SOS\n"
+            "       3) 📊 Real-Time Inventory & Days-of-Supply Audits\n"
+            "       4) 📈 Epidemic & Disease Surge Forecasts (Dengue, Malaria)\n"
+            "     * Prompt them to state their facility name (or state/district) and describe what they need.\n"
+            "     * Provide starter quick-reply chips for facility connection or immediate emergency needs.\n"
+            "3. FACILITY RESOLUTION PROTOCOL:\n"
+            "   - If the user provides a facility name (e.g. 'I am from PHC Baragaon' or 'CHC Cholapur'):\n"
+            "     * Intent is 'FACILITY_SELECTION'. Confirm connection and prompt for their clinical requirement.\n"
+            "   - If the user provides a State and/or District (e.g. 'Varanasi, UP' or 'Telangana, Warangal'):\n"
+            "     * Intent is 'FACILITY_SELECTION'. Set is_clarification_needed = true, missing_slots = ['facility_name'].\n"
+            "     * Formulate recommendations of facilities in that district with clickable options.\n"
+            "   - If the user makes an operational request (e.g., 'we need medicines', 'check stock') but NO facility is active:\n"
+            "     * Set is_clarification_needed = true, missing_slots = ['facility_or_location']. Politely ask for their facility name OR state and district.\n"
+            "4. MULTILINGUAL & CONVERSATIONAL:\n"
+            "   - Always formulate responses in the user's native language/script ({language_code}).\n"
+            "   - Keep tone empathetic, frontline-attuned, and conversational without rigid scripts."
         )
 
         history_formatted = []
@@ -740,17 +753,17 @@ Active Healthcare Facilities Sample:
 
 Analyze this clinical conversational turn:
 1. Intent Classification:
-   - "EMERGENCY_REQUISITION": Request for emergency pharmaceutical supplies.
+   - "GENERAL_QUERY": General guidance, greetings ('hi', 'hello', 'namaste', 'vanakkam', 'pranam', 'good morning', etc.), capability overview, system orientation. (MANDATORY for greetings — NEVER mark greetings as FACILITY_SELECTION or EMERGENCY_REQUISITION).
+   - "FACILITY_SELECTION": User is explicitly stating their facility name (e.g. 'I am from PHC Baragaon'), or stating their State/District to find facilities.
+   - "EMERGENCY_REQUISITION": Explicit user request for emergency pharmaceutical supplies or medicine reallocation.
    - "COLD_CHAIN_ALERT": Refrigerator/ILR temperature breach (>8°C or <2°C), power failure.
    - "STOCK_STATUS_CHECK": Real-time audit of facility inventory or stockout verification.
    - "EPIDEMIC_FORECAST": Outbreak risks, monsoon surge, or 14-30 day demand forecast.
    - "FLEET_ROUTING_CHECK": Emergency transport route, GPS distance, vehicle allocation.
    - "FACILITY_BED_CAPACITY": Bed counts (ICU, oxygen, general) and daily patient footfall.
    - "STAFF_ATTENDANCE": On-duty ASHA, ANM, and Medical Officer attendance.
-   - "FACILITY_SELECTION": User is providing their facility name, or stating their State/District to find facilities.
-   - "GENERAL_QUERY": General guidance, greetings, system orientation.
 
-2. Clinical Urgency: "CRITICAL", "HIGH", or "NORMAL".
+2. Clinical Urgency: "CRITICAL", "HIGH", or "NORMAL". (For greetings/GENERAL_QUERY, always "NORMAL").
 
 3. Extract Entities:
    - medicine_name: Full name matched against the Active Medicines Database (or null).
@@ -760,12 +773,14 @@ Analyze this clinical conversational turn:
    - temperature_reading: Float degrees Celsius if cold chain alert (or null).
    - state_name: State mentioned by user (or null).
    - district_name: District mentioned by user (or null).
-   - target_facility_name: The requesting/reporting facility name if stated by user (or null to use current facility context).
+   - target_facility_name: The requesting/reporting facility name if EXPLICITLY stated by user (or null to use current facility context; NEVER ASSUME OR HALLUCINATE A FACILITY).
    - target_facility_id: Recipient facility ID if known (or null).
    - source_facility_name: Supplying/donor facility name if user explicitly specified where stock should come from (or null to discover nearest surplus).
    - source_facility_id: Supplying/donor facility ID if specified (or null).
 
 4. Missing Slot Detection:
+   - If intent is "GENERAL_QUERY":
+     is_clarification_needed = false, missing_slots = [].
    - If intent in ["EMERGENCY_REQUISITION", "STOCK_STATUS_CHECK", "COLD_CHAIN_ALERT", "FACILITY_BED_CAPACITY", "STAFF_ATTENDANCE"] and Active Facility Context is NOT_YET_SPECIFIED and target_facility_name is null:
      is_clarification_needed = true, missing_slots = ["facility_or_location"].
      Ask the user for their Facility Name OR State and District.
@@ -872,10 +887,8 @@ Return ONLY valid JSON matching this schema:
         Resolves entities dynamically from the real NLEM medicine database and facility registry.
         Zero hardcoded keyword dictionaries or static medicine lists.
         """
-        import re
         from .medicine_data_service import get_active_essential_medicines
         from .facility_data_service import (
-            get_active_public_facilities,
             search_facilities_by_state_and_district,
             resolve_facility_by_name_or_id
         )
@@ -884,7 +897,6 @@ Return ONLY valid JSON matching this schema:
         lower = user_prompt.lower().strip()
         ctx = dict(accumulated_context or {})
         active_medicines = get_active_essential_medicines()
-        active_facilities = get_active_public_facilities()
 
         # 1. Check for Direct Facility Name or State/District in user prompt
         target_facility_name = ctx.get("target_facility_name") or ctx.get("facility_name") or facility_name
@@ -979,27 +991,42 @@ Return ONLY valid JSON matching this schema:
                 source_facility_id = matched_f["id"]
 
         # 4. Intent Determination
-        intent = ctx.get("intent")
-        if any(k in lower for k in ["temp", "refrigerator", "fridge", "freeze", "ilr", "तापमान", "खराब", "குளிர்", "ఉష్ణోగ్రత", "cool"]):
-            intent = "COLD_CHAIN_ALERT"
-        elif any(k in lower for k in ["dengue", "malaria", "outbreak", "epidemic", "forecast", "surge", "महामारी", "भविष्यवाणी"]):
-            intent = "EPIDEMIC_FORECAST"
-        elif any(k in lower for k in ["bed", "beds", "icu", "oxygen", "footfall", "opd", "बिस्तर", "बेड", "పడకలు"]):
-            intent = "FACILITY_BED_CAPACITY"
-        elif any(k in lower for k in ["attendance", "staff", "nurse", "asha", "doctor", "उपस्थिति", "हाजिरी", "సిబ్బంది"]):
-            intent = "STAFF_ATTENDANCE"
-        elif any(k in lower for k in ["route", "transit", "vehicle", "driver", "van", "किलोमीटर", "वाहन", "రవాణా"]):
-            intent = "FLEET_ROUTING_CHECK"
-        elif any(k in lower for k in ["stock", "audit", "inventory", "ledger", "स्टॉक", "तनिख़ी", "சரிபார்க்க", "తనిఖీ"]):
-            intent = "STOCK_STATUS_CHECK"
-        elif any(k in lower for k in ["need", "urgent", "dispatch", "requisition", "shortage", "send", "भेजें", "आवश्यकता", "पम्पండి", "தேவை", "तातडीने"]) or med_name:
-            intent = "EMERGENCY_REQUISITION"
-        elif (detected_district or detected_state) and not target_facility_name:
-            intent = "FACILITY_SELECTION"
-        elif direct_resolved_fac and not intent:
-            intent = "FACILITY_SELECTION"
-        elif not intent:
+        greeting_words = {
+            "hi", "hello", "hey", "namaste", "namaskar", "namaskaram",
+            "vanakkam", "pranam", "adaab", "good morning", "good afternoon",
+            "good evening", "help", "who are you", "what can you do"
+        }
+        is_greeting = lower in greeting_words or any(lower == g or lower.startswith(g + " ") for g in ["hi", "hello", "hey", "namaste", "namaskar", "vanakkam", "namaskaram", "pranam", "adaab"])
+
+        if is_greeting and not any(k in lower for k in ["vial", "dose", "tablet", "injection", "temp", "celsius", "freeze", "shortage", "audit", "attendance", "bed"]):
             intent = "GENERAL_QUERY"
+            med_name = None
+            med_id = None
+            req_qty = None
+        else:
+            intent = None
+            if any(k in lower for k in ["temp", "refrigerator", "fridge", "freeze", "ilr", "तापमान", "खराब", "குளிர்", "ఉష్ణోగ్రత", "cool"]):
+                intent = "COLD_CHAIN_ALERT"
+            elif any(k in lower for k in ["dengue", "malaria", "outbreak", "epidemic", "forecast", "surge", "महामारी", "भविष्यवाणी"]):
+                intent = "EPIDEMIC_FORECAST"
+            elif any(k in lower for k in ["bed", "beds", "icu", "oxygen", "footfall", "opd", "बिस्तर", "बेड", "పడకలు"]):
+                intent = "FACILITY_BED_CAPACITY"
+            elif any(k in lower for k in ["attendance", "staff", "nurse", "asha", "doctor", "उपस्थिति", "हाजिरी", "సిబ్బంది"]):
+                intent = "STAFF_ATTENDANCE"
+            elif any(k in lower for k in ["route", "transit", "vehicle", "driver", "van", "किलोमीटर", "वाहन", "రవాణా"]):
+                intent = "FLEET_ROUTING_CHECK"
+            elif any(k in lower for k in ["stock", "audit", "inventory", "ledger", "स्टॉक", "तनिख़ी", "சரிபார்க்க", "తనిఖీ"]):
+                intent = "STOCK_STATUS_CHECK"
+            elif any(k in lower for k in ["need", "urgent", "dispatch", "requisition", "shortage", "send", "भेजें", "आवश्यकता", "पम्पండి", "தேவை", "तातडीने"]) or med_name:
+                intent = "EMERGENCY_REQUISITION"
+            elif (detected_district or detected_state) and not target_facility_name:
+                intent = "FACILITY_SELECTION"
+            elif direct_resolved_fac:
+                intent = "FACILITY_SELECTION"
+            elif ctx.get("intent"):
+                intent = ctx.get("intent")
+            else:
+                intent = "GENERAL_QUERY"
 
         # 5. Check if we need to Recommend Facilities for a State / District
         if (detected_district or detected_state) and not target_facility_name:
@@ -1122,13 +1149,23 @@ Return ONLY valid JSON matching this schema:
         elif intent == "GENERAL_QUERY":
             top_drug_name = active_medicines[0].get("name", "Anti-Snake Venom") if active_medicines else "Anti-Snake Venom"
             quick_reply_options = [
-                {"label": f"🐍 Emergency Requisition", "value": f"We need 25 units of {top_drug_name} urgently", "action_payload": f"We need 25 units of {top_drug_name} urgently"},
-                {"label": "❄️ Report Cold-Chain SOS (>8°C)", "value": "Report ILR temperature breach above 8.5 degrees Celsius", "action_payload": "Report ILR temperature breach above 8.5 degrees Celsius"},
-                {"label": "📊 Audit Local Stock", "value": f"Check inventory stock level for {target_display_name}", "action_payload": f"Check inventory stock level for {target_display_name}"},
-                {"label": "📍 Find Facilities in My District", "value": "Show healthcare facilities in Varanasi, Uttar Pradesh", "action_payload": "Show healthcare facilities in Varanasi, Uttar Pradesh"}
+                {"label": "🏥 Connect PHC Baragaon", "value": "I am from Primary Health Centre Baragaon", "action_payload": "I am from Primary Health Centre Baragaon"},
+                {"label": "📍 Find Facilities in My District", "value": "Show healthcare facilities in Varanasi, Uttar Pradesh", "action_payload": "Show healthcare facilities in Varanasi, Uttar Pradesh"},
+                {"label": "🐍 Emergency ASV Requisition", "value": f"We need 25 vials of {top_drug_name}", "action_payload": f"We need 25 vials of {top_drug_name}"},
+                {"label": "❄️ Cold-Chain ILR Alert", "value": "Report refrigerator temperature breach above 8.5 degrees", "action_payload": "Report refrigerator temperature breach above 8.5 degrees"}
             ]
 
         # 8. Localized Dialogue Formatting
+        greeting_responses = {
+            "en": "Namaste! I am Sanjeevani AI, your Clinical Voice & Chat Copilot for the National Health Mission. I can assist you with:\n1. 🚨 Emergency Medicine Requisitions (Anti-Snake Venom, Rabies, Insulin)\n2. ❄️ Cold-Chain ILR Temperature Alerts & Refrigerator SOS\n3. 📊 Live Inventory & Days-of-Supply Audits\n4. 📈 Epidemic Outbreak & Disease Surge Forecasts\n\nWhich healthcare facility are you reporting from? You can tell me your facility name, or share your State & District to find it.",
+            "hi": "नमस्ते! मैं संजीवनी एआई हूँ, राष्ट्रीय स्वास्थ्य मिशन (NHM) के लिए आपका फ्रंटलाइन क्लिनिकल वॉयस और चैट कोपायलट। मैं आपकी सहायता कर सकता हूँ:\n1. 🚨 आपातकालीन दवा मांग (एंटी-स्नेक वेनम, रेबीज, इंसुलिन)\n2. ❄️ कोल्ड-चेन ILR तापमान अलर्ट व रेफ्रिजरेटर SOS\n3. 📊 वास्तविक समय इन्वेंटरी व स्टॉक ऑडिट\n4. 📈 महामारी व रोग प्रकोप पूर्वानुमान\n\nआप किस स्वास्थ्य केंद्र से संपर्क कर रहे हैं? कृपया अपने केंद्र का नाम बताएं, या अपना राज्य और जिला बताएं।",
+            "te": "నమస్కారం! నేను సంజీవని AI, జాతీయ ఆరోగ్య మిషన్ (NHM) కొరకు మీ క్లినికల్ వాయిస్ & చాట్ కోపైలట్. నేను మీకు సహాయపడగలను:\n1. 🚨 అత్యవసర ఔషధాల రవాణా (యాంటీ-స్నేక్ వెనమ్, రేబీస్, ఇన్సులిన్)\n2. ❄️ కోల్డ్-చైన్ రిఫ్రిజిరేటర్ ఉష్ణోగ్రత హెచ్చరికలు\n3. 📊 ప్రత్యక్ష ఇన్వెంటరీ మరియు స్టాక్ ఆడిట్\n4. 📈 అంటువ్యాధుల వ్యాప్తి ముందస్తు అంచనాలు\n\nమీరు ఏ ఆరోగ్య కేంద్రం నుండి మాట్లాడుతున్నారు? దయచేసి మీ కేంద్రం పేరు లేదా మీ రాష్ట్రం మరియు జిల్లాను తెలియజేయండి.",
+            "ta": "வணக்கம்! நான் சஞ்சீவனி AI, தேசிய சுகாதார இயக்கத்திற்கான (NHM) உங்கள் மருத்துவ குரல் மற்றும் அரட்டை வழிகாட்டி. நான் உங்களுக்கு உதவ முடியும்:\n1. 🚨 அவசர மருந்துகள் விநியோகம் (பாம்புக்கடி மருந்து, ரேபிஸ், இன்சுலின்)\n2. ❄️ குளிர்சங்கிலி வெப்பநிலை எச்சரிக்கைகள்\n3. 📊 நேரடி இருப்பு மற்றும் தணிக்கை\n4. 📈 தொற்றுநோய் பாதிப்பு முன்கணிப்பு\n\nநீங்கள் எந்த சுகாதார மையத்திலிருந்து தொடர்பு கொள்கிறீர்கள்? உங்கள் மையத்தின் பெயர் அல்லது மாவட்டம் மற்றும் மாநிலத்தைக் குறிப்பிடவும்.",
+            "mr": "नमस्ते! मी संजीवनी AI आहे, राष्ट्रीय आरोग्य अभियानासाठी (NHM) तुमचा क्लिनिकल व्हॉइस आणि चॅट कोपायलट. मी आपल्याला मदत करू शकतो:\n1. 🚨 आणीबाणी औषध पुरवठा (अँटी-स्नेक व्हेनम, रेबीज, इन्सुलिन)\n2. ❄️ कोल्ड-चेन फ्रीज तापमान सूचना\n3. 📊 थेट स्टॉक आणि इन्व्हेंटरी ऑडिट\n4. 📈 साथीचे रोग वाढीचा अंदाज\n\nआपण कोणत्या आरोग्य केंद्रातून संपर्क साधत आहात? कृपया आपल्या केंद्राचे नाव किंवा राज्य व जिल्हा सांगा.",
+            "bn": "নমস্কার! আমি সঞ্জীবনী এআই, জাতীয় স্বাস্থ্য মিশনের (NHM) জন্য আপনার ক্লিনিক্যাল ভয়েস ও চ্যাট কোপাইলট। আমি আপনাকে সাহায্য করতে পারি:\n1. 🚨 জরুরি ওষুধ সরবরাহ (অ্যান্টি-স্নেক ভেনম, জলাতঙ্ক, ইনসুলিন)\n2. ❄️ কোল্ড-চেইন ফ্রিজের তাপমাত্রা সতর্কতা\n3. 📊 রিয়েল-টাইম স্টক এবং ইনভেন্টরি অডিট\n4. 📈 মহামারী ও রোগের প্রাদুর্ভাব পূর্বাভাস\n\nআপনি কোন স্বাস্থ্য কেন্দ্র থেকে যোগাযোগ করছেন? অনুগ্রহ করে আপনার কেন্দ্রের নাম অথবা রাজ্য ও জেলা জানান।",
+            "kn": "ನಮಸ್ಕಾರ! ನಾನು ಸಂಜೀವನಿ AI, ರಾಷ್ಟ್ರೀಯ ಆರೋಗ್ಯ ಅಭಿಯಾನಕ್ಕಾಗಿ ನಿಮ್ಮ ಕ್ಲಿನಿಕಲ್ ಧ್ವನಿ ಮತ್ತು ಚಾಟ್ ಕೋಪೈಲಟ್. ನಾನು ನಿಮಗೆ ಸಹಾಯ ಮಾಡಬಲ್ಲೆ:\n1. 🚨 ತುರ್ತು ಔಷಧಿ ಸರಬರಾಜು (ಹಾವು ಕಡಿತದ ವಿಷಹಾರಿ, ರೇಬೀಸ್, ಇನ್ಸುಲಿನ್)\n2. ❄️ ಕೋಲ್ಡ್-ಚೈನ್ ತಾಪಮಾನ ಎಚ್ಚರಿಕೆಗಳು\n3. 📊 ನೈಜ-ಸಮಯದ ದಾಸ್ತಾನು ಲೆಕ್ಕಪರಿಶೋಧನೆ\n4. 📈 ಸಾಂಕ್ರಾಮಿಕ ರೋಗ ಉಲ್ಬಣ ಮುನ್ಸೂಚನೆ\n\nನೀವು ಯಾವ ಆರೋಗ್ಯ ಕೇಂದ್ರದಿಂದ ಸಂಪರ್ಕಿಸುತ್ತಿದ್ದೀರಿ? ದಯವಿಟ್ಟು ನಿಮ್ಮ ಕೇಂದ್ರದ ಹೆಸರು ಅಥವಾ ರಾಜ್ಯ ಮತ್ತು ಜಿಲ್ಲೆಯನ್ನು ತಿಳಿಸಿ.",
+            "ml": "നമസ്കാരം! ഞാൻ സഞ്ജീവനി AI, ദേശീയ ആരോഗ്യ ദൗത്യത്തിനായുള്ള നിങ്ങളുടെ ക്ലിനിക്കൽ വോയ്‌സ് & ചാറ്റ് കോപൈലറ്റ്. ഞാൻ നിങ്ങളെ സഹായിക്കാം:\n1. 🚨 അടിയന്തര മരുന്ന് പുനർവിതരണം (പാമ്പുവിഷ പ്രതിവിധി, റാബീസ്, ഇൻസുലിൻ)\n2. ❄️ കോൾഡ്-ചെയിൻ റഫ്രിജറേറ്റർ താപനില മുന്നറിയിപ്പുകൾ\n3. 📊 തത്സമയ സ്റ്റോക്ക് ഓഡിറ്റ്\n4. 📈 പകർച്ചവ്യാധി സാധ്യത പ്രവചനം\n\nനിങ്ങൾ ഏത് ആരോഗ്യ കേന്ദ്രത്തിൽ നിന്നാണ് ബന്ധപ്പെടുന്നത്? ദയവായി നിങ്ങളുടെ കേന്ദ്രത്തിന്റെ പേര് അല്ലെങ്കിൽ സംസ്ഥാനവും ജില്ലയും പറയുക."
+        }
         localized_questions = {
             "facility_or_location": {
                 "en": "Which healthcare facility are you reporting from? You can directly tell me your Facility Name, or provide your State and District so I can recommend nearby facilities.",
@@ -1160,7 +1197,7 @@ Return ONLY valid JSON matching this schema:
             }
         }
 
-        if is_clarify:
+        if is_clarify and target_slot:
             slot_qs = localized_questions.get(target_slot, {})
             localized_resp = slot_qs.get(language_code) or slot_qs.get("en") or f"Please provide {target_slot} for {target_display_name}."
             english_resp = slot_qs.get("en") or f"Please provide {target_slot} for {target_display_name}."
@@ -1246,6 +1283,7 @@ Return ONLY valid JSON matching this schema:
 
         try:
             import vertexai
+            _ = vertexai
             sdk_installed = True
         except ImportError:
             sdk_installed = False

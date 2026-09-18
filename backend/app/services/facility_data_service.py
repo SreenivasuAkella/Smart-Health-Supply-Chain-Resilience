@@ -426,46 +426,44 @@ def search_facilities_by_state_and_district(
 
 def resolve_facility_by_name_or_id(facility_str: str) -> Optional[Dict[str, Any]]:
     """
-    Fuzzy resolves a user-spoken or typed facility name/ID to an exact facility record.
+    Resolves an explicit facility identifier or facility name against active public healthcare registries.
     """
-    if not facility_str:
+    if not facility_str or not isinstance(facility_str, str):
         return None
-    raw = facility_str.lower().strip()
+
+    raw = facility_str.strip()
+    if len(raw) < 4:
+        return None
+
     all_facs = get_active_public_facilities()
 
-    # Exact ID match
+    # 1. Exact ID match (case-insensitive)
     for f in all_facs:
-        if f.get("id", "").lower() == raw:
+        if f.get("id", "").lower() == raw.lower():
             return f
 
-    # Exact name match
+    # 2. Exact name match (case-insensitive)
     for f in all_facs:
-        if f.get("name", "").lower() == raw:
+        if f.get("name", "").lower() == raw.lower():
             return f
 
+    # 3. Clean conversational prefixes if user stated "I am from Primary Health Centre Baragaon"
     import re
-    # Word boundary match (e.g. \bbaragaon\b, \bkhed\b, \bvellore\b)
-    cleaned_tokens = [t for t in re.findall(r'\w+', raw) if len(t) > 2 and t not in ["hospital", "centre", "center", "health", "primary", "block", "district", "the", "from", "at", "for"]]
-    if cleaned_tokens:
-        for f in all_facs:
-            fn = f.get("name", "").lower()
-            if all(re.search(rf'\b{re.escape(t)}\b', fn) for t in cleaned_tokens):
-                return f
-
-    # Substring / Acronym match
-    norm_raw = raw.replace("phc", "primary health centre").replace("chc", "community health centre").replace("dh", "district hospital")
+    cleaned = re.sub(r'^(i am from|we are at|reporting from|connect to|select|switch to)\s+', '', raw, flags=re.IGNORECASE).strip()
     for f in all_facs:
         fn = f.get("name", "").lower()
-        if raw in fn or norm_raw in fn:
+        if fn == cleaned.lower() or f.get("id", "").lower() == cleaned.lower():
             return f
 
-    # District + token match
-    if cleaned_tokens:
-        for f in all_facs:
-            fn = f.get("name", "").lower()
-            fd = f.get("district", "").lower()
-            if any(re.search(rf'\b{re.escape(t)}\b', fn) or re.search(rf'\b{re.escape(t)}\b', fd) for t in cleaned_tokens):
-                return f
+    # 4. Acronym-expanded name match (e.g. "PHC Baragaon" -> "Primary Health Centre Baragaon")
+    norm_cleaned = cleaned.lower().replace("phc", "primary health centre").replace("chc", "community health centre").replace("dh", "district hospital")
+    for f in all_facs:
+        fn = f.get("name", "").lower()
+        if fn == norm_cleaned or norm_cleaned == fn:
+            return f
+        # Exact substring only when substantial phrase with facility type
+        if len(norm_cleaned) >= 12 and (norm_cleaned in fn or fn in norm_cleaned):
+            return f
 
     return None
 

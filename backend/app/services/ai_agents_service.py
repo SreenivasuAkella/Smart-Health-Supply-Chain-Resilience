@@ -425,9 +425,6 @@ class AshaVoiceCopilotAgent:
             target_fac = next((f for f in active_facilities if f["id"] == ctx["facility_id"]), None)
         if not target_fac and ctx.get("facility_name"):
             target_fac = resolve_facility_by_name_or_id(ctx["facility_name"])
-        if not target_fac:
-            target_fac = resolve_facility_by_name_or_id(user_prompt)
-
         resolved_fac_id = target_fac["id"] if target_fac else None
         resolved_fac_name = target_fac["name"] if target_fac else None
 
@@ -438,7 +435,7 @@ class AshaVoiceCopilotAgent:
         parse_res = self.registry.call_tool("asha_parse_multilingual_voice", {
             "spoken_prompt": user_prompt,
             "language_code": language_code,
-            "facility_id": resolved_fac_id or "PHC-BARAGAON-03"
+            "facility_id": resolved_fac_id
         })
         parse_data = parse_res["content"][0]["data"] if not parse_res.get("isError") else {}
 
