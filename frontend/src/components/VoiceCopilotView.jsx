@@ -11,9 +11,7 @@ import {
 } from 'lucide-react';
 import { 
   chatWithAshaCopilot,
-  preemptActiveDispatch,
   queryGeminiCopilot, 
-  fetchCopilotHistory,
   fetchCopilotSessions,
   fetchCopilotSessionDetail,
   fetchFacilities 
@@ -105,7 +103,6 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [playingMsgId, setPlayingMsgId] = useState(null);
   const [autoSpeak, setAutoSpeak] = useState(true);
-  const [voiceDispatches, setVoiceDispatches] = useState([]);
   const [expandedTraceStep, setExpandedTraceStep] = useState(null);
 
   // Conversational session management
@@ -125,10 +122,6 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   const [attachedImageBase64, setAttachedImageBase64] = useState(null);
   const [attachedImageName, setAttachedImageName] = useState(null);
   const [isVisionScanning, setIsVisionScanning] = useState(false);
-
-  // Supervisory vs Field Mode (Default: SUPERVISORY Command Center)
-  const [copilotMode, setCopilotMode] = useState('SUPERVISORY');
-  const [preemptLoadingId, setPreemptLoadingId] = useState(null);
 
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -162,47 +155,6 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
     setAttachedImageName(null);
   };
 
-  const handleTriggerPreemption = async (disp) => {
-    if (!disp) return;
-    const targetId = selectedFacility?.id || "PHC-BARAGAON-03";
-    const targetName = selectedFacility?.name || "Primary Health Centre Baragaon";
-
-    setPreemptLoadingId(disp.id);
-    try {
-      const result = await preemptActiveDispatch({
-        dispatchId: disp.id,
-        targetFacilityId: targetId,
-        targetFacilityName: targetName,
-        supervisorId: "DHO-OFFICER-COMMAND",
-        reason: "CRITICAL_PHC_EMERGENCY_OVERRIDE"
-      });
-
-      if (result) {
-        // Add supervisory audit notice directly to chat
-        const overrideMsg = {
-          id: `OVERRIDE-${Date.now()}`,
-          role: 'assistant',
-          content: `⚡ PRIORITY DRONE PRE-EMPTION EXECUTED: Mission ${disp.id} rerouted to ${targetName} under red-air corridor ${result.air_corridor_code || 'CORRIDOR-ALPHA'}. ETA reduced to ${result.new_eta || '12 mins'}.`,
-          content_english: `Supervisory command override: High-speed corridor established directly to ${targetName}.`,
-          status: 'PRE-EMPTED',
-          intent: 'SUPERVISORY_FLEET_PREEMPTION',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          recommended_action: {
-            action_type: 'CREATE_DISPATCH_ORDER',
-            action_summary: `Pre-empted in-transit flight redirected to ${targetName}`,
-            eta: result.new_eta || '12 mins',
-            dispatch_id: result.dispatch_id || disp.id
-          }
-        };
-        setMessages(prev => [...prev, overrideMsg]);
-        loadHistoryAndSessions();
-      }
-    } catch (err) {
-      console.error("Failed to execute drone pre-emption:", err);
-    } finally {
-      setPreemptLoadingId(null);
-    }
-  };
 
   useEffect(() => {
     try {
@@ -287,14 +239,6 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   }, [messages, loading]);
 
   const loadHistoryAndSessions = async () => {
-    try {
-      const list = await fetchCopilotHistory();
-      if (list && list.length > 0) {
-        setVoiceDispatches(list);
-      }
-    } catch (e) {
-      console.warn("Failed to load history:", e);
-    }
 
     try {
       const sessList = await fetchCopilotSessions();
@@ -646,244 +590,7 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
 
   return (
     <div className="space-y-6 animate-fadeIn max-w-[1600px] mx-auto pb-10">
-      {/* Compact Action & Control Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="bg-gradient-to-r from-cyan-500/15 to-indigo-500/15 border border-cyan-500/30 text-cyan-300 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
-            <Sparkles size={13} className="text-cyan-400" /> Multi-Turn GenAI + MCP
-          </span>
-          <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
-            <Layers size={13} className="text-emerald-400" /> 8 Indian Languages
-          </span>
 
-          {/* Mode Switcher: Supervisory vs Field */}
-          <button
-            onClick={() => setCopilotMode(prev => prev === 'SUPERVISORY' ? 'FIELD' : 'SUPERVISORY')}
-            className={`text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 border transition-all ${
-              copilotMode === 'SUPERVISORY'
-                ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm shadow-purple-500/20'
-                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-            }`}
-            title="Toggle between District Supervisory Command Center and Field Worker Mode"
-          >
-            {copilotMode === 'SUPERVISORY' ? (
-              <>
-                <ShieldAlert size={12} className="text-purple-400" />
-                <span>Supervisory & Logistics Command</span>
-              </>
-            ) : (
-              <>
-                <Headphones size={12} className="text-emerald-400" />
-                <span>Field Worker Voice Mode</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Dynamic Conversational Facility Status Badge */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {selectedFacility?.name ? (
-            <div className="flex items-center gap-2 bg-slate-950/90 border border-cyan-500/40 rounded-xl px-3 py-1.5 shadow-sm text-xs">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-              </span>
-              <Building2 size={13} className="text-cyan-400 shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-[9px] uppercase tracking-wider font-bold text-cyan-400">Connected Facility</span>
-                <span className="font-semibold text-white truncate max-w-[210px]" title={selectedFacility.name}>
-                  {selectedFacility.name}
-                  {selectedFacility.district ? ` (${selectedFacility.district})` : ''}
-                </span>
-              </div>
-              <button
-                onClick={() => setSelectedFacility(null)}
-                className="text-[10px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded px-1.5 py-0.5 ml-1 transition-colors"
-                title="Disconnect facility to mention a new one in conversation"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 bg-slate-950/80 border border-amber-500/30 rounded-xl px-3 py-1.5 shadow-sm text-xs text-amber-300">
-              <Building2 size={13} className="text-amber-400 shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-[9px] uppercase tracking-wider font-bold text-amber-400">Conversational Facility</span>
-                <span className="text-[11px] text-slate-300">Mention facility name or state/district in chat</span>
-              </div>
-            </div>
-          )}
-
-          {/* Audio Toggle */}
-          <button
-            onClick={() => {
-              if (isPlayingAudio) stopSpeaking();
-              setAutoSpeak(!autoSpeak);
-            }}
-            className={`text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 border font-semibold transition-all shadow-sm ${
-              autoSpeak 
-                ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25' 
-                : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {autoSpeak ? (
-              <>
-                <Volume2 size={13} className="text-cyan-400 animate-pulse" />
-                <span>Voice: ON</span>
-              </>
-            ) : (
-              <>
-                <VolumeX size={13} className="text-slate-400" />
-                <span>Voice: MUTED</span>
-              </>
-            )}
-          </button>
-
-          {/* New Session Button */}
-          <button
-            onClick={startNewSession}
-            className="text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 border border-slate-700/80 text-slate-200 font-semibold transition-all"
-            title="Reset conversation state and start new clinical triage session"
-          >
-            <PlusCircle size={13} className="text-emerald-400" />
-            <span>New Session</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 4 KPI Telemetry Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-panel p-4 border border-slate-800 space-y-1.5 rounded-2xl">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-xs font-medium">Multi-Turn Voice Triage</span>
-            <div className="p-2 bg-emerald-500/15 rounded-lg text-emerald-400">
-              <PhoneCall size={16} />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-white">3,124 Calls</div>
-          <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-            <CheckCircle2 size={12} /> 99.4% Automated NLU & Proactive Clarification
-          </div>
-        </div>
-
-        <div className="glass-panel p-4 border border-slate-800 space-y-1.5 rounded-2xl">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-xs font-medium">Gemini NLU Inference Latency</span>
-            <div className="p-2 bg-cyan-500/15 rounded-lg text-cyan-400">
-              <Zap size={16} />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-cyan-300">142 ms</div>
-          <div className="text-[11px] text-slate-400 font-medium">
-            Sub-second real-time transcription & slot evaluation
-          </div>
-        </div>
-
-        <div className="glass-panel p-4 border border-slate-800 space-y-1.5 rounded-2xl">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-xs font-medium">Supported Regional Dialects</span>
-            <div className="p-2 bg-indigo-500/15 rounded-lg text-indigo-400">
-              <Languages size={16} />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-indigo-300">8 Languages</div>
-          <div className="text-[11px] text-indigo-400 font-medium">
-            Hindi, Telugu, Tamil, Marathi, Bengali, Kannada, Malayalam, English
-          </div>
-        </div>
-
-        <div className="glass-panel p-4 border border-slate-800 space-y-1.5 rounded-2xl">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-xs font-medium">Autonomous GPS Corridors</span>
-            <div className="p-2 bg-amber-500/15 rounded-lg text-amber-400">
-              <Truck size={16} />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-amber-300">419 Dispatches</div>
-          <div className="text-[11px] text-amber-400 font-semibold">
-            Avg ETA: 38 mins to rural health centers
-          </div>
-        </div>
-      </div>
-
-      {/* Supervisory Priority Fleet Pre-emption Console */}
-      {copilotMode === 'SUPERVISORY' && (
-        <div className="glass-panel p-4 sm:p-5 border-2 border-purple-500/40 rounded-3xl space-y-3 bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/40 shadow-2xl">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300">
-                <ShieldAlert size={18} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>District Priority Drone / EV Pre-emption Console</span>
-                  <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[9px] font-mono px-2 py-0.5 rounded-full uppercase">Supervisory Command Active</span>
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  Pre-empt in-transit supply missions to reroute emergency shipments immediately to {selectedFacility?.name || "Connected PHC"}
-                </p>
-              </div>
-            </div>
-            <span className="text-xs text-purple-300 font-mono font-semibold bg-slate-950/80 px-2.5 py-1 rounded-lg border border-purple-500/30">
-              Active Corridors: {voiceDispatches.filter(d => d.status === 'DISPATCHED' || d.status === 'IN TRANSIT').length || 2}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-            {voiceDispatches.slice(0, 3).map((disp) => {
-              const isLoading = preemptLoadingId === disp.id;
-              const isAlreadyPreempted = disp.status === 'PRE-EMPTED & REROUTED';
-              return (
-                <div key={disp.id} className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 hover:border-purple-500/40 transition-all shadow-sm">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-purple-300 font-bold">{disp.id}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      isAlreadyPreempted
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                    }`}>
-                      {disp.status}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-300 truncate">
-                    <strong>Route:</strong> {disp.facility}
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>ETA: <strong className="text-emerald-400">{disp.eta || '28 mins'}</strong></span>
-                    <span>{disp.time_ago || 'Recent'}</span>
-                  </div>
-                  <button
-                    onClick={() => handleTriggerPreemption(disp)}
-                    disabled={isLoading || isAlreadyPreempted}
-                    className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm ${
-                      isAlreadyPreempted
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                        : 'bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white border border-purple-400/40 hover:scale-[1.02]'
-                    }`}
-                  >
-                    {isLoading ? (
-                      <>
-                        <RefreshCw size={11} className="animate-spin" />
-                        <span>Rerouting Flight Corridor...</span>
-                      </>
-                    ) : isAlreadyPreempted ? (
-                      <>
-                        <CheckCircle2 size={11} className="text-rose-400" />
-                        <span>Mission Pre-empted</span>
-                      </>
-                    ) : (
-                      <>
-                        <Zap size={11} className="text-amber-300" />
-                        <span>Pre-empt & Reroute to PHC</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Main 2-Column Split Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -924,48 +631,6 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* One-Tap Clinical SOS Emergency Protocol Bar */}
-            <div className="space-y-1.5 p-3 rounded-2xl bg-gradient-to-r from-rose-950/40 via-slate-900 to-indigo-950/40 border border-rose-500/30">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-rose-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <AlertOctagon size={13} className="text-rose-400" /> One-Tap Emergency Clinical Protocols:
-                </span>
-                <span className="text-[10px] text-rose-400 font-semibold">Priority Triage & Clinical Card</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button
-                  onClick={() => handleSendQuery("हमारे पास केवल 3 शीशियां एंटी-वेनम बची हैं, तत्काल 25 शीशियां भेजें (Snakebite Envenomation Emergency)")}
-                  className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-rose-500/30 hover:border-rose-400 text-left transition-all group"
-                >
-                  <div className="flex items-center justify-between text-xs font-bold text-rose-300 group-hover:text-rose-200">
-                    <span>🐍 Snakebite ASV SOS</span>
-                    <ArrowRight size={11} />
-                  </div>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">20WBCT + 10 ASV Vials Loading</span>
-                </button>
-                <button
-                  onClick={() => handleSendQuery("कोल्ड चेन आईएलआर रेफ्रिजरेटर का तापमान 8.9°C हो गया है, तत्काल तकनीशियन भेजें")}
-                  className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-amber-500/30 hover:border-amber-400 text-left transition-all group"
-                >
-                  <div className="flex items-center justify-between text-xs font-bold text-amber-300 group-hover:text-amber-200">
-                    <span>❄️ Cold-Chain Breach</span>
-                    <ArrowRight size={11} />
-                  </div>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">Thermal Excursion SOS</span>
-                </button>
-                <button
-                  onClick={() => handleSendQuery("मातृ प्रसवोत्तर रक्तस्राव (PPH) हेतु 20 शीशियां ऑक्सीटोसिन तत्काल पुनःआवंटित करें")}
-                  className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-purple-500/30 hover:border-purple-400 text-left transition-all group"
-                >
-                  <div className="flex items-center justify-between text-xs font-bold text-purple-300 group-hover:text-purple-200">
-                    <span>🩸 Maternal PPH Oxytocin</span>
-                    <ArrowRight size={11} />
-                  </div>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">AMTSL 10 IU IM Protocol</span>
-                </button>
               </div>
             </div>
 
@@ -1698,62 +1363,6 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
             </div>
           </div>
 
-          {/* Live Voice Emergency Feed from Database */}
-          <div className="glass-panel p-5 border border-slate-800 rounded-3xl space-y-4 shadow-xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-cyan-500/15 rounded-lg text-cyan-400">
-                  <Activity size={16} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Live Voice Emergency Feed</h3>
-                  <p className="text-[11px] text-slate-400">Real-time database log of frontline voice triage</p>
-                </div>
-              </div>
-              <span className="bg-emerald-500/15 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> Live DB
-              </span>
-            </div>
-
-            <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-              {voiceDispatches.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-500">
-                  Loading emergency records from database...
-                </div>
-              ) : (
-                voiceDispatches.slice(0, 5).map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="bg-slate-900/80 hover:bg-slate-900 border border-slate-800/90 rounded-xl p-3.5 space-y-2 transition-all shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white">{item.worker || "ASHA Worker"}</span>
-                        <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
-                          {item.language}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-medium">{item.time_ago || "Recent"}</span>
-                    </div>
-
-                    <p className="text-xs text-slate-300 font-medium line-clamp-2">
-                      "{item.prompt}"
-                    </p>
-
-                    <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800/60">
-                      <span className="text-slate-400 font-semibold truncate max-w-[160px]">{item.facility}</span>
-                      <span className={`font-bold px-2 py-0.5 rounded ${
-                        item.color === 'emerald' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' :
-                        (item.color === 'amber' ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' : 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-400')
-                      }`}>
-                        {item.status}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
 
           {/* Autonomous Multi-Agent Swarm Registry */}
           <div className="glass-panel p-5 border border-slate-800 rounded-3xl space-y-3.5 shadow-xl">
