@@ -377,7 +377,9 @@ export async function chatWithAshaCopilot({
   sourceFacilityId = null,
   sourceFacilityName = null,
   history = [],
-  apiKey = ""
+  apiKey = "",
+  imageBase64 = null,
+  mimeType = "image/jpeg"
 } = {}) {
   try {
     const payload = {
@@ -389,7 +391,9 @@ export async function chatWithAshaCopilot({
       source_facility_id: sourceFacilityId,
       source_facility_name: sourceFacilityName,
       conversation_history: history,
-      api_key: apiKey
+      api_key: apiKey,
+      image_base64: imageBase64,
+      image_mime_type: mimeType
     };
 
     const res = await fetch(`${API_BASE_URL}/copilot/chat`, {
@@ -405,6 +409,35 @@ export async function chatWithAshaCopilot({
     return askAshaCopilot({ prompt, language, facilityId, facilityName, sourceFacilityId, sourceFacilityName, apiKey });
   }
 }
+
+export async function preemptActiveDispatch({
+  dispatchId,
+  targetFacilityId,
+  targetFacilityName,
+  supervisorId = "DHO-OFFICER-COMMAND",
+  reason = "EMERGENCY_OVERRIDE"
+} = {}) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/copilot/preempt-dispatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dispatch_id: dispatchId,
+        target_facility_id: targetFacilityId,
+        target_facility_name: targetFacilityName,
+        supervisor_id: supervisorId,
+        reason: reason
+      })
+    });
+    if (!res.ok) throw new Error("Dispatch Pre-emption failed");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("preemptActiveDispatch error:", err);
+    throw err;
+  }
+}
+
 
 export async function fetchCopilotSessions() {
   try {

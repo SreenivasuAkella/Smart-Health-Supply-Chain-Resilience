@@ -33,7 +33,12 @@ def load_copilot_dispatches_from_db() -> List[Dict[str, Any]]:
         except Exception:
             pass
             
-    # Seed default realistic triage records with dynamic timestamps relative to now
+    # Dynamically generate realistic triage records grounded in active public facilities database
+    from .facility_data_service import get_active_public_facilities
+    from .medicine_data_service import get_active_essential_medicines
+    live_facs = get_active_public_facilities()
+    live_meds = get_active_essential_medicines()
+
     _now = datetime.utcnow()
 
     def _ts(minutes_ago: int) -> str:
@@ -46,70 +51,78 @@ def load_copilot_dispatches_from_db() -> List[Dict[str, Any]]:
         hours = minutes_ago // 60
         return f"{hours} hour{'s' if hours != 1 else ''} ago"
 
+    fac_0 = live_facs[0] if len(live_facs) > 0 else {"id": "PHC-01", "name": "Primary Health Centre Baragaon"}
+    fac_1 = live_facs[1] if len(live_facs) > 1 else {"id": "PHC-02", "name": "Kaniyambadi PHC"}
+    fac_2 = live_facs[2] if len(live_facs) > 2 else {"id": "PHC-03", "name": "Ghatkesar PHC"}
+    fac_3 = live_facs[3] if len(live_facs) > 3 else {"id": "PHC-04", "name": "Khed CHC"}
+
+    med_0 = live_meds[0].get("name", "Anti-Snake Venom") if live_meds else "Anti-Snake Venom"
+    med_1 = live_meds[1].get("name", "Pentavalent Vaccine") if len(live_meds) > 1 else "Vaccine"
+
     seed_records = [
         {
-            "id": "VOX-DISP-0841",
+            "id": f"VOX-DISP-{uuid.uuid4().hex[:4].upper()}",
             "worker": "Sunita Devi (ASHA)",
-            "facility": "Primary Health Centre Baragaon",
-            "facility_id": "PHC-BARAGAON-03",
+            "facility": fac_0.get("name"),
+            "facility_id": fac_0.get("id"),
             "language": "हिन्दी (Hindi)",
             "language_code": "hi",
-            "prompt": "हमारे पास केवल 3 शीशियां एंटी-वेनम बची हैं, तत्काल 25 शीशियां भेजें",
+            "prompt": f"हमारे पास केवल 3 शीशियां {med_0} बची हैं, तत्काल 25 शीशियां भेजें",
             "intent": "EMERGENCY_REQUISITION",
             "status": "DISPATCHED",
-            "eta": "34 mins",
+            "eta": "28 mins (Aerial Drone Corridor)",
             "timestamp": _ts(4),
             "time_ago": _time_ago(4),
             "color": "emerald",
-            "action_summary": "Auto-dispatched 25 ASV vials from Pt. Deen Dayal Upadhyay DH with insulated cold-box GPS tag #TRK-8492"
+            "action_summary": f"Auto-dispatched 25 units of {med_0} with active GPS tag #TRK-{uuid.uuid4().hex[:4].upper()}"
         },
         {
-            "id": "VOX-DISP-0840",
+            "id": f"VOX-DISP-{uuid.uuid4().hex[:4].upper()}",
             "worker": "Lakshmi Narayanan (ANM)",
-            "facility": "Kaniyambadi PHC (Vellore)",
-            "facility_id": "PHC-VELLORE-02",
+            "facility": fac_1.get("name"),
+            "facility_id": fac_1.get("id"),
             "language": "தமிழ் (Tamil)",
             "language_code": "ta",
             "prompt": "குளிர்சாதன பெட்டி வெப்பநிலை 8.7°C ஆக அதிகரித்துள்ளது",
             "intent": "COLD_CHAIN_ALERT",
-            "status": "TECHNICIAN ALERTED",
+            "status": "IN TRANSIT",
             "eta": "20 mins",
             "timestamp": _ts(18),
             "time_ago": _time_ago(18),
             "color": "amber",
-            "action_summary": "SMS & Push SOS dispatched to District Vaccine Cold-Chain Officer (Vellore)"
+            "action_summary": f"Passive cooling and biomedical technician alerted for {fac_1.get('name')}"
         },
         {
-            "id": "VOX-DISP-0839",
+            "id": f"VOX-DISP-{uuid.uuid4().hex[:4].upper()}",
             "worker": "Kavitha Rao (ASHA Lead)",
-            "facility": "Ghatkesar PHC (Medchal)",
-            "facility_id": "PHC-MEDCHAL-01",
+            "facility": fac_2.get("name"),
+            "facility_id": fac_2.get("id"),
             "language": "తెలుగు (Telugu)",
             "language_code": "te",
-            "prompt": "డెంగ్యూ మరియు మలేరియా మందుల స్టాక్ వివరాలు తనిఖీ చేయండి",
+            "prompt": f"{med_0} మరియు అత్యవసర మందుల స్టాక్ వివరాలు తనిఖీ చేయండి",
             "intent": "STOCK_STATUS_CHECK",
             "status": "CONFIRMED",
             "eta": "Immediate",
             "timestamp": _ts(42),
             "time_ago": _time_ago(42),
             "color": "cyan",
-            "action_summary": "Facility ledger synchronized with e-Aushadhi state cloud repository"
+            "action_summary": f"Facility inventory synchronized with national e-Aushadhi repository"
         },
         {
-            "id": "VOX-DISP-0838",
+            "id": f"VOX-DISP-{uuid.uuid4().hex[:4].upper()}",
             "worker": "Pooja Patil (CHO)",
-            "facility": "Khed CHC (Pune)",
-            "facility_id": "CHC-PUNE-04",
+            "facility": fac_3.get("name"),
+            "facility_id": fac_3.get("id"),
             "language": "मराठी (Marathi)",
             "language_code": "mr",
-            "prompt": "आमच्याकडे फक्त ३ अँटी-स्नेक व्हेनम उरले आहेत, त्वरित २५ पाठवा",
+            "prompt": f"आमच्याकडे {med_0} संपले आहे, त्वरित पुरवठा पाठवा",
             "intent": "EMERGENCY_REQUISITION",
             "status": "IN TRANSIT",
-            "eta": "45 mins",
+            "eta": "35 mins",
             "timestamp": _ts(68),
             "time_ago": _time_ago(68),
             "color": "indigo",
-            "action_summary": "Auto-routed 25 ASV vials from Pune District Central Depot"
+            "action_summary": f"Automated reallocation corridor provisioned for {fac_3.get('name')}"
         }
     ]
     save_copilot_dispatches_to_db(seed_records)
@@ -335,12 +348,14 @@ def process_copilot_chat(
     source_facility_id: Optional[str] = None,
     source_facility_name: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
-    custom_api_key: Optional[str] = None
+    custom_api_key: Optional[str] = None,
+    image_base64: Optional[str] = None,
+    image_mime_type: Optional[str] = "image/jpeg"
 ) -> Dict[str, Any]:
     """
-    Conversational GenAI Multi-Turn Chat Controller.
-    Preserves dialogue context, detects missing info, invokes dynamic agents & tools,
-    and stores dialogue events in persistent disk storage, Firebase RTDB, and Google BigQuery.
+    Conversational GenAI Multi-Turn Chat Controller with Multimodal Agentic Vision.
+    Preserves dialogue context, detects missing info, analyzes multimodal images,
+    invokes dynamic agents & tools, and stores dialogue events in persistent storage, RTDB, and BigQuery.
     """
     start_time = time.time()
     session = get_or_create_session(session_id, facility_id, facility_name, language_code)
@@ -350,14 +365,43 @@ def process_copilot_chat(
     active_facility_id = facility_id or session.get("facility_id")
     active_facility_name = facility_name or session.get("facility_name")
 
+    # 0. Multimodal Vision Pre-Processing (if image provided)
+    vision_result = None
+    effective_prompt = prompt.strip() if prompt else ""
+    
+    if image_base64:
+        try:
+            import base64
+            from .gemini_vision import analyze_multimodal_health_image
+            clean_b64 = image_base64.split(",")[1] if "," in image_base64 else image_base64
+            img_bytes = base64.b64decode(clean_b64)
+            vision_result = analyze_multimodal_health_image(
+                image_bytes=img_bytes,
+                mime_type=image_mime_type or "image/jpeg",
+                custom_api_key=custom_api_key,
+                user_context_hint=effective_prompt
+            )
+            
+            # Combine vision findings with prompt
+            auto_suggest = vision_result.get("agentic_handoff", {}).get("autonomous_prompt_suggestion", "")
+            if not effective_prompt:
+                effective_prompt = auto_suggest or vision_result.get("findings_summary", "Image asset analyzed.")
+            else:
+                effective_prompt = f"{effective_prompt}. Visual Inspection Note: {vision_result.get('findings_summary', '')}"
+        except Exception as v_err:
+            print(f"[Copilot Vision Processing Warning]: {v_err}")
+
     # Append user message
     user_msg_id = f"MSG-{uuid.uuid4().hex[:6].upper()}"
     user_msg = {
         "id": user_msg_id,
         "role": "user",
-        "content": prompt,
+        "content": prompt if prompt else (effective_prompt or "Image inspection uploaded"),
         "language_code": language_code,
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "has_image": bool(image_base64),
+        "image_base64": image_base64 if image_base64 else None,
+        "vision_result": vision_result
     }
     session["messages"].append(user_msg)
     if conversation_history:
@@ -370,7 +414,7 @@ def process_copilot_chat(
     try:
         from .ai_agents_service import run_asha_voice_pipeline
         agent_result = run_asha_voice_pipeline(
-            user_prompt=prompt,
+            user_prompt=effective_prompt or prompt,
             language_code=language_code,
             facility_id=active_facility_id,
             facility_name=active_facility_name,
@@ -388,7 +432,7 @@ def process_copilot_chat(
 
     if not agent_result:
         agent_result = process_copilot_query(
-            user_prompt=prompt,
+            user_prompt=effective_prompt or prompt,
             language_code=language_code,
             facility_id=active_facility_id,
             facility_name=active_facility_name,
@@ -398,6 +442,27 @@ def process_copilot_chat(
         agent_result["status"] = "IMPLEMENTED"
         agent_result["is_clarification_needed"] = False
         agent_result["missing_slots"] = []
+
+    # Attach Vision Result to agent_result if present
+    if vision_result:
+        agent_result["vision_analysis"] = vision_result
+
+    # 2. Check for Clinical Emergency Protocols (Snakebite / Cold Chain / Maternal)
+    combined_query_text = f"{effective_prompt} {agent_result.get('intent', '')}".lower()
+    clinical_card = None
+    try:
+        from .ai_agents_service import generate_clinical_protocol_card
+        if any(w in combined_query_text for w in ["snake", "asv", "venom", "सांप", "सर्पदंश", "పాము", "విషము"]):
+            clinical_card = generate_clinical_protocol_card("SNAKEBITE_ASV")
+        elif any(w in combined_query_text for w in ["cold", "fridge", "temp", "8.", "9.", "कोल्ड", "तापमान", "రిఫ్రిజిరేటర్"]):
+            clinical_card = generate_clinical_protocol_card("COLD_CHAIN_EXCURSION")
+        elif any(w in combined_query_text for w in ["oxytocin", "pph", "maternal", "bleeding", "प्रसव", "రక్తస్రావం"]):
+            clinical_card = generate_clinical_protocol_card("MATERNAL_PPH_OXYTOCIN")
+    except Exception as prot_err:
+        print(f"[Clinical Protocol generation notice]: {prot_err}")
+
+    if clinical_card:
+        agent_result["clinical_protocol_card"] = clinical_card
 
     # Update session facility if dynamically resolved during conversational turn
     resolved_fac_id = agent_result.get("facility_id") or agent_result.get("target_facility_id")
@@ -431,6 +496,8 @@ def process_copilot_chat(
         "execution_trace": agent_result.get("execution_trace", []),
         "agents_invoked": agent_result.get("agents_invoked", []),
         "tools_executed": agent_result.get("tools_executed", []),
+        "vision_analysis": vision_result,
+        "clinical_protocol_card": clinical_card,
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
     session["messages"].append(asst_msg)

@@ -89,6 +89,9 @@ async def copilot_chat(request: Request):
         conversation_history = body.get("conversation_history") or body.get("history") or []
         key = body.get("apiKey") or body.get("custom_api_key") or body.get("api_key")
 
+        image_base64 = body.get("image_base64") or body.get("imageBase64")
+        image_mime_type = body.get("image_mime_type") or body.get("mimeType") or "image/jpeg"
+
         result = process_copilot_chat(
             prompt=str(prompt_text),
             session_id=str(session_id) if session_id else None,
@@ -98,7 +101,39 @@ async def copilot_chat(request: Request):
             source_facility_id=str(source_facility_id) if source_facility_id and str(source_facility_id) != "AUTO_NEAREST_SURPLUS" else None,
             source_facility_name=str(source_facility_name) if source_facility_name else None,
             conversation_history=conversation_history,
-            custom_api_key=key
+            custom_api_key=key,
+            image_base64=str(image_base64) if image_base64 else None,
+            image_mime_type=str(image_mime_type)
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/api/copilot/preempt-dispatch")
+@router.post("/api/ai/copilot/preempt-dispatch")
+async def copilot_preempt_dispatch(request: Request):
+    """
+    Supervisory Fleet Pre-emption & Override Endpoint.
+    Allows District Health Officers to reroute in-transit delivery drones/EVs to emergency PHCs.
+    """
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            body = {}
+        
+        dispatch_id = body.get("dispatch_id") or body.get("dispatchId") or "VOX-DISP-0841"
+        target_fac_id = body.get("target_facility_id") or body.get("targetFacilityId") or "PHC-BARAGAON-03"
+        target_fac_name = body.get("target_facility_name") or body.get("targetFacilityName") or "Emergency Facility"
+        supervisor_id = body.get("supervisor_id") or body.get("supervisorId") or "DHO-OFFICER-COMMAND"
+        reason = body.get("reason") or "EMERGENCY_OVERRIDE"
+
+        from ..services.ai_agents_service import preempt_active_dispatch
+        result = preempt_active_dispatch(
+            dispatch_id=dispatch_id,
+            target_facility_id=target_fac_id,
+            target_facility_name=target_fac_name,
+            supervisor_id=supervisor_id,
+            reason=reason
         )
         return {"success": True, "data": result}
     except Exception as e:

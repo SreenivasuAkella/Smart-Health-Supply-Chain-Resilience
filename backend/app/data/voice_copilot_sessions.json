@@ -1,4 +1,266 @@
 {
+  "SESS-5828ACC5": {
+    "session_id": "SESS-5828ACC5",
+    "facility_id": "PHC-BARAGAON-03",
+    "facility_name": "Primary Health Centre Baragaon",
+    "language_code": "hi",
+    "messages": [
+      {
+        "id": "MSG-531F70",
+        "role": "user",
+        "content": "\u0915\u0943\u092a\u092f\u093e \u0938\u094d\u091f\u0949\u0915 \u0930\u091c\u093f\u0938\u094d\u091f\u0930 \u0915\u0940 \u091c\u093e\u0902\u091a \u0915\u0930\u0947\u0902",
+        "language_code": "hi",
+        "timestamp": "2026-09-18T08:10:58.372248Z",
+        "has_image": true,
+        "image_base64": "data:image/jpeg;base64,ZmFrZWJ5dGVz",
+        "vision_result": {
+          "category": "STOCK_REGISTER",
+          "summary_title": "Paper Stock Ledger: 2 Critical Stockouts",
+          "findings_summary": "Physical stock register page OCR detects Anti-Snake Venom (ASV) balance is 0 vials (deficit: 25) and Oxytocin balance is 4 ampoules (deficit: 40).",
+          "stock_register_details": {
+            "detected_rows": [
+              {
+                "item_name": "Anti-Snake Venom (ASV) 10ml",
+                "batch_no": "ASV-UP-2024-11",
+                "stock_available": 0,
+                "minimum_required": 25,
+                "is_stockout": true,
+                "urgency": "CRITICAL"
+              },
+              {
+                "item_name": "Oxytocin Injection 10 IU",
+                "batch_no": "OXY-MH-2025-03",
+                "stock_available": 4,
+                "minimum_required": 40,
+                "is_stockout": true,
+                "urgency": "HIGH"
+              },
+              {
+                "item_name": "Paracetamol 500mg Tablets",
+                "batch_no": "PCM-2025-88",
+                "stock_available": 1200,
+                "minimum_required": 500,
+                "is_stockout": false,
+                "urgency": "NORMAL"
+              }
+            ],
+            "critical_stockouts_count": 2,
+            "ledger_date_detected": "Today"
+          },
+          "medicine_details": {
+            "brand_name": "Anti-Snake Venom Polyvalent Serum",
+            "generic_name": "Purified Equine Snake Antivenom",
+            "batch_number": "ASV-UP-2024-11",
+            "counterfeit_risk_score": 2.1,
+            "packaging_status": "Stock Depleted (0 Vials Available)"
+          },
+          "temperature_details": {
+            "recorded_temperature_celsius": null,
+            "excursion_detected": false
+          },
+          "agentic_handoff": {
+            "recommended_agent": "StockoutSentinelAgent",
+            "requires_autonomous_action": true,
+            "action_type": "EMERGENCY_REQUISITION",
+            "autonomous_prompt_suggestion": "Paper register scan confirms zero vials of Anti-Snake Venom remaining. Requisition 25 vials from nearest surplus facility immediately."
+          },
+          "brand_name": "Primary Health Centre Stock Register",
+          "generic_name": "Facility Medicine Stock Ledger",
+          "batch_number": "REG-FOLIO-84",
+          "counterfeit_risk_score": 0.0,
+          "tamper_or_damage_detected": false,
+          "packaging_status": "Verified Logbook Entry",
+          "e_aushadhi_ledger_sync_ready": true,
+          "ai_engine_used": "Gemini Multimodal Vision Engine (Dynamic Inspection Mode)"
+        }
+      },
+      {
+        "id": "MSG-DB3778",
+        "role": "assistant",
+        "content": "\u092a\u094d\u0930\u093e\u0907\u092e\u0930\u0940 \u0939\u0947\u0932\u094d\u0925 \u0938\u0947\u0902\u091f\u0930 \u092c\u0921\u093c\u093e\u0917\u093e\u0901\u0935 \u0915\u0947 \u0938\u094d\u091f\u0949\u0915 \u0930\u091c\u093f\u0938\u094d\u091f\u0930 \u0915\u0940 \u091c\u093e\u0901\u091a \u092a\u0942\u0930\u0940 \u0939\u094b \u0917\u0908 \u0939\u0948\u0964 \u090f\u0902\u091f\u0940-\u0938\u094d\u0928\u0947\u0915 \u0935\u0947\u0928\u092e (ASV) \u0915\u093e \u0938\u094d\u091f\u0949\u0915 \u0938\u092e\u093e\u092a\u094d\u0924 (0 \u0935\u093e\u092f\u0932, 25 \u0915\u0940 \u0915\u092e\u0940) \u0939\u094b \u091a\u0941\u0915\u093e \u0939\u0948 \u0914\u0930 \u0911\u0915\u094d\u0938\u0940\u091f\u094b\u0938\u093f\u0928 \u0915\u0947\u0935\u0932 4 \u090f\u092e\u094d\u092a\u0942\u0932 \u092c\u091a\u093e \u0939\u0948 (40 \u0915\u0940 \u0915\u092e\u0940)\u0964 \u0915\u094d\u092f\u093e \u0906\u092a \u0907\u0928 \u091c\u0940\u0935\u0928 \u09b0\u0995\u09cd\u09b7\u0995 \u0914\u0937\u0927\u093f\u092f\u094b\u0902 \u0915\u0947 \u0932\u093f\u090f \u0924\u0924\u094d\u0915\u093e\u0932 \u0906\u092a\u093e\u0924\u0915\u093e\u0932\u0940\u0928 \u0930\u0940\u0915\u094d\u0935\u093f\u091c\u093f\u0936\u0928 (\u0906\u0926\u0947\u0936) \u091c\u093e\u0930\u0940 \u0915\u0930\u0928\u093e \u091a\u093e\u0939\u0924\u0947 \u0939\u0948\u0902?",
+        "content_english": "Stock register audit completed for Primary Health Centre Baragaon. Snake Antivenin (ASV) is completely stocked out (0 vials, deficit of 25) and Oxytocin is critically low at 4 ampoules (deficit of 40). Would you like to immediately trigger an emergency requisition for these life-saving medicines?",
+        "status": "IMPLEMENTED",
+        "intent": "STOCK_STATUS_CHECK",
+        "is_clarification_needed": false,
+        "missing_slots": [],
+        "quick_reply_options": [
+          {
+            "label": "\ud83d\udea8 \u0906\u092a\u093e\u0924\u0915\u093e\u0932\u0940\u0928 \u090f\u090f\u0938\u0935\u0940 \u0907\u0902\u0921ent \u092c\u0928\u093e\u090f\u0901",
+            "action_payload": "Create emergency ASV requisition of 25 vials for PHC Baragaon",
+            "value": "Create emergency ASV requisition of 25 vials for PHC Baragaon"
+          },
+          {
+            "label": "\ud83d\udd04 \u0928\u093f\u0915\u091f\u0924\u092e \u0905\u0927\u093f\u0936\u0947\u0937 \u0915\u0947\u0902\u0926\u094d\u0930 \u0916\u094b\u091c\u0947\u0902",
+            "action_payload": "Find surplus donor nodes for Snake Antivenin near Varanasi",
+            "value": "Find surplus donor nodes for Snake Antivenin near Varanasi"
+          },
+          {
+            "label": "\ud83d\udcca \u0905\u0928\u094d\u092f \u0938\u094d\u091f\u0949\u0915 \u0911\u0921\u093f\u091f \u0926\u0947\u0916\u0947\u0902",
+            "action_payload": "View remaining facility inventory and stock audit",
+            "value": "View remaining facility inventory and stock audit"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "UPDATE_INVENTORY",
+          "action_summary": "Facility ledger synchronized with e-Aushadhi national health cloud repository for Primary Health Centre Baragaon.",
+          "suggested_source_facility": "Regional Central Drug Stores Depot",
+          "dispatch_id": null,
+          "eta": "Immediate",
+          "vehicle_type": null
+        },
+        "target_facility_id": "PHC-BARAGAON-03",
+        "target_facility_name": "Primary Health Centre Baragaon",
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_conversational_intake",
+            "action_summary": "Clinical conversational intake in 'hi': Identified intent STOCK_STATUS_CHECK (Urgency: HIGH). Visual inspection of stock register at Primary Health Centre Baragaon indicates critical stockouts: Anti-Snake Venom (ASV) balance is 0 vials with a deficit of 25, and Oxytocin balance is 4 ampoules with a deficit of 40.",
+            "duration_ms": 5963.41,
+            "timestamp": "2026-09-18T08:11:04.347954Z",
+            "details": {
+              "intent": "STOCK_STATUS_CHECK",
+              "confidence": 0.98,
+              "urgency": "HIGH",
+              "entities": {
+                "medicine_name": "Snake Antivenin",
+                "medicine_id": "PUB-MED-001",
+                "requested_quantity": 25,
+                "current_stock": 0,
+                "temperature_reading": null,
+                "state_name": "Uttar Pradesh",
+                "district_name": "Varanasi",
+                "target_facility_name": "Primary Health Centre Baragaon",
+                "target_facility_id": "PHC-BARAGAON-03",
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": false,
+              "missing_slots": [],
+              "clinical_rationale": "Visual inspection of stock register at Primary Health Centre Baragaon indicates critical stockouts: Anti-Snake Venom (ASV) balance is 0 vials with a deficit of 25, and Oxytocin balance is 4 ampoules with a deficit of 40.",
+              "engine": "Google Gemini (gemini-3.5-flash-lite)",
+              "model": "gemini-3.6-flash"
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "StockoutSentinelAgent",
+            "mcp_tool_called": "asha_audit_node_inventory",
+            "action_summary": "Audited e-Aushadhi node ledger balance for 'Snake Antivenin'. Stock balance: 4 units (1.1 days buffer).",
+            "duration_ms": 8.34,
+            "timestamp": "2026-09-18T08:11:04.356323Z",
+            "details": {
+              "facility_id": "PHC-BARAGAON-03",
+              "facility_name": "Primary Health Centre Baragaon",
+              "medicine_id": "PUB-MED-001",
+              "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+              "current_stock": 4,
+              "daily_consumption_burn": 3.5,
+              "days_of_supply_remaining": 1.1,
+              "is_deficit": true,
+              "buffer_status": "CRITICAL_DEFICIT",
+              "recommended_reorder_qty": 36,
+              "storage_requirement": "2\u00b0C to 8\u00b0C"
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent",
+          "StockoutSentinelAgent"
+        ],
+        "tools_executed": [
+          "asha_conversational_intake",
+          "asha_audit_node_inventory"
+        ],
+        "vision_analysis": {
+          "category": "STOCK_REGISTER",
+          "summary_title": "Paper Stock Ledger: 2 Critical Stockouts",
+          "findings_summary": "Physical stock register page OCR detects Anti-Snake Venom (ASV) balance is 0 vials (deficit: 25) and Oxytocin balance is 4 ampoules (deficit: 40).",
+          "stock_register_details": {
+            "detected_rows": [
+              {
+                "item_name": "Anti-Snake Venom (ASV) 10ml",
+                "batch_no": "ASV-UP-2024-11",
+                "stock_available": 0,
+                "minimum_required": 25,
+                "is_stockout": true,
+                "urgency": "CRITICAL"
+              },
+              {
+                "item_name": "Oxytocin Injection 10 IU",
+                "batch_no": "OXY-MH-2025-03",
+                "stock_available": 4,
+                "minimum_required": 40,
+                "is_stockout": true,
+                "urgency": "HIGH"
+              },
+              {
+                "item_name": "Paracetamol 500mg Tablets",
+                "batch_no": "PCM-2025-88",
+                "stock_available": 1200,
+                "minimum_required": 500,
+                "is_stockout": false,
+                "urgency": "NORMAL"
+              }
+            ],
+            "critical_stockouts_count": 2,
+            "ledger_date_detected": "Today"
+          },
+          "medicine_details": {
+            "brand_name": "Anti-Snake Venom Polyvalent Serum",
+            "generic_name": "Purified Equine Snake Antivenom",
+            "batch_number": "ASV-UP-2024-11",
+            "counterfeit_risk_score": 2.1,
+            "packaging_status": "Stock Depleted (0 Vials Available)"
+          },
+          "temperature_details": {
+            "recorded_temperature_celsius": null,
+            "excursion_detected": false
+          },
+          "agentic_handoff": {
+            "recommended_agent": "StockoutSentinelAgent",
+            "requires_autonomous_action": true,
+            "action_type": "EMERGENCY_REQUISITION",
+            "autonomous_prompt_suggestion": "Paper register scan confirms zero vials of Anti-Snake Venom remaining. Requisition 25 vials from nearest surplus facility immediately."
+          },
+          "brand_name": "Primary Health Centre Stock Register",
+          "generic_name": "Facility Medicine Stock Ledger",
+          "batch_number": "REG-FOLIO-84",
+          "counterfeit_risk_score": 0.0,
+          "tamper_or_damage_detected": false,
+          "packaging_status": "Verified Logbook Entry",
+          "e_aushadhi_ledger_sync_ready": true,
+          "ai_engine_used": "Gemini Multimodal Vision Engine (Dynamic Inspection Mode)"
+        },
+        "clinical_protocol_card": {
+          "protocol_id": "CLIN-PROT-ASV-01",
+          "title": "National Snakebite Envenomation Protocol (Polyvalent ASV)",
+          "urgency": "CRITICAL",
+          "badge_color": "emerald",
+          "first_line_test": "20-Minute Whole Blood Clotting Test (20WBCT)",
+          "test_procedure": "Collect 2ml fresh venous blood in clean dry glass tube. Keep undisturbed for 20 mins. Invert tube: if blood liquid/unclotted, envenomation confirmed.",
+          "recommended_dosage": "10 Vials Polyvalent ASV (Lyophilized)",
+          "reconstitution_instructions": "Reconstitute each vial with 10ml sterile water. Dilute in 200ml 0.9% Normal Saline or 5% Dextrose.",
+          "infusion_rate": "Infuse slowly over 60 minutes. Stay at bedside for first 15 minutes to monitor for anaphylaxis.",
+          "emergency_antidote_on_standby": "Inj. Adrenaline (Epinephrine) 1:1000 (0.5ml IM) must be drawn and ready at bedside.",
+          "repeat_criteria": "Repeat 20WBCT after 1 hour. If unclotted, administer 2nd dose of 10 vials.",
+          "cold_chain_warning": "Maintain ASV vials at 2\u00b0C\u20138\u00b0C in ILR until reconstitution. Do NOT freeze diluent.",
+          "authority_guideline": "Standard Treatment Guidelines, MoHFW / WHO SEARO 2024"
+        },
+        "timestamp": "2026-09-18T08:11:04.356562Z"
+      }
+    ],
+    "context": {
+      "facility_id": "PHC-BARAGAON-03",
+      "facility_name": "Primary Health Centre Baragaon",
+      "intent": "STOCK_STATUS_CHECK",
+      "medicine_name": "Snake Antivenin",
+      "medicine_id": "PUB-MED-001",
+      "requested_quantity": 25
+    },
+    "created_at": "2026-09-18T08:10:57.111237Z",
+    "updated_at": "2026-09-18T08:11:04.356513Z"
+  },
   "SESS-383992ED": {
     "session_id": "SESS-383992ED",
     "facility_id": null,

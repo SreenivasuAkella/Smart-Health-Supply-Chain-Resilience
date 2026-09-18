@@ -6,10 +6,12 @@ import {
   Clock, ShieldAlert, Cpu, Activity, PhoneCall, Headphones, FileCheck2,
   AlertTriangle, Play, ChevronRight, Zap, RefreshCw, BarChart3,
   ChevronDown, ChevronUp, Layers, Bot, Building2, ExternalLink, Navigation,
-  MessageSquare, User, HelpCircle, History, PlusCircle, Thermometer, Box
+  MessageSquare, User, HelpCircle, History, PlusCircle, Thermometer, Box,
+  Camera, UploadCloud, FileText, AlertOctagon, Image as ImageIcon, X
 } from 'lucide-react';
 import { 
   chatWithAshaCopilot,
+  preemptActiveDispatch,
   queryGeminiCopilot, 
   fetchCopilotHistory,
   fetchCopilotSessions,
@@ -119,8 +121,18 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   const [recentSessions, setRecentSessions] = useState([]);
   const [showSessionDrawer, setShowSessionDrawer] = useState(false);
 
+  // Multimodal Gemini Vision State
+  const [attachedImageBase64, setAttachedImageBase64] = useState(null);
+  const [attachedImageName, setAttachedImageName] = useState(null);
+  const [isVisionScanning, setIsVisionScanning] = useState(false);
+
+  // Supervisory vs Field Mode (Default: SUPERVISORY Command Center)
+  const [copilotMode, setCopilotMode] = useState('SUPERVISORY');
+  const [preemptLoadingId, setPreemptLoadingId] = useState(null);
+
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const [selectedFacility, setSelectedFacility] = useState(() => {
     try {
@@ -131,6 +143,66 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
     }
   });
   const [facilities, setFacilities] = useState([]);
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachedImageName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedImageBase64(reader.result);
+    };
+    reader.readAsDataURL(file);
+    // Reset file input value so same file can be re-selected if desired
+    e.target.value = '';
+  };
+
+  const clearAttachedImage = () => {
+    setAttachedImageBase64(null);
+    setAttachedImageName(null);
+  };
+
+  const handleTriggerPreemption = async (disp) => {
+    if (!disp) return;
+    const targetId = selectedFacility?.id || "PHC-BARAGAON-03";
+    const targetName = selectedFacility?.name || "Primary Health Centre Baragaon";
+
+    setPreemptLoadingId(disp.id);
+    try {
+      const result = await preemptActiveDispatch({
+        dispatchId: disp.id,
+        targetFacilityId: targetId,
+        targetFacilityName: targetName,
+        supervisorId: "DHO-OFFICER-COMMAND",
+        reason: "CRITICAL_PHC_EMERGENCY_OVERRIDE"
+      });
+
+      if (result) {
+        // Add supervisory audit notice directly to chat
+        const overrideMsg = {
+          id: `OVERRIDE-${Date.now()}`,
+          role: 'assistant',
+          content: `⚡ PRIORITY DRONE PRE-EMPTION EXECUTED: Mission ${disp.id} rerouted to ${targetName} under red-air corridor ${result.air_corridor_code || 'CORRIDOR-ALPHA'}. ETA reduced to ${result.new_eta || '12 mins'}.`,
+          content_english: `Supervisory command override: High-speed corridor established directly to ${targetName}.`,
+          status: 'PRE-EMPTED',
+          intent: 'SUPERVISORY_FLEET_PREEMPTION',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          recommended_action: {
+            action_type: 'CREATE_DISPATCH_ORDER',
+            action_summary: `Pre-empted in-transit flight redirected to ${targetName}`,
+            eta: result.new_eta || '12 mins',
+            dispatch_id: result.dispatch_id || disp.id
+          }
+        };
+        setMessages(prev => [...prev, overrideMsg]);
+        loadHistoryAndSessions();
+      }
+    } catch (err) {
+      console.error("Failed to execute drone pre-emption:", err);
+    } finally {
+      setPreemptLoadingId(null);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -452,18 +524,25 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
     stopSpeaking();
 
     const textToSend = queryText || inputText;
-    if (!textToSend.trim()) return;
+    const currentImage = attachedImageBase64;
+    const currentImageName = attachedImageName;
+
+    if (!textToSend.trim() && !currentImage) return;
 
     setInputText('');
+    clearAttachedImage();
     setLoading(true);
 
     const userMsgId = `USER-${Date.now()}`;
     const userMsg = {
       id: userMsgId,
       role: 'user',
-      content: textToSend,
+      content: textToSend || (currentImageName ? `Uploaded health image: ${currentImageName}` : "Image inspection request"),
       language_code: selectedLang,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      has_image: Boolean(currentImage),
+      image_base64: currentImage,
+      image_name: currentImageName
     };
 
     setMessages(prev => [...prev, userMsg]);
@@ -478,7 +557,8 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
         sourceFacilityId: null,
         sourceFacilityName: null,
         history: messages,
-        apiKey: apiKey
+        apiKey: apiKey,
+        imageBase64: currentImage
       });
 
       if (result) {
@@ -526,6 +606,8 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
           execution_trace: result.execution_trace || [],
           agents_invoked: result.agents_invoked || [],
           tools_executed: result.tools_executed || [],
+          vision_analysis: result.vision_analysis,
+          clinical_protocol_card: result.clinical_protocol_card,
           orchestration_duration_ms: result.orchestration_duration_ms,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -573,6 +655,29 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
           <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
             <Layers size={13} className="text-emerald-400" /> 8 Indian Languages
           </span>
+
+          {/* Mode Switcher: Supervisory vs Field */}
+          <button
+            onClick={() => setCopilotMode(prev => prev === 'SUPERVISORY' ? 'FIELD' : 'SUPERVISORY')}
+            className={`text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 border transition-all ${
+              copilotMode === 'SUPERVISORY'
+                ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm shadow-purple-500/20'
+                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+            }`}
+            title="Toggle between District Supervisory Command Center and Field Worker Mode"
+          >
+            {copilotMode === 'SUPERVISORY' ? (
+              <>
+                <ShieldAlert size={12} className="text-purple-400" />
+                <span>Supervisory & Logistics Command</span>
+              </>
+            ) : (
+              <>
+                <Headphones size={12} className="text-emerald-400" />
+                <span>Field Worker Voice Mode</span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* Dynamic Conversational Facility Status Badge */}
@@ -701,6 +806,85 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
         </div>
       </div>
 
+      {/* Supervisory Priority Fleet Pre-emption Console */}
+      {copilotMode === 'SUPERVISORY' && (
+        <div className="glass-panel p-4 sm:p-5 border-2 border-purple-500/40 rounded-3xl space-y-3 bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/40 shadow-2xl">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300">
+                <ShieldAlert size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>District Priority Drone / EV Pre-emption Console</span>
+                  <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[9px] font-mono px-2 py-0.5 rounded-full uppercase">Supervisory Command Active</span>
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Pre-empt in-transit supply missions to reroute emergency shipments immediately to {selectedFacility?.name || "Connected PHC"}
+                </p>
+              </div>
+            </div>
+            <span className="text-xs text-purple-300 font-mono font-semibold bg-slate-950/80 px-2.5 py-1 rounded-lg border border-purple-500/30">
+              Active Corridors: {voiceDispatches.filter(d => d.status === 'DISPATCHED' || d.status === 'IN TRANSIT').length || 2}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+            {voiceDispatches.slice(0, 3).map((disp) => {
+              const isLoading = preemptLoadingId === disp.id;
+              const isAlreadyPreempted = disp.status === 'PRE-EMPTED & REROUTED';
+              return (
+                <div key={disp.id} className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 hover:border-purple-500/40 transition-all shadow-sm">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-mono text-purple-300 font-bold">{disp.id}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isAlreadyPreempted
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    }`}>
+                      {disp.status}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 truncate">
+                    <strong>Route:</strong> {disp.facility}
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <span>ETA: <strong className="text-emerald-400">{disp.eta || '28 mins'}</strong></span>
+                    <span>{disp.time_ago || 'Recent'}</span>
+                  </div>
+                  <button
+                    onClick={() => handleTriggerPreemption(disp)}
+                    disabled={isLoading || isAlreadyPreempted}
+                    className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm ${
+                      isAlreadyPreempted
+                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                        : 'bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white border border-purple-400/40 hover:scale-[1.02]'
+                    }`}
+                  >
+                    {isLoading ? (
+                      <>
+                        <RefreshCw size={11} className="animate-spin" />
+                        <span>Rerouting Flight Corridor...</span>
+                      </>
+                    ) : isAlreadyPreempted ? (
+                      <>
+                        <CheckCircle2 size={11} className="text-rose-400" />
+                        <span>Mission Pre-empted</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={11} className="text-amber-300" />
+                        <span>Pre-empt & Reroute to PHC</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Main 2-Column Split Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (8 Cols) — Conversational Voice Chat Thread */}
@@ -740,6 +924,48 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* One-Tap Clinical SOS Emergency Protocol Bar */}
+            <div className="space-y-1.5 p-3 rounded-2xl bg-gradient-to-r from-rose-950/40 via-slate-900 to-indigo-950/40 border border-rose-500/30">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-rose-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertOctagon size={13} className="text-rose-400" /> One-Tap Emergency Clinical Protocols:
+                </span>
+                <span className="text-[10px] text-rose-400 font-semibold">Priority Triage & Clinical Card</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  onClick={() => handleSendQuery("हमारे पास केवल 3 शीशियां एंटी-वेनम बची हैं, तत्काल 25 शीशियां भेजें (Snakebite Envenomation Emergency)")}
+                  className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-rose-500/30 hover:border-rose-400 text-left transition-all group"
+                >
+                  <div className="flex items-center justify-between text-xs font-bold text-rose-300 group-hover:text-rose-200">
+                    <span>🐍 Snakebite ASV SOS</span>
+                    <ArrowRight size={11} />
+                  </div>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">20WBCT + 10 ASV Vials Loading</span>
+                </button>
+                <button
+                  onClick={() => handleSendQuery("कोल्ड चेन आईएलआर रेफ्रिजरेटर का तापमान 8.9°C हो गया है, तत्काल तकनीशियन भेजें")}
+                  className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-amber-500/30 hover:border-amber-400 text-left transition-all group"
+                >
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-300 group-hover:text-amber-200">
+                    <span>❄️ Cold-Chain Breach</span>
+                    <ArrowRight size={11} />
+                  </div>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">Thermal Excursion SOS</span>
+                </button>
+                <button
+                  onClick={() => handleSendQuery("मातृ प्रसवोत्तर रक्तस्राव (PPH) हेतु 20 शीशियां ऑक्सीटोसिन तत्काल पुनःआवंटित करें")}
+                  className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-purple-500/30 hover:border-purple-400 text-left transition-all group"
+                >
+                  <div className="flex items-center justify-between text-xs font-bold text-purple-300 group-hover:text-purple-200">
+                    <span>🩸 Maternal PPH Oxytocin</span>
+                    <ArrowRight size={11} />
+                  </div>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">AMTSL 10 IU IM Protocol</span>
+                </button>
               </div>
             </div>
 
@@ -847,6 +1073,17 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                             : 'bg-slate-900 border border-slate-800/90 text-slate-100 shadow-xl rounded-tl-sm'
                         }`}
                       >
+                        {/* User Attached Image Preview */}
+                        {isUser && msg.image_base64 && (
+                          <div className="mb-2 rounded-xl overflow-hidden border border-cyan-300/40 max-w-[260px] bg-slate-950/70 p-1">
+                            <img src={msg.image_base64} alt="Health Image" className="w-full h-auto object-cover max-h-44 rounded-lg shadow-inner" />
+                            <div className="px-1.5 py-1 flex items-center justify-between text-[10px] text-cyan-200">
+                              <span className="flex items-center gap-1 font-semibold"><Camera size={11} /> Visual Inspection Attached</span>
+                              <span className="text-[9px] opacity-75 truncate max-w-[120px]">{msg.image_name || "asset.jpg"}</span>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Audio Controls for Copilot Messages */}
                         {!isUser && (
                           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
@@ -897,6 +1134,158 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                             <p className="text-[11px] text-slate-300 leading-relaxed">
                               {msg.content_english}
                             </p>
+                          </div>
+                        )}
+
+                        {/* Multimodal Gemini Vision Inspection Card */}
+                        {!isUser && msg.vision_analysis && (
+                          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950/80 border border-cyan-500/40 rounded-xl p-3.5 space-y-2.5 shadow-lg">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300">
+                                  <Camera size={16} />
+                                </div>
+                                <div>
+                                  <span className="text-xs font-black text-cyan-300 uppercase tracking-wide block">
+                                    {msg.vision_analysis.summary_title || "Multimodal Vision Inspection"}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {msg.vision_analysis.category} • {msg.vision_analysis.ai_engine_used || 'Gemini Vision Agent'}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                Visual Audit Authenticated
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-300 leading-relaxed">
+                              {msg.vision_analysis.findings_summary}
+                            </p>
+
+                            {/* Stock Register Detected Rows */}
+                            {msg.vision_analysis.category === 'STOCK_REGISTER' && msg.vision_analysis.stock_register_details?.detected_rows?.length > 0 && (
+                              <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-2.5 space-y-1.5">
+                                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
+                                  📋 Detected Inventory Logbook Rows:
+                                </span>
+                                <div className="space-y-1">
+                                  {msg.vision_analysis.stock_register_details.detected_rows.map((row, rIdx) => (
+                                    <div key={rIdx} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-slate-900 border border-slate-800/80">
+                                      <span className="font-semibold text-slate-200">{row.item_name}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[11px] text-slate-400">Stock: <strong className={row.stock_available === 0 ? "text-rose-400 font-bold" : "text-emerald-400"}>{row.stock_available}</strong> / Min: {row.minimum_required}</span>
+                                        {row.is_stockout && (
+                                          <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                            STOCKOUT
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* ILR Thermometer Excursion Warning */}
+                            {msg.vision_analysis.category === 'ILR_THERMOMETER' && msg.vision_analysis.temperature_details && (
+                              <div className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                                msg.vision_analysis.temperature_details.excursion_detected 
+                                  ? 'bg-rose-950/40 border-rose-500/40 text-rose-200' 
+                                  : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                              }`}>
+                                <div className="flex items-center gap-2">
+                                  <Thermometer size={16} className={msg.vision_analysis.temperature_details.excursion_detected ? "text-rose-400 animate-pulse" : "text-emerald-400"} />
+                                  <div>
+                                    <span className="text-xs font-bold block">
+                                      Observed ILR Temperature: {msg.vision_analysis.temperature_details.recorded_temperature_celsius}°C
+                                    </span>
+                                    <span className="text-[10px] opacity-80">Safe Cold-Chain Target: 2.0°C – 8.0°C</span>
+                                  </div>
+                                </div>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  msg.vision_analysis.temperature_details.excursion_detected
+                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                }`}>
+                                  {msg.vision_analysis.temperature_details.excursion_detected ? 'EXCURSION BREACH' : 'NORMAL RANGE'}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Medicine Authentication Details */}
+                            {msg.vision_analysis.category === 'MEDICINE_PACK' && msg.vision_analysis.medicine_details && (
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-950/80 p-2 rounded-xl border border-slate-800 text-[11px]">
+                                <div>
+                                  <span className="text-[9px] text-slate-500 uppercase block">Brand</span>
+                                  <span className="font-semibold text-slate-200 truncate block">{msg.vision_analysis.medicine_details.brand_name || 'Polyvalent ASV'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] text-slate-500 uppercase block">Batch No</span>
+                                  <span className="font-mono font-bold text-cyan-300 truncate block">{msg.vision_analysis.medicine_details.batch_number || 'ASV-2025-01'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] text-slate-500 uppercase block">Expiry Date</span>
+                                  <span className="font-semibold text-slate-200 block">{msg.vision_analysis.medicine_details.expiry_date || '03/2028'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] text-slate-500 uppercase block">Counterfeit Risk</span>
+                                  <span className="font-bold text-emerald-400 block">{msg.vision_analysis.medicine_details.counterfeit_risk_score ?? 2.8}% Genuine</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* National Emergency Clinical Protocol Card */}
+                        {!isUser && msg.clinical_protocol_card && (
+                          <div className="bg-gradient-to-r from-rose-950/50 via-slate-900 to-indigo-950/60 border-2 border-rose-500/50 rounded-2xl p-4 space-y-3 shadow-xl">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-300">
+                                  <AlertOctagon size={18} />
+                                </div>
+                                <div>
+                                  <span className="text-xs font-black text-rose-300 uppercase tracking-wide block">
+                                    {msg.clinical_protocol_card.title}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-medium">
+                                    {msg.clinical_protocol_card.authority_guideline}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="bg-rose-500/20 text-rose-300 border border-rose-500/50 text-[10px] font-bold px-2.5 py-1 rounded-lg animate-pulse">
+                                {msg.clinical_protocol_card.urgency} PROTOCOL
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-rose-500/20 space-y-1">
+                                <span className="text-[10px] font-bold text-rose-400 uppercase flex items-center gap-1">
+                                  <FileText size={11} /> Mandatory First-Line Test:
+                                </span>
+                                <div className="font-bold text-slate-100">{msg.clinical_protocol_card.first_line_test}</div>
+                                <p className="text-[11px] text-slate-300 leading-relaxed">{msg.clinical_protocol_card.test_procedure}</p>
+                              </div>
+
+                              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-rose-500/20 space-y-1">
+                                <span className="text-[10px] font-bold text-emerald-400 uppercase flex items-center gap-1">
+                                  <Box size={11} /> Recommended Loading Dosage:
+                                </span>
+                                <div className="font-bold text-emerald-300">{msg.clinical_protocol_card.recommended_dosage}</div>
+                                <p className="text-[11px] text-slate-300 leading-relaxed">{msg.clinical_protocol_card.reconstitution_instructions}</p>
+                              </div>
+                            </div>
+
+                            <div className="bg-slate-950/90 p-2.5 rounded-xl border border-slate-800 text-[11px] space-y-1 text-slate-300">
+                              <div className="flex items-center gap-1.5 text-amber-300 font-semibold">
+                                <ShieldAlert size={12} className="shrink-0" />
+                                <span>Emergency Standby: {msg.clinical_protocol_card.emergency_antidote_on_standby}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                ❄️ Cold Chain: {msg.clinical_protocol_card.cold_chain_warning}
+                              </div>
+                            </div>
                           </div>
                         )}
 
@@ -1149,6 +1538,42 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
               )}
 
               <div className="relative rounded-2xl border border-slate-700/80 bg-slate-900/95 focus-within:border-cyan-500/80 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all p-3 shadow-inner">
+                {/* Hidden File Input for Multimodal Vision */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                {/* Attached Image Preview Chip */}
+                {attachedImageBase64 && (
+                  <div className="mb-2.5 p-2 rounded-xl bg-slate-950/90 border border-cyan-500/40 flex items-center justify-between gap-2 animate-fadeIn">
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-cyan-400/40 shrink-0 bg-slate-900">
+                        <img src={attachedImageBase64} alt="Attached Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-xs font-bold text-cyan-300 flex items-center gap-1">
+                          <Camera size={12} /> Visual Inspection Attached
+                        </span>
+                        <span className="text-[10px] text-slate-400 block truncate max-w-[200px] sm:max-w-[300px]">
+                          {attachedImageName || "health_asset.jpg"}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearAttachedImage}
+                      className="p-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400 transition-colors"
+                      title="Remove attached image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
                 <textarea
                   rows={2}
                   value={inputText}
@@ -1159,7 +1584,13 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                       handleSendQuery();
                     }
                   }}
-                  placeholder={isRecording ? "Transcribing voice in real-time..." : `Type or click mic to speak in ${activeLangObj.name}... (Press Enter to send)`}
+                  placeholder={
+                    isRecording 
+                      ? "Transcribing voice in real-time..." 
+                      : attachedImageBase64
+                        ? `Image attached. Add notes or hit Send to trigger Gemini Vision agent...`
+                        : `Type or click mic to speak in ${activeLangObj.name}... (Press Enter to send)`
+                  }
                   className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none resize-none pr-2 leading-relaxed"
                 />
 
@@ -1169,6 +1600,21 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* Camera / Image Upload Button */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`py-1.5 px-2.5 rounded-xl transition-all flex items-center gap-1.5 text-xs font-bold ${
+                        attachedImageBase64
+                          ? 'bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/30'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                      }`}
+                      title="Upload or snap photo of medicine pack, stock register, or thermometer dial"
+                    >
+                      <Camera size={14} />
+                      <span className="hidden sm:inline">{attachedImageBase64 ? "Image Added" : "Add Image"}</span>
+                    </button>
+
                     {/* Microphone Button */}
                     <button
                       onClick={toggleRecording}
@@ -1186,7 +1632,7 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                     {/* Send Button */}
                     <button
                       onClick={() => handleSendQuery()}
-                      disabled={loading || !inputText.trim()}
+                      disabled={loading || (!inputText.trim() && !attachedImageBase64)}
                       className="bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold py-1.5 px-4 rounded-xl flex items-center gap-1.5 shadow-md shadow-cyan-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       <span>{loading ? "Processing..." : "Send Request"}</span>

@@ -4822,12 +4822,17 @@
     "language_code": "hi",
     "prompt": "\u0939\u092e\u093e\u0930\u0947 \u092a\u093e\u0938 \u0915\u0947\u0935\u0932 3 \u0936\u0940\u0936\u093f\u092f\u093e\u0902 \u090f\u0902\u091f\u0940-\u0935\u0947\u0928\u092e \u092c\u091a\u0940 \u0939\u0948\u0902, \u0924\u0924\u094d\u0915\u093e\u0932 25 \u0936\u0940\u0936\u093f\u092f\u093e\u0902 \u092d\u0947\u091c\u0947\u0902",
     "intent": "EMERGENCY_REQUISITION",
-    "status": "DISPATCHED",
-    "eta": "34 mins",
+    "status": "PRE-EMPTED & REROUTED",
+    "eta": "7 mins (4.3 km Aerial Corridor)",
     "timestamp": "2026-09-02T14:48:00Z",
     "time_ago": "4 mins ago",
-    "color": "emerald",
-    "action_summary": "Auto-dispatched 25 ASV vials from Pt. Deen Dayal Upadhyay DH with insulated cold-box GPS tag #TRK-8492"
+    "color": "rose",
+    "action_summary": "\u26a1 SUPERVISORY OVERRIDE: Drone pre-empted mid-air from Primary Health Centre Baragaon and rerouted to Primary Health Centre Baragaon via CORRIDOR-RED-F4FC at 65 km/h.",
+    "original_facility": "Primary Health Centre Baragaon",
+    "preempted_by": "DHO-SUPERVISOR-01",
+    "preemption_timestamp": "2026-09-18T08:21:19.057364Z",
+    "corridor_code": "CORRIDOR-RED-F4FC",
+    "distance_km": 4.3
   },
   {
     "id": "VOX-DISP-0840",
