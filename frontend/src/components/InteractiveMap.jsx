@@ -562,21 +562,18 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                   pathOptions={{
                     color: '#0284c7',
                     weight: 5,
-                    opacity: 0.95,
+                    opacity: 0.9,
+                    lineJoin: 'round',
                     lineCap: 'round',
-                    lineJoin: 'round'
                   }}
                 />
-                {/* Active navigation pulse dashes */}
                 <Polyline
                   positions={routeWaypoints}
                   pathOptions={{
                     color: '#38bdf8',
-                    weight: 3,
-                    dashArray: '6, 10',
-                    opacity: 0.9,
-                    lineCap: 'round',
-                    lineJoin: 'round'
+                    weight: 2,
+                    opacity: 0.7,
+                    dashArray: '8, 12',
                   }}
                 />
               </>
@@ -618,16 +615,20 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
         {/* Floating Comprehensive Logistics HUD Card */}
         {reallocationPlan && (
-          <div className="absolute bottom-6 left-6 z-[1000] glass-panel p-4 max-w-md w-[calc(100%-3rem)] sm:w-auto border border-cyan-500/50 bg-slate-950/95 shadow-2xl backdrop-blur-md rounded-2xl space-y-3 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-                <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
-                  <Truck size={15} /> Active Stock Rebalancing Corridor
+          <div 
+            className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-[1000] w-[calc(100%-1.5rem)] sm:w-[440px] max-w-lg max-h-[calc(100%-1.5rem)] sm:max-h-[calc(100%-2rem)] flex flex-col glass-panel border border-cyan-500/50 bg-slate-950/95 shadow-2xl backdrop-blur-md rounded-2xl overflow-hidden animate-fade-in"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
+            {/* Header (Pinned) */}
+            <div className="flex items-center justify-between border-b border-slate-800/80 px-3.5 py-2.5 shrink-0 bg-slate-950/90 backdrop-blur-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5 truncate">
+                  <Truck size={14} className="shrink-0" /> Active Stock Rebalancing Corridor
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                   isArrived || dispatchStatus === 'DELIVERED' 
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
@@ -637,7 +638,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                 </span>
                 <button 
                   onClick={() => setReallocationPlan(null)}
-                  className="text-slate-400 hover:text-white text-sm leading-none p-1"
+                  className="text-slate-400 hover:text-white text-base leading-none p-1 rounded hover:bg-slate-800/60 transition-colors"
                   title="Close Corridor"
                 >
                   &times;
@@ -645,150 +646,164 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               </div>
             </div>
 
-            {/* Corridor Nodes Flow */}
-            <div className="grid grid-cols-7 items-center gap-2 text-xs bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-              <div className="col-span-3">
-                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">Surplus Donor</span>
-                <p className="font-bold text-white truncate text-xs">{donorName}</p>
-                <span className="text-[10px] text-slate-400">Hub Dispatch Center</span>
-              </div>
-              <div className="col-span-1 flex flex-col items-center justify-center text-cyan-400">
-                <ArrowRight size={16} />
-              </div>
-              <div className="col-span-3 text-right">
-                <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider block">Emergency PHC</span>
-                <p className="font-bold text-white truncate text-xs">{targetName}</p>
-                <span className="text-[10px] text-slate-400">Deficit Recipient</span>
-              </div>
-            </div>
-
-            {/* Live Navigation Progress */}
-            {waypointsCount > 1 && (
-              <div className="space-y-1 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-400 flex items-center gap-1">
-                    <Navigation size={10} className="text-cyan-400" /> Route Progress
-                  </span>
-                  <span className="font-mono text-cyan-300 font-bold">
-                    {transitProgressPercent}% &bull; {isArrived ? "Delivered at Destination" : `Waypoint ${vehicleIndex + 1}/${waypointsCount}`}
-                  </span>
+            {/* Scrollable Body Content */}
+            <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-2.5 custom-scrollbar">
+              {/* Corridor Nodes Flow */}
+              <div className="grid grid-cols-7 items-center gap-2 text-xs bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                <div className="col-span-3 min-w-0">
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">Surplus Donor</span>
+                  <p className="font-bold text-white text-xs leading-snug break-words line-clamp-2" title={donorName}>{donorName}</p>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">Hub Dispatch Center</span>
                 </div>
-                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-300 rounded-full ${
-                      isArrived 
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400' 
-                        : 'bg-gradient-to-r from-cyan-500 to-blue-500'
-                    }`}
-                    style={{ width: `${transitProgressPercent}%` }}
-                  />
+                <div className="col-span-1 flex flex-col items-center justify-center text-cyan-400 shrink-0">
+                  <ArrowRight size={16} />
                 </div>
-              </div>
-            )}
-
-            {/* 3 Core Logistics Metrics: Vehicle Distance, Transit ETA, Cargo Specs */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-xl">
-                <div className="flex items-center gap-1 text-slate-400 text-[10px]">
-                  <Gauge size={11} className="text-cyan-400" /> Vehicle Distance
+                <div className="col-span-3 text-right min-w-0">
+                  <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider block">Emergency PHC</span>
+                  <p className="font-bold text-white text-xs leading-snug break-words line-clamp-2" title={targetName}>{targetName}</p>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">Deficit Recipient</span>
                 </div>
-                <p className="text-base font-extrabold text-white mt-0.5">
-                  {distanceKm} <span className="text-[11px] font-normal text-slate-400">km</span>
-                </p>
-                <span className="text-[9px] text-cyan-400 font-mono">Road Network</span>
               </div>
 
-              <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-xl">
-                <div className="flex items-center gap-1 text-slate-400 text-[10px]">
-                  <Clock size={11} className="text-emerald-400" /> {isArrived ? "Trip Completed" : "Transit ETA"}
-                </div>
-                <p className="text-base font-extrabold text-white mt-0.5">
-                  {isArrived ? 0 : remainingEtaMins} <span className="text-[11px] font-normal text-slate-400">mins</span>
-                </p>
-                <span className="text-[9px] text-emerald-400 font-mono">~{aiSpeedKmh} km/h (AI Fleet)</span>
-              </div>
-
-              <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-xl">
-                <div className="flex items-center gap-1 text-slate-400 text-[10px]">
-                  <Thermometer size={11} className="text-indigo-400" /> Safe Holdover
-                </div>
-                <p className="text-base font-extrabold text-white mt-0.5">
-                  {transitHours} <span className="text-[11px] font-normal text-slate-400">hrs</span>
-                </p>
-                <span className="text-[9px] text-indigo-400 font-mono">2&ndash;8°C Cold ILR</span>
-              </div>
-            </div>
-
-            {/* Carrier & Driver Info */}
-            <div className="flex items-center justify-between text-xs bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-300">
-                  <Truck size={14} />
-                </div>
-                <div>
-                  <p className="font-semibold text-white text-[11px]">{vehicleType}</p>
-                  <p className="text-[10px] text-slate-400">Driver: {driverName} &bull; <span className="text-cyan-300">{driverContact}</span></p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-400 block">Payload</span>
-                <span className="text-xs font-bold text-white">{requestedQty} Units</span>
-              </div>
-            </div>
-
-            {/* AI Agent Decision Reasoning */}
-            {aiReasoning && (
-              <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-xl p-2.5 text-[11px] text-cyan-200">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
-                    <Bot size={13} className="text-cyan-400" />
-                    <span>Google Cloud Vertex AI Supervisor</span>
-                  </div>
-                  {reallocationPlan?.holdover_safety_factor && (
-                    <span className="text-[9px] font-mono bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
-                      Safety Margin: {reallocationPlan.holdover_safety_factor}x
+              {/* Live Navigation Progress */}
+              {waypointsCount > 1 && (
+                <div className="space-y-1 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Navigation size={10} className="text-cyan-400 shrink-0" /> Route Progress
                     </span>
-                  )}
+                    <span className="font-mono text-cyan-300 font-bold">
+                      {transitProgressPercent}% &bull; {isArrived ? "Delivered at Destination" : `Waypoint ${vehicleIndex + 1}/${waypointsCount}`}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-300 rounded-full ${
+                        isArrived 
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-400' 
+                          : 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                      }`}
+                      style={{ width: `${transitProgressPercent}%` }}
+                    />
+                  </div>
                 </div>
-                <p className="italic leading-relaxed">{aiReasoning}</p>
+              )}
 
-                {/* Toggle MCP Agentic Trace */}
-                {reallocationPlan?.execution_trace && reallocationPlan.execution_trace.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-cyan-500/20">
-                    <button
-                      onClick={() => setShowTrace(!showTrace)}
-                      className="text-[10px] font-bold text-cyan-300 hover:text-white flex items-center gap-1 transition-colors"
-                    >
-                      <Sparkles size={11} className="text-cyan-400" />
-                      <span>{showTrace ? "Hide Agentic Trace & MCP Tools ▲" : "Inspect Agentic Trace & MCP Tools ▼"}</span>
-                    </button>
+              {/* 3 Core Logistics Metrics: Vehicle Distance, Transit ETA, Cargo Specs */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-xl">
+                  <div className="flex items-center gap-1 text-slate-400 text-[10px]">
+                    <Gauge size={11} className="text-cyan-400 shrink-0" /> Vehicle Distance
+                  </div>
+                  <p className="text-base font-extrabold text-white mt-0.5">
+                    {distanceKm} <span className="text-[11px] font-normal text-slate-400">km</span>
+                  </p>
+                  <span className="text-[9px] text-cyan-400 font-mono">Road Network</span>
+                </div>
 
-                    {showTrace && (
-                      <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                        {reallocationPlan.execution_trace.map((step) => (
-                          <div key={step.step_number} className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-lg text-[10px] space-y-0.5">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-white flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                                Step {step.step_number}: {step.agent_name}
-                              </span>
-                              <span className="text-[9px] font-mono text-cyan-400">{step.duration_ms}ms</span>
-                            </div>
-                            <div className="text-slate-400 text-[9px] flex items-center gap-1">
-                              <span className="text-cyan-300 font-mono">mcp:{step.mcp_tool_called}</span>
-                            </div>
-                            <p className="text-slate-300 text-[10px] leading-tight">{step.action_summary}</p>
-                          </div>
-                        ))}
-                      </div>
+                <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-xl">
+                  <div className="flex items-center gap-1 text-slate-400 text-[10px]">
+                    <Clock size={11} className="text-emerald-400 shrink-0" /> {isArrived ? "Trip Completed" : "Transit ETA"}
+                  </div>
+                  <p className="text-base font-extrabold text-white mt-0.5">
+                    {isArrived ? 0 : remainingEtaMins} <span className="text-[11px] font-normal text-slate-400">mins</span>
+                  </p>
+                  <span className="text-[9px] text-emerald-400 font-mono">~{aiSpeedKmh} km/h (AI Fleet)</span>
+                </div>
+
+                <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-xl">
+                  <div className="flex items-center gap-1 text-slate-400 text-[10px]">
+                    <Thermometer size={11} className="text-indigo-400 shrink-0" /> Safe Holdover
+                  </div>
+                  <p className="text-base font-extrabold text-white mt-0.5">
+                    {transitHours} <span className="text-[11px] font-normal text-slate-400">hrs</span>
+                  </p>
+                  <span className="text-[9px] text-indigo-400 font-mono">2&ndash;8°C Cold ILR</span>
+                </div>
+              </div>
+
+              {/* Carrier & Driver Info */}
+              <div className="flex items-center justify-between text-xs bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-300 shrink-0">
+                    <Truck size={14} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-white text-[11px] truncate">{vehicleType}</p>
+                    <p className="text-[10px] text-slate-400 truncate">Driver: {driverName} &bull; <span className="text-cyan-300">{driverContact}</span></p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 pl-2">
+                  <span className="text-[10px] text-slate-400 block">Payload</span>
+                  <span className="text-xs font-bold text-white">{requestedQty} Units</span>
+                </div>
+              </div>
+
+              {/* AI Agent Decision Reasoning */}
+              {aiReasoning && (
+                <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-xl p-2.5 text-[11px] text-cyan-200">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+                      <Bot size={13} className="text-cyan-400 shrink-0" />
+                      <span>Google Cloud Vertex AI Supervisor</span>
+                    </div>
+                    {reallocationPlan?.holdover_safety_factor && (
+                      <span className="text-[9px] font-mono bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded shrink-0">
+                        Safety Margin: {reallocationPlan.holdover_safety_factor}x
+                      </span>
                     )}
                   </div>
-                )}
-              </div>
-            )}
+                  <div className="italic leading-relaxed text-[11px]">
+                    {aiReasoning.split(/(\*\*.*?\*\*)/g).map((chunk, idx) => {
+                      if (chunk.startsWith('**') && chunk.endsWith('**')) {
+                        return (
+                          <strong key={idx} className="font-bold text-white not-italic block mb-1">
+                            {chunk.slice(2, -2)}
+                          </strong>
+                        );
+                      }
+                      return <span key={idx}>{chunk}</span>;
+                    })}
+                  </div>
 
-            {/* Footer Action Buttons */}
-            <div className="flex gap-2 pt-1">
+                  {/* Toggle MCP Agentic Trace */}
+                  {reallocationPlan?.execution_trace && reallocationPlan.execution_trace.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-cyan-500/20">
+                      <button
+                        onClick={() => setShowTrace(!showTrace)}
+                        className="text-[10px] font-bold text-cyan-300 hover:text-white flex items-center gap-1 transition-colors"
+                      >
+                        <Sparkles size={11} className="text-cyan-400" />
+                        <span>{showTrace ? "Hide Agentic Trace & MCP Tools ▲" : "Inspect Agentic Trace & MCP Tools ▼"}</span>
+                      </button>
+
+                      {showTrace && (
+                        <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                          {reallocationPlan.execution_trace.map((step) => (
+                            <div key={step.step_number} className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-lg text-[10px] space-y-0.5">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-white flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                                  Step {step.step_number}: {step.agent_name}
+                                </span>
+                                <span className="text-[9px] font-mono text-cyan-400">{step.duration_ms}ms</span>
+                              </div>
+                              <div className="text-slate-400 text-[9px] flex items-center gap-1">
+                                <span className="text-cyan-300 font-mono">mcp:{step.mcp_tool_called}</span>
+                              </div>
+                              <p className="text-slate-300 text-[10px] leading-tight">{step.action_summary}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer Action Buttons (Pinned) */}
+            <div className="flex gap-2 p-3 border-t border-slate-800/80 shrink-0 bg-slate-950/90 backdrop-blur-sm">
               {isArrived && (
                 <button
                   onClick={handleReplayTransit}

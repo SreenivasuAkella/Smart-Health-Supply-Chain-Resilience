@@ -442,28 +442,79 @@ def resolve_facility_by_name_or_id(facility_str: str) -> Optional[Dict[str, Any]
         if f.get("id", "").lower() == raw.lower():
             return f
 
-    # 2. Exact name match (case-insensitive)
+    # 2. Exact name or alias match (case-insensitive)
     for f in all_facs:
-        if f.get("name", "").lower() == raw.lower():
+        if f.get("name", "").lower() == raw.lower() or f.get("alias", "").lower() == raw.lower():
             return f
 
     # 3. Clean conversational prefixes if user stated "I am from Primary Health Centre Baragaon"
     import re
-    cleaned = re.sub(r'^(i am from|we are at|reporting from|connect to|select|switch to)\s+', '', raw, flags=re.IGNORECASE).strip()
+    cleaned = re.sub(r'^(i am from|we are at|reporting from|connect to|select|switch to|for|at|to)\s+', '', raw, flags=re.IGNORECASE).strip()
     for f in all_facs:
         fn = f.get("name", "").lower()
-        if fn == cleaned.lower() or f.get("id", "").lower() == cleaned.lower():
+        fa = f.get("alias", "").lower()
+        fid = f.get("id", "").lower()
+        if fn == cleaned.lower() or fa == cleaned.lower() or fid == cleaned.lower():
             return f
 
     # 4. Acronym-expanded name match (e.g. "PHC Baragaon" -> "Primary Health Centre Baragaon")
     norm_cleaned = cleaned.lower().replace("phc", "primary health centre").replace("chc", "community health centre").replace("dh", "district hospital")
     for f in all_facs:
         fn = f.get("name", "").lower()
-        if fn == norm_cleaned or norm_cleaned == fn:
+        fa = f.get("alias", "").lower()
+        if fn == norm_cleaned or norm_cleaned == fn or (fa and (fa == norm_cleaned or norm_cleaned == fa)):
             return f
-        # Exact substring only when substantial phrase with facility type
-        if len(norm_cleaned) >= 12 and (norm_cleaned in fn or fn in norm_cleaned):
+        # Substring match with substantial phrase
+        if len(norm_cleaned) >= 8 and (norm_cleaned in fn or fn in norm_cleaned or (fa and norm_cleaned in fa)):
             return f
+
+    # 5. Spelling / phonetic normalization (e.g. Visakhapatnam <-> Vishakhapatnam <-> Vizag)
+    def normalize_spelling(text: str) -> str:
+        s = text.lower()
+        s = s.replace("vishakhapatnam", "visakhapatnam").replace("vizag", "visakhapatnam")
+        s = s.replace("benares", "varanasi").replace("kashi", "varanasi")
+        s = s.replace("ahmedabad", "ahmadabad")
+        s = s.replace("gurugram", "gurgaon")
+        return s
+
+    norm_query = normalize_spelling(norm_cleaned)
+    for f in all_facs:
+        fn_norm = normalize_spelling(f.get("name", ""))
+        fa_norm = normalize_spelling(f.get("alias", ""))
+        fd_norm = normalize_spelling(f.get("district", ""))
+        if norm_query in fn_norm or fn_norm in norm_query or (fa_norm and norm_query in fa_norm):
+            return f
+
+    # 6. District + Facility Type matching (e.g. "Visakhapatnam District Hospital" or "Baragaon PHC")
+    is_dh = "district hospital" in norm_query or "dh" in raw.lower().split()
+    is_phc = "primary health centre" in norm_query or "phc" in raw.lower().split()
+    is_chc = "community health centre" in norm_query or "chc" in raw.lower().split()
+
+    target_type = "District Hospital" if is_dh else ("Primary Health Centre" if is_phc else ("Community Health Centre" if is_chc else None))
+
+    for f in all_facs:
+        fd_norm = normalize_spelling(f.get("district", ""))
+        fn_norm = normalize_spelling(f.get("name", ""))
+        if fd_norm and (fd_norm in norm_query or any(part in norm_query for part in fd_norm.split() if len(part) >= 4)):
+            if target_type and f.get("type") == target_type:
+                return f
+            if not target_type and (norm_query in fn_norm or fd_norm in norm_query):
+                return f
+
+    # 7. Token-based overlap
+    stopwords = {"hospital", "centre", "center", "health", "primary", "district", "block", "headquarters", "civil", "the", "for", "and", "in", "of", "from"}
+    query_tokens = [w for w in re.findall(r'\b[a-zA-Z]{3,}\b', norm_query) if w not in stopwords]
+    if query_tokens:
+        best_fac = None
+        best_score = 0
+        for f in all_facs:
+            searchable = f"{f.get('name', '')} {f.get('alias', '')} {f.get('district', '')} {f.get('id', '')}".lower()
+            score = sum(1 for token in query_tokens if token in searchable)
+            if score > best_score:
+                best_score = score
+                best_fac = f
+        if best_fac and best_score >= max(1, len(query_tokens) // 2):
+            return best_fac
 
     return None
 

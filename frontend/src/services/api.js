@@ -486,17 +486,31 @@ export async function runCrisisSimulation(crisisType = "MONSOON_FLOOD_ISOLATION"
 
 export const triggerCrisisScenario = runCrisisSimulation;
 
-export async function updateStockLedger(medicineId, facilityId, changeQty, reason = "ADJUSTMENT") {
+export async function updateStockLedger(medicineId, facilityId, changeQty = 10, reason = "ADJUSTMENT", extraData = {}) {
   try {
+    let payload = {};
+    if (typeof medicineId === 'object' && medicineId !== null) {
+      payload = medicineId;
+    } else {
+      let effectiveMedId = medicineId;
+      let effectiveFacId = facilityId;
+      if (typeof medicineId === 'string' && (medicineId.startsWith('PHC-') || medicineId.startsWith('DH-') || medicineId.startsWith('CHC-') || medicineId.startsWith('SUB-'))) {
+        effectiveFacId = medicineId;
+        effectiveMedId = facilityId;
+      }
+      payload = {
+        medicine_id: effectiveMedId,
+        facility_id: effectiveFacId || "PHC-BARAGAON-03",
+        quantity_change: changeQty,
+        reason: reason,
+        ...extraData
+      };
+    }
+
     const res = await fetch(`${API_BASE_URL}/inventory/update-stock`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        medicine_id: medicineId,
-        facility_id: facilityId,
-        quantity_change: changeQty,
-        reason: reason
-      })
+      body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error("Stock update failed");
     const json = await res.json();

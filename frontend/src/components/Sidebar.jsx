@@ -94,8 +94,12 @@ export default function Sidebar({
         {/* Top Header / Brand */}
         <div className={`p-4 border-b border-slate-800/80 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} min-h-[72px]`}>
           <div className={`flex items-center gap-3 overflow-hidden ${isCollapsed ? 'justify-center' : ''}`}>
-            <div className="w-10 h-10 min-w-[40px] rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
-              <Activity size={22} className="text-white animate-pulse" />
+            <div className="w-10 h-10 min-w-[40px] rounded-xl overflow-hidden bg-slate-950 border border-cyan-400/30 p-0.5 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+              <img
+                src="/team_logo.jpg"
+                alt="Sanjeevani AI Logo"
+                className="w-full h-full object-cover rounded-[10px]"
+              />
             </div>
             {!isCollapsed && (
               <div className="truncate animate-fadeIn">

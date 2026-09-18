@@ -230,6 +230,30 @@ code, pre, .font-mono {
   animation: pulseGlow 2.5s infinite ease-in-out;
 }
 
+@keyframes copilotPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-copilot-pop {
+  animation: copilotPopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes soundwave {
+  0%, 100% { height: 4px; }
+  50% { height: 14px; }
+}
+
+.animate-soundwave-1 { animation: soundwave 0.8s ease-in-out infinite 0.1s; }
+.animate-soundwave-2 { animation: soundwave 0.8s ease-in-out infinite 0.3s; }
+.animate-soundwave-3 { animation: soundwave 0.8s ease-in-out infinite 0.2s; }
+
 .shadow-glow-cyan {
   box-shadow: 0 0 15px rgba(6, 182, 212, 0.35);
 }

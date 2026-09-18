@@ -1304,7 +1304,8 @@
   {
     "id": "DH-VIS-022",
     "osm_id": 100043,
-    "name": "P E S Institute Of Medical Sciences and Research, Kuppam",
+    "name": "Visakhapatnam District Hospital (PES Institute)",
+    "alias": "Visakhapatnam District Headquarters Civil Hospital",
     "type": "District Hospital",
     "district": "Vishakhapatnam",
     "state": "Andhra Pradesh",

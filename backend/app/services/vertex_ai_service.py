@@ -26,7 +26,7 @@ VERTEX_AI_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", os.getenv("GCP_PROJECT_ID"
 VERTEX_AI_LOCATION = os.getenv("VERTEX_AI_LOCATION", "us-central1")
 VERTEX_AI_MODEL = os.getenv("VERTEX_AI_MODEL", "gemini-1.5-flash-002")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
 
 class VertexAIService:
@@ -87,10 +87,11 @@ class VertexAIService:
         client = self._get_genai_client()
         if client:
             candidate_models = [
+                "gemini-3.5-flash",
+                "gemini-3.5-flash-lite",
                 "gemini-3.8-flash",
                 self.model_name,
                 "gemini-3.6-flash",
-                "gemini-3.5-flash-lite",
                 "gemini-flash-latest"
             ]
             seen = set()

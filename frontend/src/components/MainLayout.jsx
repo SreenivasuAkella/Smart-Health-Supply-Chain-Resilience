@@ -185,8 +185,16 @@ export default function MainLayout({ initialTab }) {
     localStorage.setItem('SANJEEVANI_GEMINI_KEY', key);
   };
 
-  const handleTriggerReallocation = async (targetId = "PHC-BARAGAON-03", medId = "PUB-MED-001") => {
-    const plan = await confirmReallocationDispatch(targetId, medId, 25);
+  const handleTriggerReallocation = async (targetIdOrPlan = "PHC-BARAGAON-03", medId = "PUB-MED-001", quantity = 25) => {
+    // If a pre-computed dispatch package / plan object is passed directly from Copilot
+    if (typeof targetIdOrPlan === 'object' && targetIdOrPlan !== null) {
+      setActiveReallocation(targetIdOrPlan);
+      navigateToTab('map');
+      return;
+    }
+
+    const targetId = typeof targetIdOrPlan === 'string' && targetIdOrPlan.trim() ? targetIdOrPlan.trim() : "PHC-BARAGAON-03";
+    const plan = await confirmReallocationDispatch(targetId, medId, quantity);
     if (plan) {
       setActiveReallocation(plan);
       navigateToTab('map');
@@ -314,6 +322,7 @@ export default function MainLayout({ initialTab }) {
             <MultimodalVisionScanner
               apiKey={geminiApiKey}
               onStockUpdated={handleRefresh}
+              facilities={facilities}
             />
           )}
 
@@ -350,10 +359,22 @@ export default function MainLayout({ initialTab }) {
         </main>
       </div>
 
-      {/* Global Modals */}
+      {/* Global Modals & Persistent Floating Copilot */}
       <VoiceCopilotModal
         isOpen={isCopilotOpen}
         onClose={() => setIsCopilotOpen(false)}
+        onToggle={() => {
+          if (!isCopilotOpen) {
+            handleOpenCopilot();
+          } else {
+            setIsCopilotOpen(false);
+          }
+        }}
+        activeTab={activeTab}
+        onOpenVoiceTab={() => {
+          setIsCopilotOpen(false);
+          navigateToTab('voice');
+        }}
         apiKey={geminiApiKey}
         facilities={facilities}
         onTriggerReallocation={handleTriggerReallocation}

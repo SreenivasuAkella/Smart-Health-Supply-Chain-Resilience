@@ -21,7 +21,7 @@ from typing import Dict, Any, List, Optional
 
 from .mcp_server import mcp_tool_registry, MCPToolRegistry
 from .facility_data_service import get_active_public_facilities
-from .medicine_data_service import generate_public_modeled_inventory
+from .medicine_data_service import generate_public_modeled_inventory, get_active_essential_medicines
 from .vertex_ai_service import vertex_ai_service, VertexAIService
 
 
@@ -416,6 +416,7 @@ class AshaVoiceCopilotAgent:
         # 1. Resolve health facility from registry
         from .facility_data_service import resolve_facility_by_name_or_id
         active_facilities = get_active_public_facilities()
+        active_medicines = get_active_essential_medicines()
 
         target_fac = None
         if facility_id:
@@ -477,7 +478,18 @@ class AshaVoiceCopilotAgent:
                 resolved_fac_id = tf["id"]
                 resolved_fac_name = tf["name"]
             else:
-                resolved_fac_name = extracted_tgt_name
+                tf_llm, _ = self.llm.resolve_health_entities(
+                    query_facility=extracted_tgt_name,
+                    query_medicine=entities.get("medicine_name") or entities.get("medicine_id"),
+                    available_facilities=active_facilities,
+                    available_medicines=active_medicines
+                )
+                if tf_llm:
+                    target_fac = tf_llm
+                    resolved_fac_id = tf_llm["id"]
+                    resolved_fac_name = tf_llm["name"]
+                else:
+                    resolved_fac_name = extracted_tgt_name
 
         resolved_src_fac = None
         if extracted_src_id:
@@ -997,7 +1009,14 @@ class AshaVoiceCopilotAgent:
                 "suggested_source_facility": suggested_source,
                 "dispatch_id": disp_id if intent == "EMERGENCY_REQUISITION" else None,
                 "eta": f"{eta_mins} mins" if intent == "EMERGENCY_REQUISITION" else "Immediate",
-                "vehicle_type": dispatch_order_result.get("vehicle_details", {}).get("vehicle_type") if dispatch_order_result else None
+                "vehicle_type": dispatch_order_result.get("vehicle_details", {}).get("vehicle_type") if dispatch_order_result else None,
+                "target_facility_id": resolved_fac_id,
+                "target_facility_name": resolved_fac_name,
+                "source_facility_id": (resolved_src_fac["id"] if resolved_src_fac else (dispatch_order_result.get("donor_facility", {}).get("facility_id") or dispatch_order_result.get("selected_donor", {}).get("facility_id") if dispatch_order_result else None)),
+                "source_facility_name": (resolved_src_fac["name"] if resolved_src_fac else donor_name),
+                "medicine_id": entities.get("medicine_id") or (dispatch_order_result.get("medicine_details", {}).get("id") if dispatch_order_result else "PUB-MED-001"),
+                "quantity": qty_display,
+                "dispatch_package": dispatch_order_result
             },
             "dispatch_package": dispatch_order_result,
             "cold_chain_incident": cold_chain_incident,

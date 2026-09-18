@@ -5,13 +5,16 @@ import {
   FileCheck, ShieldCheck, Database, QrCode, ShieldAlert, ArrowRight, Pill, Loader2
 } from 'lucide-react';
 import { scanMedicineWithVision, updateStockLedger } from '../services/api';
+import OpenFDAClinicalCard from './OpenFDAClinicalCard';
 
-export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
+export default function MultimodalVisionScanner({ apiKey, onStockUpdated, facilities = [] }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [selectedFacilityId, setSelectedFacilityId] = useState('PHC-BARAGAON-03');
+  const [intakeQty, setIntakeQty] = useState(10);
 
   const samplePresets = [
     {
@@ -126,7 +129,26 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
     if (!scanResult) return;
     setSyncStatus('SYNCING');
     try {
-      await updateStockLedger("PHC-BARAGAON-03", "PUB-MED-001", 10, "Gemini Multimodal Intake Scan");
+      const brand = scanResult.brand_name || scanResult.name || "Inspected Asset";
+      const generic = scanResult.generic_name || brand;
+      const medId = scanResult.medicine_id || scanResult.medicine_details?.medicine_id || `PUB-MED-${brand.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}`;
+      const facId = selectedFacilityId || "PHC-BARAGAON-03";
+      const fda = scanResult.openfda_clinical_insights || scanResult.medicine_details?.openfda_clinical_insights;
+
+      await updateStockLedger(
+        medId,
+        facId,
+        intakeQty,
+        `Gemini Multimodal Intake Scan: ${brand} (Batch: ${scanResult.batch_number || 'N/A'})`,
+        {
+          medicine_name: brand,
+          brand_name: brand,
+          generic_name: generic,
+          batch_number: scanResult.batch_number,
+          expiry_date: scanResult.expiry_date,
+          openfda_insights: fda
+        }
+      );
       setSyncStatus('SUCCESS');
       if (onStockUpdated) onStockUpdated();
     } catch (err) {
@@ -312,24 +334,93 @@ export default function MultimodalVisionScanner({ apiKey, onStockUpdated }) {
                 </p>
               </div>
 
+              {/* OpenFDA Drug Labeling & Gemini Clinical Insights Card */}
+              {(scanResult.openfda_clinical_insights || scanResult.medicine_details?.openfda_clinical_insights) && (
+                <OpenFDAClinicalCard 
+                  insights={scanResult.openfda_clinical_insights || scanResult.medicine_details?.openfda_clinical_insights} 
+                />
+              )}
+
               {scanResult.e_aushadhi_ledger_sync_ready && (
-                <button
-                  onClick={handleSyncToLedger}
-                  disabled={syncStatus === 'SUCCESS'}
-                  className="w-full btn-primary justify-center text-xs py-2.5 font-semibold"
-                >
-                  {syncStatus === 'SUCCESS' ? (
-                    <>
-                      <CheckCircle2 size={16} className="text-emerald-300" />
-                      <span>Intake Verified & Logged (+10 Units)</span>
-                    </>
-                  ) : (
-                    <>
-                      <Database size={15} />
-                      <span>Sync Verified Intake to PHC Inventory Ledger</span>
-                    </>
-                  )}
-                </button>
+                <div className="bg-slate-900/90 p-3.5 rounded-2xl border border-cyan-500/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Database size={14} className="text-cyan-400" />
+                      Register & Sync to Facility Inventory
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      e-Aushadhi / Firebase
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-400 block mb-1">Target Healthcare Center</label>
+                      <select
+                        value={selectedFacilityId}
+                        onChange={(e) => setSelectedFacilityId(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                      >
+                        {facilities && facilities.length > 0 ? (
+                          facilities.slice(0, 40).map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name} ({f.district || f.state || 'PHC'})
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="PHC-BARAGAON-03">PHC Baragaon (Varanasi)</option>
+                            <option value="PHC-SEWAPURI-04">PHC Sewapuri (Varanasi)</option>
+                            <option value="DH-VARANASI-01">Pandit Deen Dayal District Hospital (Varanasi)</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-400 block mb-1">Verified Intake Quantity</label>
+                      <div className="flex items-center gap-1.5">
+                        {[10, 25, 50, 100].map((q) => (
+                          <button
+                            key={q}
+                            type="button"
+                            onClick={() => setIntakeQty(q)}
+                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                              intakeQty === q
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-sm'
+                                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                            }`}
+                          >
+                            +{q}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSyncToLedger}
+                    disabled={syncStatus === 'SUCCESS' || syncStatus === 'SYNCING'}
+                    className="w-full btn-primary justify-center text-xs py-2.5 font-semibold shadow-md"
+                  >
+                    {syncStatus === 'SYNCING' ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin text-cyan-300" />
+                        <span>Registering Drug & Updating Ledger...</span>
+                      </>
+                    ) : syncStatus === 'SUCCESS' ? (
+                      <>
+                        <CheckCircle2 size={16} className="text-emerald-300" />
+                        <span>Intake Verified & Logged (+{intakeQty} Units)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Database size={15} />
+                        <span>Sync Verified Intake to National Ledger (+{intakeQty} Units)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
             </div>
           ) : (
