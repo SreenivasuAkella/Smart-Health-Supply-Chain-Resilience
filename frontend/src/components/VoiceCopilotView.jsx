@@ -17,6 +17,84 @@ import {
   fetchFacilities 
 } from '../services/api';
 
+const AGENT_CONFIG = {
+  AshaVoiceCopilotAgent: {
+    label: 'Frontline Copilot',
+    icon: '🎙️',
+    badgeClass: 'bg-cyan-950/60 text-cyan-300 border-cyan-500/40'
+  },
+  FacilityDirectoryAgent: {
+    label: 'Facility Directory',
+    icon: '🏥',
+    badgeClass: 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+  },
+  ContextSynchronizationAgent: {
+    label: 'Context Sync',
+    icon: '🔄',
+    badgeClass: 'bg-indigo-950/60 text-indigo-300 border-indigo-500/40'
+  },
+  ClinicalClarificationAgent: {
+    label: 'Clinical Clarifier',
+    icon: '💬',
+    badgeClass: 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+  },
+  StockoutSentinelAgent: {
+    label: 'Stockout Sentinel',
+    icon: '🔍',
+    badgeClass: 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+  },
+  SupplyChainSupervisorAgent: {
+    label: 'Crisis Supervisor',
+    icon: '⚡',
+    badgeClass: 'bg-purple-950/60 text-purple-300 border-purple-500/40'
+  },
+  AllocationStrategistAgent: {
+    label: 'Allocation Strategist',
+    icon: '🧠',
+    badgeClass: 'bg-indigo-950/60 text-indigo-300 border-indigo-500/40'
+  },
+  FleetRoutingAgent: {
+    label: 'Fleet & Route Dispatch',
+    icon: '🚚',
+    badgeClass: 'bg-blue-950/60 text-blue-300 border-blue-500/40'
+  },
+  LedgerExecutionAgent: {
+    label: 'Ledger Audit & Commit',
+    icon: '📝',
+    badgeClass: 'bg-teal-950/60 text-teal-300 border-teal-500/40'
+  },
+  ColdChainGuardianAgent: {
+    label: 'Cold-Chain Guardian',
+    icon: '❄️',
+    badgeClass: 'bg-rose-950/60 text-rose-300 border-rose-500/40'
+  },
+  TechnicianDispatchAgent: {
+    label: 'Technician Dispatch',
+    icon: '🛠️',
+    badgeClass: 'bg-orange-950/60 text-orange-300 border-orange-500/40'
+  },
+  FacilityReadinessAgent: {
+    label: 'Facility Readiness',
+    icon: '🛏️',
+    badgeClass: 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+  },
+  EpidemicSurveillanceAgent: {
+    label: 'Epidemic Surveillance',
+    icon: '📈',
+    badgeClass: 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+  }
+};
+
+const getAgentInfo = (agentName) => {
+  if (!agentName) return { label: 'Autonomous Agent', icon: '🤖', badgeClass: 'bg-slate-900 text-slate-300 border-slate-700' };
+  const cleanName = agentName.endsWith('Agent') ? agentName : `${agentName}Agent`;
+  return AGENT_CONFIG[cleanName] || AGENT_CONFIG[agentName] || {
+    label: agentName.replace('Agent', ''),
+    icon: '🤖',
+    badgeClass: 'bg-slate-900 text-slate-300 border-slate-700'
+  };
+};
+
 export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   const [selectedLang, setSelectedLang] = useState('hi');
   const [inputText, setInputText] = useState('');
@@ -29,7 +107,13 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   const [expandedTraceStep, setExpandedTraceStep] = useState(null);
 
   // Conversational session management
-  const [sessionId, setSessionId] = useState(() => `SESS-${Date.now().toString(36).toUpperCase()}`);
+  const [sessionId, setSessionId] = useState(() => {
+    try {
+      return localStorage.getItem('asha_copilot_active_session_id') || `SESS-${Date.now().toString(36).toUpperCase()}`;
+    } catch {
+      return `SESS-${Date.now().toString(36).toUpperCase()}`;
+    }
+  });
   const [messages, setMessages] = useState([]);
   const [accumulatedContext, setAccumulatedContext] = useState({});
   const [recentSessions, setRecentSessions] = useState([]);
@@ -38,20 +122,33 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  const defaultFacilities = [
-    { id: 'DH-AND-001', name: 'Andaman Islands District Headquarters Civil Hospital', district: 'Andaman Islands', state: 'Andaman & Nicobar' },
-    { id: 'PHC-AND-001', name: 'Andaman Islands Block Primary Health Centre', district: 'Andaman Islands', state: 'Andaman & Nicobar' },
-    { id: 'DH-NIC-002', name: 'Nicobar Islands District Headquarters Civil Hospital', district: 'Nicobar Islands', state: 'Andaman & Nicobar' },
-    { id: 'PHC-NIC-002', name: 'Nicobar Islands Block Primary Health Centre', district: 'Nicobar Islands', state: 'Andaman & Nicobar' },
-    { id: 'PHC-BARAGAON-03', name: 'Primary Health Centre Baragaon', district: 'Varanasi', state: 'Uttar Pradesh' },
-    { id: 'PHC-VELLORE-02', name: 'Kaniyambadi PHC', district: 'Vellore', state: 'Tamil Nadu' },
-    { id: 'PHC-MEDCHAL-01', name: 'Ghatkesar PHC', district: 'Medchal', state: 'Telangana' },
-    { id: 'CHC-PUNE-04', name: 'Khed CHC', district: 'Pune', state: 'Maharashtra' },
-    { id: 'PHC-DAR-001', name: 'Darjeeling Community Health Centre', district: 'Darjeeling', state: 'West Bengal' }
-  ];
-  const [facilities, setFacilities] = useState(defaultFacilities);
-  const [selectedFacility, setSelectedFacility] = useState(defaultFacilities[0]);
-  const [selectedSourceFacility, setSelectedSourceFacility] = useState('AUTO_NEAREST_SURPLUS');
+  const [selectedFacility, setSelectedFacility] = useState(() => {
+    try {
+      const saved = localStorage.getItem('asha_copilot_active_facility');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [facilities, setFacilities] = useState([]);
+
+  useEffect(() => {
+    try {
+      if (sessionId) {
+        localStorage.setItem('asha_copilot_active_session_id', sessionId);
+      }
+    } catch (_) {}
+  }, [sessionId]);
+
+  useEffect(() => {
+    try {
+      if (selectedFacility) {
+        localStorage.setItem('asha_copilot_active_facility', JSON.stringify(selectedFacility));
+      } else {
+        localStorage.removeItem('asha_copilot_active_facility');
+      }
+    } catch (_) {}
+  }, [selectedFacility]);
 
   const supportedLanguages = [
     { code: 'hi', bcp47: 'hi-IN', name: 'हिन्दी (Hindi)', flag: '🇮🇳', region: 'North / Central India' },
@@ -136,6 +233,31 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
       console.warn("Failed to load sessions:", e);
     }
 
+    // Restore active session detail from disk/backend if present in localStorage
+    try {
+      const savedSid = localStorage.getItem('asha_copilot_active_session_id');
+      if (savedSid) {
+        const fullSess = await fetchCopilotSessionDetail(savedSid);
+        if (fullSess && fullSess.messages && fullSess.messages.length > 0) {
+          setMessages(fullSess.messages);
+          if (fullSess.context) setAccumulatedContext(fullSess.context);
+          if (fullSess.facility_name || fullSess.facility_id) {
+            setSelectedFacility({
+              id: fullSess.facility_id,
+              name: fullSess.facility_name,
+              district: fullSess.district || '',
+              state: fullSess.state || ''
+            });
+          }
+          if (fullSess.language_code) {
+            setSelectedLang(fullSess.language_code);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to restore saved session:", e);
+    }
+
     try {
       const liveFacs = await fetchFacilities(1, 1500);
       if (liveFacs && Array.isArray(liveFacs) && liveFacs.length > 0) {
@@ -161,7 +283,52 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
     setSessionId(newSid);
     setMessages([]);
     setAccumulatedContext({});
+    setSelectedFacility(null);
     setInputText('');
+    try {
+      localStorage.setItem('asha_copilot_active_session_id', newSid);
+      localStorage.removeItem('asha_copilot_active_facility');
+    } catch (_) {}
+  };
+
+  const handleRestoreSession = async (s) => {
+    stopSpeaking();
+    stopListening();
+    setSessionId(s.session_id);
+    try {
+      localStorage.setItem('asha_copilot_active_session_id', s.session_id);
+      const fullDetail = await fetchCopilotSessionDetail(s.session_id);
+      if (fullDetail && Array.isArray(fullDetail.messages) && fullDetail.messages.length > 0) {
+        setMessages(fullDetail.messages);
+        if (fullDetail.context) setAccumulatedContext(fullDetail.context);
+        if (fullDetail.facility_id || fullDetail.facility_name) {
+          setSelectedFacility({
+            id: fullDetail.facility_id,
+            name: fullDetail.facility_name,
+            district: fullDetail.district || '',
+            state: fullDetail.state || ''
+          });
+        } else {
+          setSelectedFacility(null);
+        }
+        if (fullDetail.language_code) {
+          setSelectedLang(fullDetail.language_code);
+        }
+      } else if (s.messages) {
+        setMessages(s.messages);
+        if (s.facility_id || s.facility_name) {
+          setSelectedFacility({
+            id: s.facility_id,
+            name: s.facility_name,
+            district: '',
+            state: ''
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to restore full session detail:", err);
+      if (s.messages) setMessages(s.messages);
+    }
   };
 
   const getLangBcp47 = (code) => {
@@ -302,18 +469,14 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
     setMessages(prev => [...prev, userMsg]);
 
     try {
-      const srcFacObj = selectedSourceFacility !== 'AUTO_NEAREST_SURPLUS'
-        ? facilities.find(f => f.id === selectedSourceFacility)
-        : null;
-
       const result = await chatWithAshaCopilot({
         prompt: textToSend,
         sessionId: sessionId,
         language: selectedLang,
-        facilityId: selectedFacility.id,
-        facilityName: selectedFacility.name,
-        sourceFacilityId: srcFacObj ? srcFacObj.id : null,
-        sourceFacilityName: srcFacObj ? srcFacObj.name : null,
+        facilityId: selectedFacility?.id || null,
+        facilityName: selectedFacility?.name || null,
+        sourceFacilityId: null,
+        sourceFacilityName: null,
         history: messages,
         apiKey: apiKey
       });
@@ -321,17 +484,30 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
       if (result) {
         if (result.session_id) {
           setSessionId(result.session_id);
+          try {
+            localStorage.setItem('asha_copilot_active_session_id', result.session_id);
+          } catch (_) {}
         }
         if (result.accumulated_context) {
           setAccumulatedContext(result.accumulated_context);
+        }
+
+        // Dynamically bind facility from conversation resolution
+        if (result.facility_id || result.facility_name) {
+          setSelectedFacility({
+            id: result.facility_id,
+            name: result.facility_name,
+            district: result.extracted_entities?.district_name || '',
+            state: result.extracted_entities?.state_name || ''
+          });
         }
 
         const asstMsgId = `ASST-${Date.now()}`;
         const asstMsg = {
           id: asstMsgId,
           role: 'assistant',
-          content: result.response_text_localized || result.response_text_english,
-          content_english: result.response_text_english,
+          content: result.response_text_localized || result.response_text_english || result.clarification_prompt_localized || result.clarification_prompt_english,
+          content_english: result.response_text_english || result.clarification_prompt_english,
           status: result.status,
           intent: result.intent,
           confidence: result.confidence,
@@ -341,8 +517,8 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
           recommended_action: result.recommended_action,
           dispatch_package: result.dispatch_package,
           cold_chain_incident: result.cold_chain_incident,
-          target_facility_name: result.target_facility_name || selectedFacility.name,
-          target_facility_id: result.target_facility_id || selectedFacility.id,
+          target_facility_name: result.target_facility_name || selectedFacility?.name,
+          target_facility_id: result.target_facility_id || selectedFacility?.id,
           source_facility_name: result.source_facility_name || (result.recommended_action?.suggested_source_facility),
           source_facility_id: result.source_facility_id,
           nearest_surplus_donor: result.nearest_surplus_donor,
@@ -362,7 +538,7 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
 
         // If autonomous corridor dispatched, notify parent component
         if (result?.recommended_action?.action_type === 'CREATE_DISPATCH_ORDER' && onTriggerReallocation) {
-          onTriggerReallocation(selectedFacility.id);
+          onTriggerReallocation(selectedFacility?.id || result.target_facility_id);
         }
 
         // Reload history & sessions
@@ -399,49 +575,39 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
           </span>
         </div>
 
-        {/* Facility Selector & Controls */}
+        {/* Dynamic Conversational Facility Status Badge */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {/* Target / Recipient Facility Dropdown */}
-          <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-700/80 rounded-xl px-2.5 py-1.5 shadow-sm">
-            <Building2 size={13} className="text-cyan-400 shrink-0" />
-            <span className="text-[10px] uppercase font-bold text-slate-400 hidden sm:inline">Target:</span>
-            <select
-              value={selectedFacility.id}
-              onChange={(e) => {
-                const found = facilities.find(f => f.id === e.target.value);
-                if (found) setSelectedFacility(found);
-              }}
-              className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer pr-1 max-w-[170px] truncate"
-              title="Recipient health facility needing supplies"
-            >
-              {facilities.slice(0, 80).map(f => (
-                <option key={f.id} value={f.id} className="bg-slate-900 text-white">
-                  {f.name} ({f.district})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Supplying / Source Facility Dropdown */}
-          <div className="flex items-center gap-1.5 bg-slate-950/80 border border-emerald-700/60 rounded-xl px-2.5 py-1.5 shadow-sm">
-            <Truck size={13} className="text-emerald-400 shrink-0" />
-            <span className="text-[10px] uppercase font-bold text-slate-400 hidden sm:inline">Source:</span>
-            <select
-              value={selectedSourceFacility}
-              onChange={(e) => setSelectedSourceFacility(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-emerald-300 focus:outline-none cursor-pointer pr-1 max-w-[190px] truncate"
-              title="Supplying facility or let AI find nearest surplus"
-            >
-              <option value="AUTO_NEAREST_SURPLUS" className="bg-slate-900 text-emerald-400 font-bold">
-                ⚡ Auto Nearest Surplus (AI)
-              </option>
-              {facilities.filter(f => f.id !== selectedFacility.id).slice(0, 60).map(f => (
-                <option key={`src-${f.id}`} value={f.id} className="bg-slate-900 text-slate-200">
-                  {f.name} ({f.district})
-                </option>
-              ))}
-            </select>
-          </div>
+          {selectedFacility?.name ? (
+            <div className="flex items-center gap-2 bg-slate-950/90 border border-cyan-500/40 rounded-xl px-3 py-1.5 shadow-sm text-xs">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+              </span>
+              <Building2 size={13} className="text-cyan-400 shrink-0" />
+              <div className="flex flex-col">
+                <span className="text-[9px] uppercase tracking-wider font-bold text-cyan-400">Connected Facility</span>
+                <span className="font-semibold text-white truncate max-w-[210px]" title={selectedFacility.name}>
+                  {selectedFacility.name}
+                  {selectedFacility.district ? ` (${selectedFacility.district})` : ''}
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedFacility(null)}
+                className="text-[10px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded px-1.5 py-0.5 ml-1 transition-colors"
+                title="Disconnect facility to mention a new one in conversation"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-slate-950/80 border border-amber-500/30 rounded-xl px-3 py-1.5 shadow-sm text-xs text-amber-300">
+              <Building2 size={13} className="text-amber-400 shrink-0" />
+              <div className="flex flex-col">
+                <span className="text-[9px] uppercase tracking-wider font-bold text-amber-400">Conversational Facility</span>
+                <span className="text-[11px] text-slate-300">Mention facility name or state/district in chat</span>
+              </div>
+            </div>
+          )}
 
           {/* Audio Toggle */}
           <button
@@ -748,20 +914,24 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                               <span>{isClarification ? 'Clarification Needed • Tap to specify missing details:' : 'Suggested Frontline Actions • Tap an option to execute:'}</span>
                             </div>
                             <div className="flex flex-wrap gap-2 pt-1">
-                              {msg.quick_reply_options.map((opt, oIdx) => (
-                                <button
-                                  key={oIdx}
-                                  onClick={() => handleSendQuery(opt.action_payload || opt.value || opt.label)}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 hover:scale-105 ${
-                                    isClarification
-                                      ? 'bg-slate-900 hover:bg-slate-800 text-amber-200 hover:text-white border border-amber-500/40 hover:border-amber-400'
-                                      : 'bg-slate-900 hover:bg-slate-800 text-cyan-200 hover:text-white border border-cyan-500/40 hover:border-cyan-400'
-                                  }`}
-                                >
-                                  <span>{opt.label}</span>
-                                  <ArrowRight size={11} className={isClarification ? 'text-amber-400' : 'text-cyan-400'} />
-                                </button>
-                              ))}
+                              {msg.quick_reply_options.map((opt, oIdx) => {
+                                const optLabel = typeof opt === 'object' && opt !== null ? (opt.label || opt.name || opt.value) : String(opt);
+                                const optPayload = typeof opt === 'object' && opt !== null ? (opt.action_payload || opt.value || opt.label) : String(opt);
+                                return (
+                                  <button
+                                    key={oIdx}
+                                    onClick={() => handleSendQuery(optPayload)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 hover:scale-105 ${
+                                      isClarification
+                                        ? 'bg-slate-900 hover:bg-slate-800 text-amber-200 hover:text-white border border-amber-500/40 hover:border-amber-400'
+                                        : 'bg-slate-900 hover:bg-slate-800 text-cyan-200 hover:text-white border border-cyan-500/40 hover:border-cyan-400'
+                                    }`}
+                                  >
+                                    <span>{optLabel}</span>
+                                    <ArrowRight size={11} className={isClarification ? 'text-amber-400' : 'text-cyan-400'} />
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -871,38 +1041,67 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                           </div>
                         )}
 
-                        {/* Dynamic Multi-Agent Execution Trace Pipeline */}
-                        {!isUser && msg.execution_trace && msg.execution_trace.length > 0 && (
-                          <div className="pt-2 border-t border-slate-800/80 space-y-2 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                                <Layers size={11} className="text-indigo-400" /> Dynamic Multi-Agent Trace ({msg.execution_trace.length} Steps):
-                              </span>
-                              <span className="text-[10px] font-mono text-cyan-400 font-semibold">
-                                {msg.orchestration_duration_ms || 280}ms
-                              </span>
-                            </div>
+                        {/* Coordinated Agent Swarm Flow (Picked dynamically per conversation) */}
+                        {!isUser && ((msg.agents_invoked && msg.agents_invoked.length > 0) || (msg.execution_trace && msg.execution_trace.length > 0)) && (() => {
+                          const flowAgents = (msg.agents_invoked && msg.agents_invoked.length > 0)
+                            ? msg.agents_invoked
+                            : Array.from(new Set((msg.execution_trace || []).map(s => s.agent_name)));
+                          return (
+                            <div className="pt-2.5 border-t border-slate-800/80 space-y-2 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Sparkles size={11} className="text-cyan-400" /> Coordinated Agent Flow ({flowAgents.length} Agents):
+                                </span>
+                                <span className="text-[10px] font-mono text-cyan-400 font-semibold">
+                                  {msg.orchestration_duration_ms || 280}ms
+                                </span>
+                              </div>
 
-                            {/* Step pills */}
-                            <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-[10px] text-slate-300 scrollbar-thin">
-                              {msg.execution_trace.map((step, sIdx) => (
-                                <React.Fragment key={sIdx}>
-                                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 shrink-0">
-                                    <span className="w-3.5 h-3.5 rounded-full bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center text-[8px]">
-                                      {step.step_number}
-                                    </span>
-                                    <span className="font-semibold text-slate-200">
-                                      {step.agent_name.replace('Agent', '')}
-                                    </span>
+                              {/* Specialized Agent Swarm Badges */}
+                              <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-[11px] text-slate-300 scrollbar-thin">
+                                {flowAgents.map((agName, aIdx) => {
+                                  const agInfo = getAgentInfo(agName);
+                                  return (
+                                    <React.Fragment key={aIdx}>
+                                      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border shadow-sm shrink-0 font-medium ${agInfo.badgeClass}`}>
+                                        <span className="text-xs">{agInfo.icon}</span>
+                                        <span className="font-semibold tracking-tight">{agInfo.label}</span>
+                                      </div>
+                                      {aIdx < flowAgents.length - 1 && (
+                                        <ChevronRight size={11} className="text-slate-600 shrink-0" />
+                                      )}
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Expandable Autonomous Actions (Avoids raw technical steps being dumped directly) */}
+                              {msg.execution_trace && msg.execution_trace.length > 0 && (
+                                <details className="group mt-1 text-[11px] text-slate-400">
+                                  <summary className="cursor-pointer text-[10px] font-medium text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-1 select-none">
+                                    <Layers size={11} className="text-slate-500 group-hover:text-cyan-400" />
+                                    <span>Inspect Agent Reasoning Decisions ({msg.execution_trace.length})</span>
+                                    <ChevronDown size={11} className="transition-transform group-open:rotate-180 ml-0.5" />
+                                  </summary>
+                                  <div className="mt-2 space-y-1.5 pl-2.5 border-l-2 border-cyan-500/20 bg-slate-950/50 p-2 rounded-r-lg">
+                                    {msg.execution_trace.map((step, sIdx) => {
+                                      const agInfo = getAgentInfo(step.agent_name);
+                                      return (
+                                        <div key={sIdx} className="text-[11px] leading-relaxed">
+                                          <div className="flex items-baseline gap-1.5 font-semibold text-slate-200">
+                                            <span>{agInfo.icon}</span>
+                                            <span className="text-cyan-300 shrink-0">{agInfo.label}:</span>
+                                            <span className="font-normal text-slate-300">{step.action_summary}</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                  {sIdx < msg.execution_trace.length - 1 && (
-                                    <ChevronRight size={10} className="text-slate-600 shrink-0" />
-                                  )}
-                                </React.Fragment>
-                              ))}
+                                </details>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
                   );
@@ -1031,11 +1230,7 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                 recentSessions.slice(0, 5).map((s) => (
                   <div
                     key={s.session_id}
-                    onClick={() => {
-                      setSessionId(s.session_id);
-                      if (s.messages) setMessages(s.messages);
-                      if (s.context) setAccumulatedContext(s.context);
-                    }}
+                    onClick={() => handleRestoreSession(s)}
                     className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
                       s.session_id === sessionId
                         ? 'bg-cyan-500/15 border-cyan-500/40 text-white'
@@ -1049,7 +1244,7 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-400 truncate mt-1">
-                      {s.facility_name || "PHC Baragaon"}
+                      {s.facility_name || "Facility in consultation"}
                     </div>
                   </div>
                 ))

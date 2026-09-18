@@ -248,17 +248,60 @@ def process_copilot_query(
 # =====================================================================
 # Conversational GenAI Multi-Turn Controller & Session Management
 # =====================================================================
+SESSIONS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "voice_copilot_sessions.json")
 _SESSIONS_CACHE: Dict[str, Dict[str, Any]] = {}
+
+def load_copilot_sessions_from_db() -> Dict[str, Dict[str, Any]]:
+    """Loads voice copilot sessions from persistent disk storage."""
+    if os.path.exists(SESSIONS_FILE):
+        try:
+            with open(SESSIONS_FILE, "r") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+                elif isinstance(data, list):
+                    return {s.get("session_id", f"SESS-{i}"): s for i, s in enumerate(data) if isinstance(s, dict)}
+        except Exception as e:
+            print(f"[Load copilot sessions error]: {e}")
+    return {}
+
+
+def save_copilot_sessions_to_db(sessions: Dict[str, Dict[str, Any]]):
+    """Persists sessions to local disk file."""
+    try:
+        os.makedirs(os.path.dirname(SESSIONS_FILE), exist_ok=True)
+        # Keep recent 100 sessions on disk
+        trimmed = dict(sorted(sessions.items(), key=lambda kv: kv[1].get("updated_at", ""), reverse=True)[:100])
+        with open(SESSIONS_FILE, "w") as f:
+            json.dump(trimmed, f, indent=2)
+    except Exception as e:
+        print(f"[Save copilot sessions error]: {e}")
+
 
 def get_or_create_session(
     session_id: Optional[str] = None,
-    facility_id: str = "PHC-BARAGAON-03",
-    facility_name: str = "Primary Health Centre Baragaon",
+    facility_id: Optional[str] = None,
+    facility_name: Optional[str] = None,
     language_code: str = "hi"
 ) -> Dict[str, Any]:
     global _SESSIONS_CACHE
+    if not _SESSIONS_CACHE:
+        _SESSIONS_CACHE.update(load_copilot_sessions_from_db())
+
     sid = session_id or f"SESS-{uuid.uuid4().hex[:8].upper()}"
     if sid in _SESSIONS_CACHE:
+        sess = _SESSIONS_CACHE[sid]
+        # Update facility if newly provided
+        if facility_id:
+            sess["facility_id"] = facility_id
+        if facility_name:
+            sess["facility_name"] = facility_name
+        return sess
+
+    # Try loading from disk again
+    disk_sessions = load_copilot_sessions_from_db()
+    if sid in disk_sessions:
+        _SESSIONS_CACHE[sid] = disk_sessions[sid]
         return _SESSIONS_CACHE[sid]
 
     # Try loading from Firebase
@@ -281,6 +324,7 @@ def get_or_create_session(
         "updated_at": datetime.utcnow().isoformat() + "Z"
     }
     _SESSIONS_CACHE[sid] = new_sess
+    save_copilot_sessions_to_db(_SESSIONS_CACHE)
     return new_sess
 
 
@@ -288,8 +332,8 @@ def process_copilot_chat(
     prompt: str,
     session_id: Optional[str] = None,
     language_code: str = "hi",
-    facility_id: str = "PHC-BARAGAON-03",
-    facility_name: str = "Primary Health Centre Baragaon",
+    facility_id: Optional[str] = None,
+    facility_name: Optional[str] = None,
     source_facility_id: Optional[str] = None,
     source_facility_name: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
@@ -298,11 +342,15 @@ def process_copilot_chat(
     """
     Conversational GenAI Multi-Turn Chat Controller.
     Preserves dialogue context, detects missing info, invokes dynamic agents & tools,
-    and stores dialogue events in both Firebase RTDB and Google BigQuery.
+    and stores dialogue events in persistent disk storage, Firebase RTDB, and Google BigQuery.
     """
     start_time = time.time()
     session = get_or_create_session(session_id, facility_id, facility_name, language_code)
     sid = session["session_id"]
+
+    # Use facility from session if not explicitly passed
+    active_facility_id = facility_id or session.get("facility_id")
+    active_facility_name = facility_name or session.get("facility_name")
 
     # Append user message
     user_msg_id = f"MSG-{uuid.uuid4().hex[:6].upper()}"
@@ -326,8 +374,8 @@ def process_copilot_chat(
         agent_result = run_asha_voice_pipeline(
             user_prompt=prompt,
             language_code=language_code,
-            facility_id=facility_id,
-            facility_name=facility_name,
+            facility_id=active_facility_id,
+            facility_name=active_facility_name,
             source_facility_id=source_facility_id,
             source_facility_name=source_facility_name,
             custom_api_key=custom_api_key,
@@ -344,14 +392,24 @@ def process_copilot_chat(
         agent_result = process_copilot_query(
             user_prompt=prompt,
             language_code=language_code,
-            facility_id=facility_id,
-            facility_name=facility_name,
+            facility_id=active_facility_id or "PHC-BARAGAON-03",
+            facility_name=active_facility_name or "Primary Health Centre Baragaon",
             custom_api_key=custom_api_key
         )
         agent_result["session_id"] = sid
         agent_result["status"] = "IMPLEMENTED"
         agent_result["is_clarification_needed"] = False
         agent_result["missing_slots"] = []
+
+    # Update session facility if dynamically resolved during conversational turn
+    resolved_fac_id = agent_result.get("facility_id") or agent_result.get("target_facility_id")
+    resolved_fac_name = agent_result.get("facility_name") or agent_result.get("target_facility_name")
+    if resolved_fac_id:
+        session["facility_id"] = resolved_fac_id
+        active_facility_id = resolved_fac_id
+    if resolved_fac_name:
+        session["facility_name"] = resolved_fac_name
+        active_facility_name = resolved_fac_name
 
     # Update session context
     session["context"] = agent_result.get("accumulated_context", session["context"])
@@ -370,6 +428,8 @@ def process_copilot_chat(
         "missing_slots": agent_result.get("missing_slots", []),
         "quick_reply_options": agent_result.get("quick_reply_options", []),
         "recommended_action": agent_result.get("recommended_action"),
+        "target_facility_id": active_facility_id,
+        "target_facility_name": active_facility_name,
         "execution_trace": agent_result.get("execution_trace", []),
         "agents_invoked": agent_result.get("agents_invoked", []),
         "tools_executed": agent_result.get("tools_executed", []),
@@ -377,15 +437,22 @@ def process_copilot_chat(
     }
     session["messages"].append(asst_msg)
 
-    # 1. Dual Persistence: Firebase Realtime Database
+    # 1. Dual Persistence: Local disk storage
+    try:
+        _SESSIONS_CACHE[sid] = session
+        save_copilot_sessions_to_db(_SESSIONS_CACHE)
+    except Exception as d_err:
+        print(f"[Disk Session Save Notice]: {d_err}")
+
+    # 2. Dual Persistence: Firebase Realtime Database
     try:
         firebase_sync_service.save_copilot_session(sid, session)
         if agent_result.get("recommended_action", {}).get("action_type") == "CREATE_DISPATCH_ORDER":
-            record_voice_interaction(prompt, language_code, facility_id, facility_name, agent_result)
+            record_voice_interaction(prompt, language_code, active_facility_id or "PHC-BARAGAON-03", active_facility_name or "Primary Health Centre Baragaon", agent_result)
     except Exception as fb_err:
         print(f"[Firebase Session Save Notice]: {fb_err}")
 
-    # 2. Dual Persistence: Google BigQuery
+    # 3. Dual Persistence: Google BigQuery
     try:
         bq_payload = {
             "session_id": sid,
@@ -393,8 +460,8 @@ def process_copilot_chat(
             "timestamp": asst_msg["timestamp"],
             "role": "assistant",
             "language_code": language_code,
-            "facility_id": facility_id,
-            "facility_name": facility_name,
+            "facility_id": active_facility_id or "PHC-BARAGAON-03",
+            "facility_name": active_facility_name or "Primary Health Centre Baragaon",
             "user_prompt": prompt,
             "agent_response_localized": asst_msg["content"],
             "agent_response_english": asst_msg.get("content_english", ""),
@@ -413,10 +480,12 @@ def process_copilot_chat(
         print(f"[BigQuery Conversation Ingest Notice]: {bq_err}")
 
     agent_result["messages"] = session["messages"]
+    agent_result["response_text"] = agent_result.get("response_text_localized") or agent_result.get("response_text_english") or ""
+    agent_result["clarification_prompt"] = agent_result.get("clarification_prompt_localized") or agent_result.get("clarification_prompt_english") or ""
     agent_result["session"] = {
         "session_id": sid,
-        "facility_id": facility_id,
-        "facility_name": facility_name,
+        "facility_id": active_facility_id,
+        "facility_name": active_facility_name,
         "message_count": len(session["messages"]),
         "updated_at": session["updated_at"]
     }
@@ -425,8 +494,17 @@ def process_copilot_chat(
 
 def get_copilot_session_by_id(session_id: str) -> Optional[Dict[str, Any]]:
     global _SESSIONS_CACHE
+    if not _SESSIONS_CACHE:
+        _SESSIONS_CACHE.update(load_copilot_sessions_from_db())
+
     if session_id in _SESSIONS_CACHE:
         return _SESSIONS_CACHE[session_id]
+
+    disk_sessions = load_copilot_sessions_from_db()
+    if session_id in disk_sessions:
+        _SESSIONS_CACHE[session_id] = disk_sessions[session_id]
+        return disk_sessions[session_id]
+
     try:
         sess = firebase_sync_service.get_copilot_session(session_id)
         if sess:
@@ -439,12 +517,21 @@ def get_copilot_session_by_id(session_id: str) -> Optional[Dict[str, Any]]:
 
 def list_recent_copilot_sessions(limit: int = 20) -> List[Dict[str, Any]]:
     global _SESSIONS_CACHE
+    if not _SESSIONS_CACHE:
+        _SESSIONS_CACHE.update(load_copilot_sessions_from_db())
+
+    # Try merging with remote
     try:
         remote = firebase_sync_service.list_copilot_sessions(limit=limit)
         if remote:
-            return remote
+            for r in remote:
+                sid = r.get("session_id")
+                if sid and sid not in _SESSIONS_CACHE:
+                    _SESSIONS_CACHE[sid] = r
     except Exception:
         pass
+
     sessions = list(_SESSIONS_CACHE.values())
     sessions.sort(key=lambda s: s.get("updated_at", ""), reverse=True)
     return sessions[:limit]
+

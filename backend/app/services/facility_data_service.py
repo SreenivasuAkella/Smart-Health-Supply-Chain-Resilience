@@ -313,27 +313,160 @@ def fetch_facilities_from_openstreetmap() -> List[Dict[str, Any]]:
     return all_facilities
 
 
+LOCAL_FACILITIES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "facilities.json")
+
 _ACTIVE_FACILITIES_CACHE: Optional[List[Dict[str, Any]]] = None
 
 def get_active_public_facilities(limit: Optional[int] = None) -> List[Dict[str, Any]]:
     """
-    Returns complete active Pan-India facilities dynamically loaded from RAM cache or disk registry.
+    Returns complete active Pan-India facilities dynamically loaded from RAM cache or disk registry,
+    merging both national registry and local clinical PHCs.
     """
     global _ACTIVE_FACILITIES_CACHE
     if _ACTIVE_FACILITIES_CACHE is not None and len(_ACTIVE_FACILITIES_CACHE) > 0:
         return _ACTIVE_FACILITIES_CACHE[:limit] if limit else _ACTIVE_FACILITIES_CACHE
 
     facs = []
+    seen_ids = set()
+
+    # 1. Load local clinical frontline facilities if available
+    if os.path.exists(LOCAL_FACILITIES_FILE):
+        try:
+            with open(LOCAL_FACILITIES_FILE, "r") as f:
+                local_list = json.load(f)
+                if isinstance(local_list, list):
+                    for item in local_list:
+                        fid = item.get("id")
+                        if fid and fid not in seen_ids:
+                            seen_ids.add(fid)
+                            facs.append(item)
+        except Exception:
+            pass
+
+    # 2. Load National Public Facilities registry
     if os.path.exists(PUBLIC_FACILITIES_FILE):
         try:
             with open(PUBLIC_FACILITIES_FILE, "r") as f:
                 cached = json.load(f)
-                if cached:
-                    facs = cached
+                if isinstance(cached, list):
+                    for item in cached:
+                        fid = item.get("id")
+                        if fid and fid not in seen_ids:
+                            seen_ids.add(fid)
+                            facs.append(item)
         except Exception:
             pass
+
     if not facs:
         facs = fetch_facilities_from_openstreetmap()
-    
+
     _ACTIVE_FACILITIES_CACHE = facs
     return facs[:limit] if limit else facs
+
+
+def search_facilities_by_state_and_district(
+    state: Optional[str] = None,
+    district: Optional[str] = None,
+    query: Optional[str] = None,
+    limit: int = 6
+) -> List[Dict[str, Any]]:
+    """
+    Searches and recommends public healthcare facilities matching state, district, or keyword query.
+    Used for proactive conversational facility recommendations.
+    """
+    all_facs = get_active_public_facilities()
+    results = []
+
+    st_clean = state.lower().strip() if state else ""
+    dt_clean = district.lower().strip() if district else ""
+    q_clean = query.lower().strip() if query else ""
+
+    for f in all_facs:
+        f_name = f.get("name", "").lower()
+        f_dist = f.get("district", "").lower()
+        f_state = f.get("state", "").lower()
+        f_id = f.get("id", "").lower()
+
+        match = False
+
+        if dt_clean and st_clean:
+            # Match district and state
+            if (dt_clean in f_dist or f_dist in dt_clean) and (st_clean in f_state or f_state in st_clean):
+                match = True
+        elif dt_clean:
+            # Match district
+            if dt_clean in f_dist or f_dist in dt_clean or dt_clean in f_name:
+                match = True
+        elif st_clean:
+            # Match state
+            if st_clean in f_state or f_state in st_clean:
+                match = True
+
+        if q_clean:
+            if q_clean in f_name or q_clean in f_dist or q_clean in f_state or q_clean in f_id:
+                match = True
+
+        if match:
+            results.append(f)
+            if len(results) >= limit:
+                break
+
+    # If no strict match and query provided, attempt token matching
+    if not results and (dt_clean or q_clean or st_clean):
+        search_terms = [t for t in (dt_clean + " " + q_clean + " " + st_clean).split() if len(t) > 2]
+        for f in all_facs:
+            f_text = f"{f.get('name', '')} {f.get('district', '')} {f.get('state', '')}".lower()
+            if any(term in f_text for term in search_terms):
+                results.append(f)
+                if len(results) >= limit:
+                    break
+
+    return results
+
+
+def resolve_facility_by_name_or_id(facility_str: str) -> Optional[Dict[str, Any]]:
+    """
+    Fuzzy resolves a user-spoken or typed facility name/ID to an exact facility record.
+    """
+    if not facility_str:
+        return None
+    raw = facility_str.lower().strip()
+    all_facs = get_active_public_facilities()
+
+    # Exact ID match
+    for f in all_facs:
+        if f.get("id", "").lower() == raw:
+            return f
+
+    # Exact name match
+    for f in all_facs:
+        if f.get("name", "").lower() == raw:
+            return f
+
+    import re
+    # Word boundary match (e.g. \bbaragaon\b, \bkhed\b, \bvellore\b)
+    cleaned_tokens = [t for t in re.findall(r'\w+', raw) if len(t) > 2 and t not in ["hospital", "centre", "center", "health", "primary", "block", "district", "the", "from", "at", "for"]]
+    if cleaned_tokens:
+        for f in all_facs:
+            fn = f.get("name", "").lower()
+            if all(re.search(rf'\b{re.escape(t)}\b', fn) for t in cleaned_tokens):
+                return f
+
+    # Substring / Acronym match
+    norm_raw = raw.replace("phc", "primary health centre").replace("chc", "community health centre").replace("dh", "district hospital")
+    for f in all_facs:
+        fn = f.get("name", "").lower()
+        if raw in fn or norm_raw in fn:
+            return f
+
+    # District + token match
+    if cleaned_tokens:
+        for f in all_facs:
+            fn = f.get("name", "").lower()
+            fd = f.get("district", "").lower()
+            if any(re.search(rf'\b{re.escape(t)}\b', fn) or re.search(rf'\b{re.escape(t)}\b', fd) for t in cleaned_tokens):
+                return f
+
+    return None
+
+

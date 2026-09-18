@@ -1,5 +1,192 @@
 [
   {
+    "id": "VOX-DISP-0875",
+    "dispatch_id": "DISP-ASI01-20260918050428",
+    "worker": "Frontline Health Officer (ASHA)",
+    "facility": "Pt. Deen Dayal Upadhyay District Hospital",
+    "facility_id": "DH-VARANASI-01",
+    "language": "English",
+    "language_code": "en",
+    "prompt": "We urgently need 20 vials of Anti-Snake Venom",
+    "intent": "EMERGENCY_REQUISITION",
+    "status": "DISPATCHED",
+    "eta": "38 mins",
+    "timestamp": "2026-09-18T05:04:34.622774Z",
+    "time_ago": "Just now",
+    "color": "emerald",
+    "action_summary": "Auto-dispatched 20 units of Snake Antivenin (SNAKE ANTIVENIN) via Insulated Cryo Van with GPS tracking DISP-ASI01-20260918050428.",
+    "response_localized": "Emergency requisition logged for 20 vials of Snake Antivenin (PUB-MED-001) for Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01). Locating the nearest regional surplus donor facility and initiating priority transport dispatch immediately.",
+    "response_english": "Emergency requisition logged for 20 vials of Snake Antivenin (PUB-MED-001) for Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01). Locating the nearest regional surplus donor facility and initiating priority transport dispatch immediately.",
+    "execution_trace": [
+      {
+        "step_number": 1,
+        "agent_name": "AshaVoiceCopilotAgent",
+        "mcp_tool_called": "asha_parse_multilingual_voice",
+        "action_summary": "Acoustic & text signal ingested in 'en'. Preliminary Intent: EMERGENCY_REQUISITION.",
+        "duration_ms": 65.83,
+        "timestamp": "2026-09-18T05:03:28.822595Z",
+        "details": {
+          "spoken_prompt": "We urgently need 20 vials of Anti-Snake Venom",
+          "language_code": "en",
+          "facility_id": "DH-VARANASI-01",
+          "intent": "EMERGENCY_REQUISITION",
+          "confidence": 0.98,
+          "urgency_level": "CRITICAL",
+          "extracted_entities": {
+            "medicine_id": "PUB-MED-001",
+            "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+            "requested_quantity": 20,
+            "current_stock": null,
+            "temperature_reading": null,
+            "urgency_level": "CRITICAL"
+          },
+          "english_intent_summary": "EMERGENCY_REQUISITION: Frontline inquiry (Urgency: CRITICAL) for facility DH-VARANASI-01"
+        }
+      },
+      {
+        "step_number": 2,
+        "agent_name": "AshaVoiceCopilotAgent",
+        "mcp_tool_called": "vertex_ai_clinical_nlu",
+        "action_summary": "Clinical GenAI Triage (Google Gemini (gemini-3.6-flash)): Intent EMERGENCY_REQUISITION (Confidence: 98%, Urgency: CRITICAL). Immediate requisition of 20 vials of Anti-Snake Venom for Pt. Deen Dayal Upadhyay District Hospital due to critical envenomation risk and life-threatening emergency.",
+        "duration_ms": 13088.13,
+        "timestamp": "2026-09-18T05:03:41.910775Z",
+        "details": {
+          "intent": "EMERGENCY_REQUISITION",
+          "confidence": 0.98,
+          "urgency": "CRITICAL",
+          "entities": {
+            "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+            "medicine_id": "PUB-MED-001",
+            "requested_quantity": 20,
+            "current_stock": null,
+            "temperature_reading": null,
+            "state_name": "Uttar Pradesh",
+            "district_name": "Varanasi",
+            "target_facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+            "target_facility_id": "DH-VARANASI-01",
+            "source_facility_name": null,
+            "source_facility_id": null
+          },
+          "is_clarification_needed": false,
+          "missing_slots": [],
+          "clinical_rationale": "Immediate requisition of 20 vials of Anti-Snake Venom for Pt. Deen Dayal Upadhyay District Hospital due to critical envenomation risk and life-threatening emergency.",
+          "engine": "Google Gemini (gemini-3.6-flash)",
+          "model": "gemini-3.6-flash"
+        }
+      },
+      {
+        "step_number": 3,
+        "agent_name": "AshaVoiceCopilotAgent",
+        "mcp_tool_called": "vertex_ai_clinical_nlu",
+        "action_summary": "Evaluated clinical triage urgency via Google GenAI. Priority: CRITICAL. Frontline triage validated for Snake Antivenin (SNAKE ANTIVENIN) under protocol EMERGENCY_REQUISITION. Urgency level: CRITICAL.",
+        "duration_ms": 0.0,
+        "timestamp": "2026-09-18T05:03:41.910805Z",
+        "details": {
+          "engine": "Google Cloud Vertex AI (Gemini 1.5 Flash)",
+          "clinical_rationale": "Frontline triage validated for Snake Antivenin (SNAKE ANTIVENIN) under protocol EMERGENCY_REQUISITION. Urgency level: CRITICAL.",
+          "urgency": "CRITICAL"
+        }
+      },
+      {
+        "step_number": 4,
+        "agent_name": "AshaVoiceCopilotAgent",
+        "mcp_tool_called": "asha_audit_node_inventory",
+        "action_summary": "Audited local stock at Pt. Deen Dayal Upadhyay District Hospital: 210 units of 'Snake Antivenin (SNAKE ANTIVENIN)' left (60.0 days supply). Status: ADEQUATE.",
+        "duration_ms": 12.49,
+        "timestamp": "2026-09-18T05:03:41.923303Z",
+        "details": {
+          "facility_id": "DH-VARANASI-01",
+          "facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+          "medicine_id": "PUB-MED-001",
+          "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+          "current_stock": 210,
+          "daily_consumption_burn": 3.5,
+          "days_of_supply_remaining": 60.0,
+          "is_deficit": false,
+          "buffer_status": "ADEQUATE",
+          "recommended_reorder_qty": 0,
+          "storage_requirement": "2\u00b0C to 8\u00b0C"
+        }
+      },
+      {
+        "step_number": 5,
+        "agent_name": "StockoutSentinelAgent",
+        "mcp_tool_called": "scan_stockout_risks",
+        "action_summary": "Audited 1200 facilities via MCP. Threat Level: CRITICAL. Nicobar Islands Block Primary Health Centre faces an imminent stockout of Snake Antivenin with a severely constrained buffer of only 3.1 days of supply. Due to extreme geographic isolation and delayed supply chain transit times, any envenomation case poses an immediate, catastrophic mortality risk requiring emergency maritime or aerial reallocation.",
+        "duration_ms": 11287.28,
+        "timestamp": "2026-09-18T05:04:34.502047Z",
+        "details": {
+          "threat_level": "CRITICAL",
+          "sentinel_ai_briefing": "Nicobar Islands Block Primary Health Centre faces an imminent stockout of Snake Antivenin with a severely constrained buffer of only 3.1 days of supply. Due to extreme geographic isolation and delayed supply chain transit times, any envenomation case poses an immediate, catastrophic mortality risk requiring emergency maritime or aerial reallocation.",
+          "total_deficits": 602,
+          "engine": "Google Gemini (gemini-3.5-flash-lite)"
+        }
+      },
+      {
+        "step_number": 6,
+        "agent_name": "AllocationStrategistAgent",
+        "mcp_tool_called": "find_surplus_donor_nodes",
+        "action_summary": "Identified and triaged surplus donor node 'Institute of Medical Sciences, BHU, Varanasi'. Institute of Medical Sciences, BHU provides the shortest transit time (25 minutes) and distance (15.03 km) to minimize cold chain exposure for Snake Antivenin, while maintaining an abundant surplus stock of 720 units that easily absorbs the 20-unit draw without threatening local buffer safety.",
+        "duration_ms": 16256.98,
+        "timestamp": "2026-09-18T05:04:34.502049Z",
+        "details": {
+          "donor_id": "DH-VAR-562",
+          "triage_rationale": "Institute of Medical Sciences, BHU provides the shortest transit time (25 minutes) and distance (15.03 km) to minimize cold chain exposure for Snake Antivenin, while maintaining an abundant surplus stock of 720 units that easily absorbs the 20-unit draw without threatening local buffer safety.",
+          "engine": "Google Gemini (gemini-3.5-flash-lite)"
+        }
+      },
+      {
+        "step_number": 7,
+        "agent_name": "FleetRoutingAgent",
+        "mcp_tool_called": "allocate_medical_vehicle & calculate_road_route_and_distance",
+        "action_summary": "Assigned Insulated Cryo Van (MH-12-MED-4310); road distance 21.32 km, ETA 38 mins. Insulated Cryo Van MH-12-MED-4310 is fully equipped for this urban corridor, providing active refrigeration to strictly maintain the required 2\u00b0C to 8\u00b0C payload envelope for Snake Antivenin. With an estimated transit time of 38 minutes well within the 48.0-hour cold-box holdover margin, thermal risk along the BHU-to-District Hospital route is negligible.",
+        "duration_ms": 10812.44,
+        "timestamp": "2026-09-18T05:04:34.502050Z",
+        "details": {
+          "vehicle_id": "VEH-CRYO-02",
+          "distance_km": 21.32,
+          "fleet_ai_assessment": "Insulated Cryo Van MH-12-MED-4310 is fully equipped for this urban corridor, providing active refrigeration to strictly maintain the required 2\u00b0C to 8\u00b0C payload envelope for Snake Antivenin. With an estimated transit time of 38 minutes well within the 48.0-hour cold-box holdover margin, thermal risk along the BHU-to-District Hospital route is negligible.",
+          "thermal_safety_rating": "OPTIMAL",
+          "engine": "Google Gemini (gemini-3.6-flash)"
+        }
+      },
+      {
+        "step_number": 8,
+        "agent_name": "SupplyChainSupervisorAgent",
+        "mcp_tool_called": "vertex_ai_clinical_decision_engine",
+        "action_summary": "Authorized emergency dispatch via Google Gemini (gemini-3.6-flash). Cold-chain safety factor: 48.0x.",
+        "duration_ms": 8184.33,
+        "timestamp": "2026-09-18T05:04:34.502051Z",
+        "details": {
+          "engine": "Google Gemini (gemini-3.6-flash)",
+          "model": "gemini-3.6-flash",
+          "quality_signoff": true
+        }
+      },
+      {
+        "step_number": 9,
+        "agent_name": "LedgerExecutionAgent",
+        "mcp_tool_called": "verify_ledger_preconditions & commit_reallocation_ledger",
+        "action_summary": "Preconditions verified (PASSED). Audited GxP compliance via Google Gemini (gemini-3.6-flash) and committed dispatch DISP-ASI01-20260918050428 to master ledger. Dispatch DISP-ASI01-20260918050428 for 20 units of Snake Antivenin from IMS-BHU Varanasi to Pt. Deen Dayal Upadhyay District Hospital has successfully passed all automated thermal telemetry and audit checks under MoHFW NCCMIS guidelines. Full compliance with WHO-PQS E004 and GxP Good Distribution Practice standards is certified, authorizing immediate execution and ledger commit.",
+        "duration_ms": 6034.05,
+        "timestamp": "2026-09-18T05:04:34.502053Z",
+        "details": {
+          "dispatch_id": "DISP-ASI01-20260918050428",
+          "preconditions_passed": true,
+          "compliance_attestation": "Dispatch DISP-ASI01-20260918050428 for 20 units of Snake Antivenin from IMS-BHU Varanasi to Pt. Deen Dayal Upadhyay District Hospital has successfully passed all automated thermal telemetry and audit checks under MoHFW NCCMIS guidelines. Full compliance with WHO-PQS E004 and GxP Good Distribution Practice standards is certified, authorizing immediate execution and ledger commit.",
+          "standards_adherence": [
+            "NCCMIS_MoHFW",
+            "WHO_PQS_E004",
+            "GxP_Good_Distribution"
+          ],
+          "engine": "Google Gemini (gemini-3.6-flash)"
+        }
+      }
+    ],
+    "total_agents_involved": 6,
+    "agentic_flow": true
+  },
+  {
     "id": "VOX-DISP-0874",
     "dispatch_id": "DISP-ND001-20260917074946",
     "worker": "Frontline Health Officer (ASHA)",

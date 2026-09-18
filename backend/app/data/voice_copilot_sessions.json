@@ -1,0 +1,1085 @@
+{
+  "SESS-2810ADA7": {
+    "session_id": "SESS-2810ADA7",
+    "facility_id": "DH-VARANASI-01",
+    "facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+    "language_code": "en",
+    "messages": [
+      {
+        "id": "MSG-377CA3",
+        "role": "user",
+        "content": "Namaste, we have a medical shortage emergency",
+        "language_code": "en",
+        "timestamp": "2026-09-18T05:02:53.438134Z"
+      },
+      {
+        "id": "MSG-5720DF",
+        "role": "assistant",
+        "content": "Namaste. I note an emergency shortage at Nalanda Medical College & Hospital (NMCH). Which essential medicine or item do you need, and what is the required quantity?",
+        "content_english": "Namaste. I note an emergency shortage at Nalanda Medical College & Hospital (NMCH). Which essential medicine or item do you need, and what is the required quantity?",
+        "status": "AWAITING_CLARIFICATION",
+        "intent": "EMERGENCY_REQUISITION",
+        "is_clarification_needed": true,
+        "missing_slots": [
+          "medicine_name",
+          "requested_quantity"
+        ],
+        "quick_reply_options": [
+          {
+            "label": "\ud83d\udc0d Snake Antivenin",
+            "action_payload": "We need Snake Antivenin urgently",
+            "value": "We need Snake Antivenin urgently"
+          },
+          {
+            "label": "\ud83d\udc89 Insulin Lispro",
+            "action_payload": "We need Insulin Lispro urgently",
+            "value": "We need Insulin Lispro urgently"
+          },
+          {
+            "label": "\ud83d\udca7 Sodium Chloride IV",
+            "action_payload": "We need Sodium Chloride IV fluids urgently",
+            "value": "We need Sodium Chloride IV fluids urgently"
+          },
+          {
+            "label": "\ud83d\udc8a Paracetamol",
+            "action_payload": "We need Paracetamol tablets urgently",
+            "value": "We need Paracetamol tablets urgently"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "AWAIT_CLARIFICATION",
+          "action_summary": "Awaiting frontline clarification for missing medicine_name before triggering multi-agent corridor.",
+          "suggested_source_facility": "Regional Central Depot"
+        },
+        "target_facility_id": "DH-PATNA-05",
+        "target_facility_name": "Nalanda Medical College & Hospital (NMCH)",
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_parse_multilingual_voice",
+            "action_summary": "Acoustic & text signal ingested in 'en'. Preliminary Intent: EMERGENCY_REQUISITION.",
+            "duration_ms": 0.25,
+            "timestamp": "2026-09-18T05:02:53.700686Z",
+            "details": {
+              "spoken_prompt": "Namaste, we have a medical shortage emergency",
+              "language_code": "en",
+              "facility_id": "DH-PATNA-05",
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.98,
+              "urgency_level": "CRITICAL",
+              "extracted_entities": {
+                "medicine_id": null,
+                "medicine_name": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "urgency_level": "CRITICAL"
+              },
+              "english_intent_summary": "EMERGENCY_REQUISITION: Frontline inquiry (Urgency: CRITICAL) for facility DH-PATNA-05"
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "vertex_ai_clinical_nlu",
+            "action_summary": "Clinical GenAI Triage (Google Gemini (gemini-3.5-flash-lite)): Intent EMERGENCY_REQUISITION (Confidence: 98%, Urgency: CRITICAL). User has reported a medical shortage emergency at Nalanda Medical College & Hospital (NMCH); specific medicine and quantity are required to trigger an autonomous emergency requisition.",
+            "duration_ms": 8120.57,
+            "timestamp": "2026-09-18T05:03:01.821274Z",
+            "details": {
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.98,
+              "urgency": "CRITICAL",
+              "entities": {
+                "medicine_name": null,
+                "medicine_id": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "state_name": null,
+                "district_name": null,
+                "target_facility_name": "Nalanda Medical College & Hospital (NMCH)",
+                "target_facility_id": "DH-PATNA-05",
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": true,
+              "missing_slots": [
+                "medicine_name",
+                "requested_quantity"
+              ],
+              "clinical_rationale": "User has reported a medical shortage emergency at Nalanda Medical College & Hospital (NMCH); specific medicine and quantity are required to trigger an autonomous emergency requisition.",
+              "engine": "Google Gemini (gemini-3.5-flash-lite)",
+              "model": "gemini-3.6-flash"
+            }
+          },
+          {
+            "step_number": 3,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "detect_missing_conversational_parameters",
+            "action_summary": "Identified missing critical slot: 'medicine_name'. Formulated empathetic clarifying question in en. Awaiting frontline response.",
+            "duration_ms": 10.0,
+            "timestamp": "2026-09-18T05:03:01.821283Z",
+            "details": {
+              "missing_slots": [
+                "medicine_name",
+                "requested_quantity"
+              ],
+              "target_slot": "medicine_name",
+              "clarification_prompt_english": "Namaste. I note an emergency shortage at Nalanda Medical College & Hospital (NMCH). Which essential medicine or item do you need, and what is the required quantity?",
+              "quick_options_count": 4
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent"
+        ],
+        "tools_executed": [
+          "asha_parse_multilingual_voice",
+          "detect_missing_conversational_parameters"
+        ],
+        "timestamp": "2026-09-18T05:03:01.821391Z"
+      },
+      {
+        "id": "MSG-B3EF14",
+        "role": "user",
+        "content": "We are located in Varanasi district, Uttar Pradesh",
+        "language_code": "en",
+        "timestamp": "2026-09-18T05:03:01.887574Z"
+      },
+      {
+        "id": "MSG-595059",
+        "role": "assistant",
+        "content": "I found matching healthcare facilities in Varanasi district, Uttar Pradesh. Please select your facility so we can log your emergency requisition accurately:",
+        "content_english": "I found matching healthcare facilities in Varanasi district, Uttar Pradesh. Please select your facility so we can log your emergency requisition accurately:",
+        "status": "AWAITING_CLARIFICATION",
+        "intent": "FACILITY_SELECTION",
+        "is_clarification_needed": true,
+        "missing_slots": [
+          "facility_name"
+        ],
+        "quick_reply_options": [
+          {
+            "label": "\ud83c\udfe5 Pt. Deen Dayal Upadhyay DH",
+            "action_payload": "Our facility is Pt. Deen Dayal Upadhyay District Hospital",
+            "value": "Our facility is Pt. Deen Dayal Upadhyay District Hospital"
+          },
+          {
+            "label": "\ud83c\udfe5 CHC Cholapur",
+            "action_payload": "Our facility is Community Health Centre Cholapur",
+            "value": "Our facility is Community Health Centre Cholapur"
+          },
+          {
+            "label": "\ud83c\udfe5 PHC Baragaon",
+            "action_payload": "Our facility is Primary Health Centre Baragaon",
+            "value": "Our facility is Primary Health Centre Baragaon"
+          },
+          {
+            "label": "\ud83c\udfe5 PHC Pindra",
+            "action_payload": "Our facility is Primary Health Centre Pindra",
+            "value": "Our facility is Primary Health Centre Pindra"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "AWAIT_CLARIFICATION",
+          "action_summary": "Awaiting frontline clarification for missing facility_name before triggering multi-agent corridor.",
+          "suggested_source_facility": "Regional Central Depot"
+        },
+        "target_facility_id": "DH-PATNA-05",
+        "target_facility_name": "Nalanda Medical College & Hospital (NMCH)",
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_parse_multilingual_voice",
+            "action_summary": "Acoustic & text signal ingested in 'en'. Preliminary Intent: GENERAL_QUERY.",
+            "duration_ms": 0.38,
+            "timestamp": "2026-09-18T05:03:01.887980Z",
+            "details": {
+              "spoken_prompt": "We are located in Varanasi district, Uttar Pradesh",
+              "language_code": "en",
+              "facility_id": "DH-PATNA-05",
+              "intent": "GENERAL_QUERY",
+              "confidence": 0.94,
+              "urgency_level": "NORMAL",
+              "extracted_entities": {
+                "medicine_id": null,
+                "medicine_name": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "urgency_level": "NORMAL"
+              },
+              "english_intent_summary": "GENERAL_QUERY: Frontline inquiry (Urgency: NORMAL) for facility DH-PATNA-05"
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "vertex_ai_clinical_nlu",
+            "action_summary": "Clinical GenAI Triage (Google Gemini (gemini-3.6-flash)): Intent FACILITY_SELECTION (Confidence: 98%, Urgency: HIGH). The user is specifying their location as Varanasi district, Uttar Pradesh to update the active facility context for an emergency requisition.",
+            "duration_ms": 10214.4,
+            "timestamp": "2026-09-18T05:03:12.102391Z",
+            "details": {
+              "intent": "FACILITY_SELECTION",
+              "confidence": 0.98,
+              "urgency": "HIGH",
+              "entities": {
+                "medicine_name": null,
+                "medicine_id": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "state_name": "Uttar Pradesh",
+                "district_name": "Varanasi",
+                "target_facility_name": null,
+                "target_facility_id": null,
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": true,
+              "missing_slots": [
+                "facility_name"
+              ],
+              "clinical_rationale": "The user is specifying their location as Varanasi district, Uttar Pradesh to update the active facility context for an emergency requisition.",
+              "engine": "Google Gemini (gemini-3.6-flash)",
+              "model": "gemini-3.6-flash"
+            }
+          },
+          {
+            "step_number": 3,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "detect_missing_conversational_parameters",
+            "action_summary": "Identified missing critical slot: 'facility_name'. Formulated empathetic clarifying question in en. Awaiting frontline response.",
+            "duration_ms": 10.0,
+            "timestamp": "2026-09-18T05:03:12.102398Z",
+            "details": {
+              "missing_slots": [
+                "facility_name"
+              ],
+              "target_slot": "facility_name",
+              "clarification_prompt_english": "I found matching healthcare facilities in Varanasi district, Uttar Pradesh. Please select your facility so we can log your emergency requisition accurately:",
+              "quick_options_count": 4
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent"
+        ],
+        "tools_executed": [
+          "asha_parse_multilingual_voice",
+          "detect_missing_conversational_parameters"
+        ],
+        "timestamp": "2026-09-18T05:03:12.102494Z"
+      },
+      {
+        "id": "MSG-70187D",
+        "role": "user",
+        "content": "Connect to \ud83c\udfe5 Pt. Deen Dayal Upadhyay DH",
+        "language_code": "en",
+        "timestamp": "2026-09-18T05:03:12.103471Z"
+      },
+      {
+        "id": "MSG-CDC607",
+        "role": "assistant",
+        "content": "Connected to Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01), Varanasi. How can Sanjeevani AI assist you today? You can report an emergency stock shortage, check cold chain telemetry, or review facility bed capacity.",
+        "content_english": "Connected to Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01), Varanasi. How can Sanjeevani AI assist you today? You can report an emergency stock shortage, check cold chain telemetry, or review facility bed capacity.",
+        "status": "COMPLETED",
+        "intent": "FACILITY_SELECTION",
+        "is_clarification_needed": false,
+        "missing_slots": [],
+        "quick_reply_options": [
+          {
+            "label": "\ud83d\udea8 Request Emergency Stock",
+            "action_payload": "I need an emergency supply of Snake Antivenin",
+            "value": "I need an emergency supply of Snake Antivenin"
+          },
+          {
+            "label": "\ud83d\udce6 Check Stock Status",
+            "action_payload": "Check stock status of essential medicines",
+            "value": "Check stock status of essential medicines"
+          },
+          {
+            "label": "\ud83c\udfe5 View Bed Capacity",
+            "action_payload": "Show bed occupancy and ICU capacity",
+            "value": "Show bed occupancy and ICU capacity"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "GENERAL_ASSISTANCE",
+          "action_summary": "Bind session to Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01) and await clinical workflow command."
+        },
+        "target_facility_id": "DH-VARANASI-01",
+        "target_facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_parse_multilingual_voice",
+            "action_summary": "Acoustic & text signal ingested in 'en'. Preliminary Intent: GENERAL_QUERY.",
+            "duration_ms": 68.89,
+            "timestamp": "2026-09-18T05:03:12.172385Z",
+            "details": {
+              "spoken_prompt": "Connect to \ud83c\udfe5 Pt. Deen Dayal Upadhyay DH",
+              "language_code": "en",
+              "facility_id": "DH-PATNA-05",
+              "intent": "GENERAL_QUERY",
+              "confidence": 0.94,
+              "urgency_level": "NORMAL",
+              "extracted_entities": {
+                "medicine_id": null,
+                "medicine_name": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "urgency_level": "NORMAL"
+              },
+              "english_intent_summary": "GENERAL_QUERY: Frontline inquiry (Urgency: NORMAL) for facility DH-PATNA-05"
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "vertex_ai_clinical_nlu",
+            "action_summary": "Clinical GenAI Triage (Google Gemini (gemini-3.8-flash)): Intent FACILITY_SELECTION (Confidence: 98%, Urgency: NORMAL). The user has successfully selected and bound their facility to Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01) in Varanasi, Uttar Pradesh.",
+            "duration_ms": 16581.79,
+            "timestamp": "2026-09-18T05:03:28.754219Z",
+            "details": {
+              "intent": "FACILITY_SELECTION",
+              "confidence": 0.98,
+              "urgency": "NORMAL",
+              "entities": {
+                "medicine_name": null,
+                "medicine_id": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "state_name": "Uttar Pradesh",
+                "district_name": "Varanasi",
+                "target_facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+                "target_facility_id": "DH-VARANASI-01",
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": false,
+              "missing_slots": [],
+              "clinical_rationale": "The user has successfully selected and bound their facility to Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01) in Varanasi, Uttar Pradesh.",
+              "engine": "Google Gemini (gemini-3.8-flash)",
+              "model": "gemini-3.6-flash"
+            }
+          },
+          {
+            "step_number": 3,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "resolve_facility_by_name_or_id",
+            "action_summary": "Healthcare facility successfully bound to Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01). Ready for clinical supply operations.",
+            "duration_ms": 5.0,
+            "timestamp": "2026-09-18T05:03:28.754242Z",
+            "details": {
+              "facility_id": "DH-VARANASI-01",
+              "facility_name": "Pt. Deen Dayal Upadhyay District Hospital"
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent"
+        ],
+        "tools_executed": [
+          "asha_parse_multilingual_voice",
+          "resolve_facility_by_name_or_id"
+        ],
+        "timestamp": "2026-09-18T05:03:28.754413Z"
+      },
+      {
+        "id": "MSG-D24D05",
+        "role": "user",
+        "content": "We urgently need 20 vials of Anti-Snake Venom",
+        "language_code": "en",
+        "timestamp": "2026-09-18T05:03:28.756733Z"
+      },
+      {
+        "id": "MSG-C6E90C",
+        "role": "assistant",
+        "content": "Emergency requisition logged for 20 vials of Snake Antivenin (PUB-MED-001) for Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01). Locating the nearest regional surplus donor facility and initiating priority transport dispatch immediately.",
+        "content_english": "Emergency requisition logged for 20 vials of Snake Antivenin (PUB-MED-001) for Pt. Deen Dayal Upadhyay District Hospital (DH-VARANASI-01). Locating the nearest regional surplus donor facility and initiating priority transport dispatch immediately.",
+        "status": "IMPLEMENTED",
+        "intent": "EMERGENCY_REQUISITION",
+        "is_clarification_needed": false,
+        "missing_slots": [],
+        "quick_reply_options": [
+          {
+            "label": "\ud83d\ude9a Track Emergency Delivery",
+            "action_payload": "Track emergency dispatch status for Anti-Snake Venom",
+            "value": "Track emergency dispatch status for Anti-Snake Venom"
+          },
+          {
+            "label": "\ud83d\udcca Check Local Inventory",
+            "action_payload": "Check current stock of Anti-Snake Venom at nearby facilities",
+            "value": "Check current stock of Anti-Snake Venom at nearby facilities"
+          },
+          {
+            "label": "\ud83c\udfe5 View Bed Occupancy",
+            "action_payload": "Check hospital bed and ICU capacity",
+            "value": "Check hospital bed and ICU capacity"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "CREATE_DISPATCH_ORDER",
+          "action_summary": "Auto-dispatched 20 units of Snake Antivenin (SNAKE ANTIVENIN) via Insulated Cryo Van with GPS tracking DISP-ASI01-20260918050428.",
+          "suggested_source_facility": "Institute of Medical Sciences, BHU, Varanasi",
+          "dispatch_id": "DISP-ASI01-20260918050428",
+          "eta": "38 mins",
+          "vehicle_type": "Insulated Cryo Van"
+        },
+        "target_facility_id": "DH-VARANASI-01",
+        "target_facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_parse_multilingual_voice",
+            "action_summary": "Acoustic & text signal ingested in 'en'. Preliminary Intent: EMERGENCY_REQUISITION.",
+            "duration_ms": 65.83,
+            "timestamp": "2026-09-18T05:03:28.822595Z",
+            "details": {
+              "spoken_prompt": "We urgently need 20 vials of Anti-Snake Venom",
+              "language_code": "en",
+              "facility_id": "DH-VARANASI-01",
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.98,
+              "urgency_level": "CRITICAL",
+              "extracted_entities": {
+                "medicine_id": "PUB-MED-001",
+                "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+                "requested_quantity": 20,
+                "current_stock": null,
+                "temperature_reading": null,
+                "urgency_level": "CRITICAL"
+              },
+              "english_intent_summary": "EMERGENCY_REQUISITION: Frontline inquiry (Urgency: CRITICAL) for facility DH-VARANASI-01"
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "vertex_ai_clinical_nlu",
+            "action_summary": "Clinical GenAI Triage (Google Gemini (gemini-3.6-flash)): Intent EMERGENCY_REQUISITION (Confidence: 98%, Urgency: CRITICAL). Immediate requisition of 20 vials of Anti-Snake Venom for Pt. Deen Dayal Upadhyay District Hospital due to critical envenomation risk and life-threatening emergency.",
+            "duration_ms": 13088.13,
+            "timestamp": "2026-09-18T05:03:41.910775Z",
+            "details": {
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.98,
+              "urgency": "CRITICAL",
+              "entities": {
+                "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+                "medicine_id": "PUB-MED-001",
+                "requested_quantity": 20,
+                "current_stock": null,
+                "temperature_reading": null,
+                "state_name": "Uttar Pradesh",
+                "district_name": "Varanasi",
+                "target_facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+                "target_facility_id": "DH-VARANASI-01",
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": false,
+              "missing_slots": [],
+              "clinical_rationale": "Immediate requisition of 20 vials of Anti-Snake Venom for Pt. Deen Dayal Upadhyay District Hospital due to critical envenomation risk and life-threatening emergency.",
+              "engine": "Google Gemini (gemini-3.6-flash)",
+              "model": "gemini-3.6-flash"
+            }
+          },
+          {
+            "step_number": 3,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "vertex_ai_clinical_nlu",
+            "action_summary": "Evaluated clinical triage urgency via Google GenAI. Priority: CRITICAL. Frontline triage validated for Snake Antivenin (SNAKE ANTIVENIN) under protocol EMERGENCY_REQUISITION. Urgency level: CRITICAL.",
+            "duration_ms": 0.0,
+            "timestamp": "2026-09-18T05:03:41.910805Z",
+            "details": {
+              "engine": "Google Cloud Vertex AI (Gemini 1.5 Flash)",
+              "clinical_rationale": "Frontline triage validated for Snake Antivenin (SNAKE ANTIVENIN) under protocol EMERGENCY_REQUISITION. Urgency level: CRITICAL.",
+              "urgency": "CRITICAL"
+            }
+          },
+          {
+            "step_number": 4,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_audit_node_inventory",
+            "action_summary": "Audited local stock at Pt. Deen Dayal Upadhyay District Hospital: 210 units of 'Snake Antivenin (SNAKE ANTIVENIN)' left (60.0 days supply). Status: ADEQUATE.",
+            "duration_ms": 12.49,
+            "timestamp": "2026-09-18T05:03:41.923303Z",
+            "details": {
+              "facility_id": "DH-VARANASI-01",
+              "facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+              "medicine_id": "PUB-MED-001",
+              "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+              "current_stock": 210,
+              "daily_consumption_burn": 3.5,
+              "days_of_supply_remaining": 60.0,
+              "is_deficit": false,
+              "buffer_status": "ADEQUATE",
+              "recommended_reorder_qty": 0,
+              "storage_requirement": "2\u00b0C to 8\u00b0C"
+            }
+          },
+          {
+            "step_number": 5,
+            "agent_name": "StockoutSentinelAgent",
+            "mcp_tool_called": "scan_stockout_risks",
+            "action_summary": "Audited 1200 facilities via MCP. Threat Level: CRITICAL. Nicobar Islands Block Primary Health Centre faces an imminent stockout of Snake Antivenin with a severely constrained buffer of only 3.1 days of supply. Due to extreme geographic isolation and delayed supply chain transit times, any envenomation case poses an immediate, catastrophic mortality risk requiring emergency maritime or aerial reallocation.",
+            "duration_ms": 11287.28,
+            "timestamp": "2026-09-18T05:04:34.502047Z",
+            "details": {
+              "threat_level": "CRITICAL",
+              "sentinel_ai_briefing": "Nicobar Islands Block Primary Health Centre faces an imminent stockout of Snake Antivenin with a severely constrained buffer of only 3.1 days of supply. Due to extreme geographic isolation and delayed supply chain transit times, any envenomation case poses an immediate, catastrophic mortality risk requiring emergency maritime or aerial reallocation.",
+              "total_deficits": 602,
+              "engine": "Google Gemini (gemini-3.5-flash-lite)"
+            }
+          },
+          {
+            "step_number": 6,
+            "agent_name": "AllocationStrategistAgent",
+            "mcp_tool_called": "find_surplus_donor_nodes",
+            "action_summary": "Identified and triaged surplus donor node 'Institute of Medical Sciences, BHU, Varanasi'. Institute of Medical Sciences, BHU provides the shortest transit time (25 minutes) and distance (15.03 km) to minimize cold chain exposure for Snake Antivenin, while maintaining an abundant surplus stock of 720 units that easily absorbs the 20-unit draw without threatening local buffer safety.",
+            "duration_ms": 16256.98,
+            "timestamp": "2026-09-18T05:04:34.502049Z",
+            "details": {
+              "donor_id": "DH-VAR-562",
+              "triage_rationale": "Institute of Medical Sciences, BHU provides the shortest transit time (25 minutes) and distance (15.03 km) to minimize cold chain exposure for Snake Antivenin, while maintaining an abundant surplus stock of 720 units that easily absorbs the 20-unit draw without threatening local buffer safety.",
+              "engine": "Google Gemini (gemini-3.5-flash-lite)"
+            }
+          },
+          {
+            "step_number": 7,
+            "agent_name": "FleetRoutingAgent",
+            "mcp_tool_called": "allocate_medical_vehicle & calculate_road_route_and_distance",
+            "action_summary": "Assigned Insulated Cryo Van (MH-12-MED-4310); road distance 21.32 km, ETA 38 mins. Insulated Cryo Van MH-12-MED-4310 is fully equipped for this urban corridor, providing active refrigeration to strictly maintain the required 2\u00b0C to 8\u00b0C payload envelope for Snake Antivenin. With an estimated transit time of 38 minutes well within the 48.0-hour cold-box holdover margin, thermal risk along the BHU-to-District Hospital route is negligible.",
+            "duration_ms": 10812.44,
+            "timestamp": "2026-09-18T05:04:34.502050Z",
+            "details": {
+              "vehicle_id": "VEH-CRYO-02",
+              "distance_km": 21.32,
+              "fleet_ai_assessment": "Insulated Cryo Van MH-12-MED-4310 is fully equipped for this urban corridor, providing active refrigeration to strictly maintain the required 2\u00b0C to 8\u00b0C payload envelope for Snake Antivenin. With an estimated transit time of 38 minutes well within the 48.0-hour cold-box holdover margin, thermal risk along the BHU-to-District Hospital route is negligible.",
+              "thermal_safety_rating": "OPTIMAL",
+              "engine": "Google Gemini (gemini-3.6-flash)"
+            }
+          },
+          {
+            "step_number": 8,
+            "agent_name": "SupplyChainSupervisorAgent",
+            "mcp_tool_called": "vertex_ai_clinical_decision_engine",
+            "action_summary": "Authorized emergency dispatch via Google Gemini (gemini-3.6-flash). Cold-chain safety factor: 48.0x.",
+            "duration_ms": 8184.33,
+            "timestamp": "2026-09-18T05:04:34.502051Z",
+            "details": {
+              "engine": "Google Gemini (gemini-3.6-flash)",
+              "model": "gemini-3.6-flash",
+              "quality_signoff": true
+            }
+          },
+          {
+            "step_number": 9,
+            "agent_name": "LedgerExecutionAgent",
+            "mcp_tool_called": "verify_ledger_preconditions & commit_reallocation_ledger",
+            "action_summary": "Preconditions verified (PASSED). Audited GxP compliance via Google Gemini (gemini-3.6-flash) and committed dispatch DISP-ASI01-20260918050428 to master ledger. Dispatch DISP-ASI01-20260918050428 for 20 units of Snake Antivenin from IMS-BHU Varanasi to Pt. Deen Dayal Upadhyay District Hospital has successfully passed all automated thermal telemetry and audit checks under MoHFW NCCMIS guidelines. Full compliance with WHO-PQS E004 and GxP Good Distribution Practice standards is certified, authorizing immediate execution and ledger commit.",
+            "duration_ms": 6034.05,
+            "timestamp": "2026-09-18T05:04:34.502053Z",
+            "details": {
+              "dispatch_id": "DISP-ASI01-20260918050428",
+              "preconditions_passed": true,
+              "compliance_attestation": "Dispatch DISP-ASI01-20260918050428 for 20 units of Snake Antivenin from IMS-BHU Varanasi to Pt. Deen Dayal Upadhyay District Hospital has successfully passed all automated thermal telemetry and audit checks under MoHFW NCCMIS guidelines. Full compliance with WHO-PQS E004 and GxP Good Distribution Practice standards is certified, authorizing immediate execution and ledger commit.",
+              "standards_adherence": [
+                "NCCMIS_MoHFW",
+                "WHO_PQS_E004",
+                "GxP_Good_Distribution"
+              ],
+              "engine": "Google Gemini (gemini-3.6-flash)"
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent",
+          "SupplyChainSupervisorAgent",
+          "StockoutSentinelAgent",
+          "AllocationStrategistAgent",
+          "FleetRoutingAgent",
+          "LedgerExecutionAgent"
+        ],
+        "tools_executed": [
+          "asha_parse_multilingual_voice",
+          "vertex_ai_clinical_nlu",
+          "asha_audit_node_inventory",
+          "scan_stockout_risks",
+          "find_surplus_donor_nodes",
+          "allocate_medical_vehicle & calculate_road_route_and_distance",
+          "vertex_ai_clinical_decision_engine",
+          "verify_ledger_preconditions & commit_reallocation_ledger"
+        ],
+        "timestamp": "2026-09-18T05:04:34.559805Z"
+      }
+    ],
+    "context": {
+      "facility_id": "DH-VARANASI-01",
+      "facility_name": "Pt. Deen Dayal Upadhyay District Hospital",
+      "intent": "EMERGENCY_REQUISITION",
+      "medicine_name": "Snake Antivenin (SNAKE ANTIVENIN)",
+      "medicine_id": "PUB-MED-001",
+      "requested_quantity": 20
+    },
+    "created_at": "2026-09-18T05:02:53.437531Z",
+    "updated_at": "2026-09-18T05:04:34.502204Z"
+  },
+  "SESS-58090D6E": {
+    "session_id": "SESS-58090D6E",
+    "facility_id": null,
+    "facility_name": null,
+    "language_code": "en",
+    "messages": [
+      {
+        "id": "MSG-CCC97A",
+        "role": "user",
+        "content": "Hello, I need help with supplies",
+        "language_code": "en",
+        "timestamp": "2026-09-18T04:56:00.799481Z"
+      },
+      {
+        "id": "MSG-BEECF2",
+        "role": "assistant",
+        "content": "Welcome to Sanjeevani AI. To help you with your medical supplies, please state your Facility Name, or specify your State and District.",
+        "content_english": "Welcome to Sanjeevani AI. To help you with your medical supplies, please state your Facility Name, or specify your State and District.",
+        "status": "AWAITING_CLARIFICATION",
+        "intent": "EMERGENCY_REQUISITION",
+        "is_clarification_needed": true,
+        "missing_slots": [
+          "facility_or_location"
+        ],
+        "quick_reply_options": [
+          {
+            "label": "\ud83c\udfe5 Pt. Deen Dayal Hospital, Varanasi",
+            "action_payload": "Pt. Deen Dayal Upadhyay District Hospital, Varanasi, Uttar Pradesh",
+            "value": "Pt. Deen Dayal Upadhyay District Hospital, Varanasi, Uttar Pradesh"
+          },
+          {
+            "label": "\ud83c\udfe5 NMCH, Patna",
+            "action_payload": "Nalanda Medical College & Hospital, Patna, Bihar",
+            "value": "Nalanda Medical College & Hospital, Patna, Bihar"
+          },
+          {
+            "label": "\ud83c\udfe5 Aundh Civil Hospital, Pune",
+            "action_payload": "Aundh District Civil Hospital, Pune, Maharashtra",
+            "value": "Aundh District Civil Hospital, Pune, Maharashtra"
+          },
+          {
+            "label": "\ud83d\udccd Specify District / State",
+            "action_payload": "I am located in Varanasi, Uttar Pradesh",
+            "value": "I am located in Varanasi, Uttar Pradesh"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "AWAIT_CLARIFICATION",
+          "action_summary": "Awaiting frontline clarification for missing facility_or_location before triggering multi-agent corridor.",
+          "suggested_source_facility": "Regional Central Depot"
+        },
+        "target_facility_id": null,
+        "target_facility_name": null,
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_parse_multilingual_voice",
+            "action_summary": "Acoustic & text signal ingested in 'en'. Preliminary Intent: EMERGENCY_REQUISITION.",
+            "duration_ms": 0.23,
+            "timestamp": "2026-09-18T04:56:01.068123Z",
+            "details": {
+              "spoken_prompt": "Hello, I need help with supplies",
+              "language_code": "en",
+              "facility_id": "PHC-BARAGAON-03",
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.98,
+              "urgency_level": "CRITICAL",
+              "extracted_entities": {
+                "medicine_id": null,
+                "medicine_name": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "urgency_level": "CRITICAL"
+              },
+              "english_intent_summary": "EMERGENCY_REQUISITION: Frontline inquiry (Urgency: CRITICAL) for facility PHC-BARAGAON-03"
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "vertex_ai_clinical_nlu",
+            "action_summary": "Clinical GenAI Triage (Google Gemini (gemini-3.6-flash)): Intent EMERGENCY_REQUISITION (Confidence: 95%, Urgency: HIGH). The user is requesting assistance with medical supplies, but no facility context or specific medication details have been provided.",
+            "duration_ms": 31953.42,
+            "timestamp": "2026-09-18T04:56:33.021568Z",
+            "details": {
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.95,
+              "urgency": "HIGH",
+              "entities": {
+                "medicine_name": null,
+                "medicine_id": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "state_name": null,
+                "district_name": null,
+                "target_facility_name": null,
+                "target_facility_id": null,
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": true,
+              "missing_slots": [
+                "facility_or_location"
+              ],
+              "clinical_rationale": "The user is requesting assistance with medical supplies, but no facility context or specific medication details have been provided.",
+              "engine": "Google Gemini (gemini-3.6-flash)",
+              "model": "gemini-3.6-flash"
+            }
+          },
+          {
+            "step_number": 3,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "detect_missing_conversational_parameters",
+            "action_summary": "Identified missing critical slot: 'facility_or_location'. Formulated empathetic clarifying question in en. Awaiting frontline response.",
+            "duration_ms": 10.0,
+            "timestamp": "2026-09-18T04:56:33.021581Z",
+            "details": {
+              "missing_slots": [
+                "facility_or_location"
+              ],
+              "target_slot": "facility_or_location",
+              "clarification_prompt_english": "Welcome to Sanjeevani AI. To help you with your medical supplies, please state your Facility Name, or specify your State and District.",
+              "quick_options_count": 4
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent"
+        ],
+        "tools_executed": [
+          "asha_parse_multilingual_voice",
+          "detect_missing_conversational_parameters"
+        ],
+        "timestamp": "2026-09-18T04:56:33.021701Z"
+      }
+    ],
+    "context": {
+      "intent": "EMERGENCY_REQUISITION",
+      "pending_slot": "facility_or_location"
+    },
+    "created_at": "2026-09-18T04:56:00.798931Z",
+    "updated_at": "2026-09-18T04:56:33.021678Z"
+  },
+  "SESS-F4B26587": {
+    "session_id": "SESS-F4B26587",
+    "facility_id": null,
+    "facility_name": null,
+    "language_code": "en",
+    "messages": [
+      {
+        "id": "MSG-B07665",
+        "role": "user",
+        "content": "Hello, I need help with supplies",
+        "language_code": "en",
+        "timestamp": "2026-09-18T04:51:37.350139Z"
+      },
+      {
+        "id": "MSG-96813F",
+        "role": "assistant",
+        "content": "Hello! I can help you with medicine and supply requisitions right away. Could you please share your Facility Name, or tell me your State and District?",
+        "content_english": "Hello! I can help you with medicine and supply requisitions right away. Could you please share your Facility Name, or tell me your State and District?",
+        "status": "AWAITING_CLARIFICATION",
+        "intent": "EMERGENCY_REQUISITION",
+        "is_clarification_needed": true,
+        "missing_slots": [
+          "facility_or_location"
+        ],
+        "quick_reply_options": [
+          {
+            "label": "\ud83c\udfe5 Pt. Deen Dayal Hospital, Varanasi",
+            "action_payload": "My facility is Pt. Deen Dayal Upadhyay District Hospital Varanasi",
+            "value": "My facility is Pt. Deen Dayal Upadhyay District Hospital Varanasi"
+          },
+          {
+            "label": "\ud83c\udfe5 CHC Cholapur, Varanasi",
+            "action_payload": "My facility is CHC Cholapur Varanasi",
+            "value": "My facility is CHC Cholapur Varanasi"
+          },
+          {
+            "label": "\ud83c\udfe5 NMCH Patna, Bihar",
+            "action_payload": "My facility is Nalanda Medical College Patna",
+            "value": "My facility is Nalanda Medical College Patna"
+          },
+          {
+            "label": "\ud83d\udccd Uttar Pradesh, Varanasi",
+            "action_payload": "I am located in Varanasi, Uttar Pradesh",
+            "value": "I am located in Varanasi, Uttar Pradesh"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "AWAIT_CLARIFICATION",
+          "action_summary": "Awaiting frontline clarification for missing facility_or_location before triggering multi-agent corridor.",
+          "suggested_source_facility": "Regional Central Depot"
+        },
+        "target_facility_id": null,
+        "target_facility_name": null,
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_parse_multilingual_voice",
+            "action_summary": "Acoustic & text signal ingested in 'en'. Preliminary Intent: EMERGENCY_REQUISITION.",
+            "duration_ms": 0.28,
+            "timestamp": "2026-09-18T04:51:37.596192Z",
+            "details": {
+              "spoken_prompt": "Hello, I need help with supplies",
+              "language_code": "en",
+              "facility_id": "PHC-BARAGAON-03",
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.98,
+              "urgency_level": "CRITICAL",
+              "extracted_entities": {
+                "medicine_id": null,
+                "medicine_name": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "urgency_level": "CRITICAL"
+              },
+              "english_intent_summary": "EMERGENCY_REQUISITION: Frontline inquiry (Urgency: CRITICAL) for facility PHC-BARAGAON-03"
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "vertex_ai_clinical_nlu",
+            "action_summary": "Clinical GenAI Triage (Google Gemini (gemini-3.6-flash)): Intent EMERGENCY_REQUISITION (Confidence: 92%, Urgency: HIGH). The user requested assistance with medical supplies, but facility context, specific medicine, and quantity are not yet specified.",
+            "duration_ms": 19540.88,
+            "timestamp": "2026-09-18T04:51:57.137088Z",
+            "details": {
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.92,
+              "urgency": "HIGH",
+              "entities": {
+                "medicine_name": null,
+                "medicine_id": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "state_name": null,
+                "district_name": null,
+                "target_facility_name": null,
+                "target_facility_id": null,
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": true,
+              "missing_slots": [
+                "facility_or_location"
+              ],
+              "clinical_rationale": "The user requested assistance with medical supplies, but facility context, specific medicine, and quantity are not yet specified.",
+              "engine": "Google Gemini (gemini-3.6-flash)",
+              "model": "gemini-3.6-flash"
+            }
+          },
+          {
+            "step_number": 3,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "detect_missing_conversational_parameters",
+            "action_summary": "Identified missing critical slot: 'facility_or_location'. Formulated empathetic clarifying question in en. Awaiting frontline response.",
+            "duration_ms": 10.0,
+            "timestamp": "2026-09-18T04:51:57.137097Z",
+            "details": {
+              "missing_slots": [
+                "facility_or_location"
+              ],
+              "target_slot": "facility_or_location",
+              "clarification_prompt_english": "Hello! I can help you with medicine and supply requisitions right away. Could you please share your Facility Name, or tell me your State and District?",
+              "quick_options_count": 4
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent"
+        ],
+        "tools_executed": [
+          "asha_parse_multilingual_voice",
+          "detect_missing_conversational_parameters"
+        ],
+        "timestamp": "2026-09-18T04:51:57.137195Z"
+      }
+    ],
+    "context": {
+      "intent": "EMERGENCY_REQUISITION",
+      "pending_slot": "facility_or_location"
+    },
+    "created_at": "2026-09-18T04:51:37.349657Z",
+    "updated_at": "2026-09-18T04:51:57.137177Z"
+  },
+  "SESS-617D488C": {
+    "session_id": "SESS-617D488C",
+    "facility_id": null,
+    "facility_name": null,
+    "language_code": "en",
+    "messages": [
+      {
+        "id": "MSG-7D89E7",
+        "role": "user",
+        "content": "Hello, I need help with supplies",
+        "language_code": "en",
+        "timestamp": "2026-09-18T04:51:11.665833Z"
+      },
+      {
+        "id": "MSG-455BCA",
+        "role": "assistant",
+        "content": "Hello! I am Sanjeevani AI. To assist you with supplies, please tell me your Facility Name (or State/District) and which medicine or vaccine you need.",
+        "content_english": "Hello! I am Sanjeevani AI. To assist you with supplies, please tell me your Facility Name (or State/District) and which medicine or vaccine you need.",
+        "status": "AWAITING_CLARIFICATION",
+        "intent": "EMERGENCY_REQUISITION",
+        "is_clarification_needed": true,
+        "missing_slots": [
+          "facility_or_location",
+          "medicine_name"
+        ],
+        "quick_reply_options": [
+          {
+            "label": "\ud83c\udfe5 Pt. Deen Dayal Hospital, Varanasi",
+            "action_payload": "I am at Pt. Deen Dayal Upadhyay District Hospital Varanasi",
+            "value": "I am at Pt. Deen Dayal Upadhyay District Hospital Varanasi"
+          },
+          {
+            "label": "\ud83c\udfe5 NMCH Patna",
+            "action_payload": "I am at Nalanda Medical College Patna",
+            "value": "I am at Nalanda Medical College Patna"
+          },
+          {
+            "label": "\ud83d\udc0d Need Snake Antivenin",
+            "action_payload": "I need urgent Snake Antivenin supply",
+            "value": "I need urgent Snake Antivenin supply"
+          },
+          {
+            "label": "\ud83e\udd9f Need Artesunate",
+            "action_payload": "I need Artesunate for malaria treatment",
+            "value": "I need Artesunate for malaria treatment"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "AWAIT_CLARIFICATION",
+          "action_summary": "Awaiting frontline clarification for missing facility_or_location before triggering multi-agent corridor.",
+          "suggested_source_facility": "Regional Central Depot"
+        },
+        "target_facility_id": null,
+        "target_facility_name": null,
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_parse_multilingual_voice",
+            "action_summary": "Acoustic & text signal ingested in 'en'. Preliminary Intent: EMERGENCY_REQUISITION.",
+            "duration_ms": 0.26,
+            "timestamp": "2026-09-18T04:51:11.920871Z",
+            "details": {
+              "spoken_prompt": "Hello, I need help with supplies",
+              "language_code": "en",
+              "facility_id": "PHC-BARAGAON-03",
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.98,
+              "urgency_level": "CRITICAL",
+              "extracted_entities": {
+                "medicine_id": null,
+                "medicine_name": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "urgency_level": "CRITICAL"
+              },
+              "english_intent_summary": "EMERGENCY_REQUISITION: Frontline inquiry (Urgency: CRITICAL) for facility PHC-BARAGAON-03"
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "vertex_ai_clinical_nlu",
+            "action_summary": "Clinical GenAI Triage (Google Gemini (gemini-3.6-flash)): Intent EMERGENCY_REQUISITION (Confidence: 92%, Urgency: HIGH). The health worker requires assistance with medical supplies, but facility context, specific drug requirement, and requested quantity are missing.",
+            "duration_ms": 12938.13,
+            "timestamp": "2026-09-18T04:51:24.859025Z",
+            "details": {
+              "intent": "EMERGENCY_REQUISITION",
+              "confidence": 0.92,
+              "urgency": "HIGH",
+              "entities": {
+                "medicine_name": null,
+                "medicine_id": null,
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "state_name": null,
+                "district_name": null,
+                "target_facility_name": null,
+                "target_facility_id": null,
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": true,
+              "missing_slots": [
+                "facility_or_location",
+                "medicine_name"
+              ],
+              "clinical_rationale": "The health worker requires assistance with medical supplies, but facility context, specific drug requirement, and requested quantity are missing.",
+              "engine": "Google Gemini (gemini-3.6-flash)",
+              "model": "gemini-3.6-flash"
+            }
+          },
+          {
+            "step_number": 3,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "detect_missing_conversational_parameters",
+            "action_summary": "Identified missing critical slot: 'facility_or_location'. Formulated empathetic clarifying question in en. Awaiting frontline response.",
+            "duration_ms": 10.0,
+            "timestamp": "2026-09-18T04:51:24.859037Z",
+            "details": {
+              "missing_slots": [
+                "facility_or_location",
+                "medicine_name"
+              ],
+              "target_slot": "facility_or_location",
+              "clarification_prompt_english": "Hello! I am Sanjeevani AI. To assist you with supplies, please tell me your Facility Name (or State/District) and which medicine or vaccine you need.",
+              "quick_options_count": 4
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent"
+        ],
+        "tools_executed": [
+          "asha_parse_multilingual_voice",
+          "detect_missing_conversational_parameters"
+        ],
+        "timestamp": "2026-09-18T04:51:24.859198Z"
+      }
+    ],
+    "context": {
+      "intent": "EMERGENCY_REQUISITION",
+      "pending_slot": "facility_or_location"
+    },
+    "created_at": "2026-09-18T04:51:11.665566Z",
+    "updated_at": "2026-09-18T04:51:24.859166Z"
+  },
+  "TEST-SESS-001": {
+    "session_id": "TEST-SESS-001",
+    "facility_id": null,
+    "facility_name": null,
+    "language_code": "hi",
+    "messages": [],
+    "context": {},
+    "created_at": "2026-09-18T04:49:01.574727Z",
+    "updated_at": "2026-09-18T04:49:01.574733Z"
+  }
+}

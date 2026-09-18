@@ -656,8 +656,8 @@ Return ONLY valid JSON:
         user_prompt: str,
         session_id: Optional[str] = None,
         language_code: str = "hi",
-        facility_id: str = "PHC-BARAGAON-03",
-        facility_name: str = "Primary Health Centre Baragaon",
+        facility_id: Optional[str] = None,
+        facility_name: Optional[str] = None,
         conversation_history: Optional[List[Dict[str, Any]]] = None,
         accumulated_context: Optional[Dict[str, Any]] = None,
         allow_clarification: bool = True
@@ -666,11 +666,12 @@ Return ONLY valid JSON:
         Frontline Clinical Voice & Chat Copilot GenAI Intelligence:
         Performs genuine LLM multi-turn clinical analysis, intent classification,
         dynamic entity/slot extraction, missing parameter detection, localized clarification,
+        conversational facility resolution by name or state/district,
         and downstream agent/tool orchestration across all project features.
         Zero hardcoded entity lists or keyword dictionaries.
         """
         from .medicine_data_service import get_active_essential_medicines
-        from .facility_data_service import get_active_public_facilities
+        from .facility_data_service import get_active_public_facilities, search_facilities_by_state_and_district
 
         history = list(conversation_history or [])
         ctx = dict(accumulated_context or {})
@@ -686,7 +687,7 @@ Return ONLY valid JSON:
 
         facility_catalog_summary = "\n".join([
             f"- [{f.get('id')}] {f.get('name')} ({f.get('district')}, {f.get('state')}) - Beds: {f.get('bedCapacity', 20)}, Footfall: {f.get('dailyPatientFootfall', 100)}"
-            for f in active_facilities[:8]
+            for f in active_facilities[:12]
         ])
 
         system_instruction = (
@@ -694,16 +695,20 @@ Return ONLY valid JSON:
             "and e-Aushadhi autonomous supply network. Your role is FRONTLINE_CLINICAL_COPILOT_TRIAGE. "
             "You assist frontline health workers (ASHAs, ANMs, Medical Officers) speaking 8 Indian languages "
             "(Hindi: hi, Telugu: te, Tamil: ta, Marathi: mr, Bengali: bn, Kannada: kn, Malayalam: ml, English: en). "
-            "You orchestrate autonomous agents and database tools across all 7 operational modules: "
+            "You orchestrate autonomous agents and database tools across all operational modules: "
             "1. EMERGENCY_REQUISITION: Autonomous drug reallocations from regional surplus donor hospitals. "
             "2. COLD_CHAIN_ALERT: Refrigerator/ILR temperature breaches (>8°C or <2°C) and power failure SOS. "
             "3. STOCK_STATUS_CHECK: e-Aushadhi real-time facility inventory audits & days-of-supply checks. "
             "4. EPIDEMIC_FORECAST: 14–30 day epidemiological disease surge forecasts (Dengue, Malaria, flood impact). "
-            "5. FLEET_ROUTING_CHECK: Emergency transport distance, vehicle allocation (Solar ILR Van, Cryo Van), cold-box holdover. "
+            "5. FLEET_ROUTING_CHECK: Emergency transport distance, vehicle allocation, cold-box holdover. "
             "6. FACILITY_BED_CAPACITY: Hospital/PHC bed occupancy (total, occupied, ICU, oxygen) and daily patient footfall. "
             "7. STAFF_ATTENDANCE: On-duty health workers (ASHA, ANM, Medical Officers) and roster tracking. "
-            "8. GENERAL_QUERY: Professional clinical guidance, platform orientation, greetings. "
-            "IMPORTANT: Never invent synthetic medicine IDs or hardcode static values. Always resolve against the live database catalog provided."
+            "8. FACILITY_RECOMMENDATION & RESOLUTION: Conversational facility binding. The user can directly provide their facility name, "
+            "or provide their State and District so you can recommend matching facilities in that location. "
+            "If the user makes a clinical request but no facility is set, politely ask for their Facility Name OR State and District. "
+            "9. GENERAL_QUERY: Professional clinical guidance, platform orientation, greetings. "
+            "CRITICAL: Be agentic, empathetic, and conversational. Always formulate responses in the user's native language/script ({language_code}). "
+            "Never invent fake medicines or rigid hardcoded scripts."
         )
 
         history_formatted = []
@@ -713,11 +718,13 @@ Return ONLY valid JSON:
             history_formatted.append(f"[{role.upper()}]: {content}")
         history_str = "\n".join(history_formatted) if history_formatted else "None (New Session)"
 
+        current_fac_desc = f"{facility_name} ({facility_id})" if (facility_id and facility_name) else "NOT_YET_SPECIFIED"
+
         prompt = f"""
 Clinical Frontline Conversational Turn Analysis:
 - User Spoken/Typed Input: "{user_prompt}"
 - User Language: {language_code}
-- Facility Context: {facility_name} ({facility_id})
+- Active Facility Context: {current_fac_desc}
 - Session ID: {sid}
 - Prior Multi-turn History:
 {history_str}
@@ -740,6 +747,7 @@ Analyze this clinical conversational turn:
    - "FLEET_ROUTING_CHECK": Emergency transport route, GPS distance, vehicle allocation.
    - "FACILITY_BED_CAPACITY": Bed counts (ICU, oxygen, general) and daily patient footfall.
    - "STAFF_ATTENDANCE": On-duty ASHA, ANM, and Medical Officer attendance.
+   - "FACILITY_SELECTION": User is providing their facility name, or stating their State/District to find facilities.
    - "GENERAL_QUERY": General guidance, greetings, system orientation.
 
 2. Clinical Urgency: "CRITICAL", "HIGH", or "NORMAL".
@@ -750,21 +758,26 @@ Analyze this clinical conversational turn:
    - requested_quantity: Integer number of units requested (or null).
    - current_stock: Integer units remaining if stated (or null).
    - temperature_reading: Float degrees Celsius if cold chain alert (or null).
-   - district_name: Target district if mentioned or inferred (or null).
-   - target_facility_name: The requesting/recipient facility name if stated by user (or null to use current facility context).
+   - state_name: State mentioned by user (or null).
+   - district_name: District mentioned by user (or null).
+   - target_facility_name: The requesting/reporting facility name if stated by user (or null to use current facility context).
    - target_facility_id: Recipient facility ID if known (or null).
-   - source_facility_name: The supplying/donor facility name if user explicitly specified where stock should come from (e.g., "from Port Blair", "send from Nicobar DH", "transfer from G.B. Pant Hospital") (or null to discover nearest surplus facility).
+   - source_facility_name: Supplying/donor facility name if user explicitly specified where stock should come from (or null to discover nearest surplus).
    - source_facility_id: Supplying/donor facility ID if specified (or null).
 
 4. Missing Slot Detection:
+   - If intent in ["EMERGENCY_REQUISITION", "STOCK_STATUS_CHECK", "COLD_CHAIN_ALERT", "FACILITY_BED_CAPACITY", "STAFF_ATTENDANCE"] and Active Facility Context is NOT_YET_SPECIFIED and target_facility_name is null:
+     is_clarification_needed = true, missing_slots = ["facility_or_location"].
+     Ask the user for their Facility Name OR State and District.
    - If intent is "EMERGENCY_REQUISITION" and medicine_name is missing/unknown:
      is_clarification_needed = true, missing_slots = ["medicine_name"].
    - If intent is "EMERGENCY_REQUISITION" and medicine_name is known but requested_quantity is missing:
      is_clarification_needed = true, missing_slots = ["requested_quantity"].
    - If intent is "COLD_CHAIN_ALERT" and temperature_reading is missing:
      is_clarification_needed = true, missing_slots = ["temperature_celsius"].
-   - If intent is "EPIDEMIC_FORECAST" and district_name is missing/unknown:
-     is_clarification_needed = true, missing_slots = ["district_name"].
+   - If user stated a district or state (e.g. "Varanasi", "Uttar Pradesh", "Pune", "Andaman"):
+     is_clarification_needed = true, missing_slots = ["facility_name"].
+     Formulate a recommendation of facilities in that district/state with clickable chips for each.
    - Otherwise is_clarification_needed = false, missing_slots = [].
 
 5. Localized Dialogue Formulation:
@@ -785,7 +798,7 @@ Analyze this clinical conversational turn:
 
 Return ONLY valid JSON matching this schema:
 {{
-  "intent": "<EMERGENCY_REQUISITION|COLD_CHAIN_ALERT|STOCK_STATUS_CHECK|EPIDEMIC_FORECAST|FLEET_ROUTING_CHECK|FACILITY_BED_CAPACITY|STAFF_ATTENDANCE|GENERAL_QUERY>",
+  "intent": "<EMERGENCY_REQUISITION|COLD_CHAIN_ALERT|STOCK_STATUS_CHECK|EPIDEMIC_FORECAST|FLEET_ROUTING_CHECK|FACILITY_BED_CAPACITY|STAFF_ATTENDANCE|FACILITY_SELECTION|GENERAL_QUERY>",
   "confidence": <float between 0.85 and 0.99>,
   "urgency_level": "<CRITICAL|HIGH|NORMAL>",
   "clinical_rationale": "<1-2 sentence clinical assessment>",
@@ -795,6 +808,7 @@ Return ONLY valid JSON matching this schema:
     "requested_quantity": <int or null>,
     "current_stock": <int or null>,
     "temperature_reading": <float or null>,
+    "state_name": "<string or null>",
     "district_name": "<string or null>",
     "target_facility_name": "<string or null>",
     "target_facility_id": "<string or null>",
@@ -848,10 +862,10 @@ Return ONLY valid JSON matching this schema:
         self,
         user_prompt: str,
         language_code: str,
-        facility_name: str,
-        facility_id: str,
-        accumulated_context: Dict[str, Any],
-        allow_clarification: bool
+        facility_name: Optional[str] = None,
+        facility_id: Optional[str] = None,
+        accumulated_context: Optional[Dict[str, Any]] = None,
+        allow_clarification: bool = True
     ) -> Dict[str, Any]:
         """
         Dynamic database-backed safety fallback.
@@ -860,14 +874,66 @@ Return ONLY valid JSON matching this schema:
         """
         import re
         from .medicine_data_service import get_active_essential_medicines
-        from .facility_data_service import get_active_public_facilities
+        from .facility_data_service import (
+            get_active_public_facilities,
+            search_facilities_by_state_and_district,
+            resolve_facility_by_name_or_id
+        )
+        from .district_data_service import fetch_live_public_districts
 
         lower = user_prompt.lower().strip()
-        ctx = dict(accumulated_context)
+        ctx = dict(accumulated_context or {})
         active_medicines = get_active_essential_medicines()
         active_facilities = get_active_public_facilities()
 
-        # 1. Dynamic Medicine Entity Resolution from Live Database
+        # 1. Check for Direct Facility Name or State/District in user prompt
+        target_facility_name = ctx.get("target_facility_name") or ctx.get("facility_name") or facility_name
+        target_facility_id = ctx.get("target_facility_id") or ctx.get("facility_id") or facility_id
+
+        # Direct facility resolution from user utterance
+        direct_resolved_fac = resolve_facility_by_name_or_id(user_prompt)
+        if direct_resolved_fac:
+            target_facility_name = direct_resolved_fac["name"]
+            target_facility_id = direct_resolved_fac["id"]
+            ctx["facility_id"] = target_facility_id
+            ctx["facility_name"] = target_facility_name
+
+        # Detect State & District if mentioned
+        detected_district = None
+        detected_state = None
+        known_states = [
+            "andaman", "andhra pradesh", "arunachal", "assam", "bihar", "chandigarh", "chhattisgarh",
+            "delhi", "goa", "gujarat", "haryana", "himachal", "jammu", "kashmir", "jharkhand",
+            "karnataka", "kerala", "ladakh", "madhya pradesh", "maharashtra", "manipur", "meghalaya",
+            "mizoram", "nagaland", "odisha", "puducherry", "punjab", "rajasthan", "sikkim",
+            "tamil nadu", "telangana", "tripura", "uttar pradesh", "uttarakhand", "west bengal"
+        ]
+        for st in known_states:
+            if st in lower:
+                detected_state = st
+                break
+
+        # Check district names against public districts registry
+        try:
+            live_districts = fetch_live_public_districts()
+            for d in live_districts:
+                dn = d.get("district_name", "").lower()
+                if dn and len(dn) > 3 and dn in lower:
+                    detected_district = d.get("district_name")
+                    if not detected_state and d.get("state_name"):
+                        detected_state = d.get("state_name")
+                    break
+        except Exception:
+            pass
+
+        # Common prominent districts fallback check
+        if not detected_district:
+            for d_name in ["varanasi", "pune", "vellore", "medchal", "darjeeling", "lucknow", "bhopal", "surat", "patna", "nagpur", "jaipur", "kanpur", "thiruvananthapuram", "mysuru", "kolkata"]:
+                if d_name in lower:
+                    detected_district = d_name.title()
+                    break
+
+        # 2. Dynamic Medicine Entity Resolution from Live Database
         med_name = ctx.get("medicine_name")
         med_id = ctx.get("medicine_id")
 
@@ -875,10 +941,8 @@ Return ONLY valid JSON matching this schema:
             g_name = med.get("generic_name", "").lower()
             b_name = med.get("brand_name", "").lower()
             m_id = med.get("id", "")
-            
-            # Match generic name, brand name, ID, or primary clinical tokens
+
             tokens = [t for t in g_name.split() if len(t) > 3] + [t for t in b_name.split() if len(t) > 3]
-            # Domain synonyms for high-priority medicines
             if "snake" in g_name or "antivenin" in g_name:
                 tokens.extend(["anti-venom", "antivenom", "snake", "सांप", "एंटी-वेनम", "विष", "పాము", "பாம்பு", "सাপ"])
             elif "rabies" in g_name:
@@ -897,37 +961,24 @@ Return ONLY valid JSON matching this schema:
                 med_name = med.get("name")
                 break
 
-        # 2. Dynamic Quantity, Temperature, and Multi-Facility Extraction
+        # 3. Dynamic Quantity & Temperature Extraction
         qtys = [int(x) for x in re.findall(r'\b\d+\b', user_prompt)]
         req_qty = qtys[-1] if qtys else ctx.get("requested_quantity")
         temp_matches = re.findall(r'(\d+(?:\.\d+)?)\s*(?:°\s*c|celsius|degree|अंश|डिग्री|டிகிரி|ഡിഗ്രി)?', lower)
         temp_reading = float(temp_matches[0]) if temp_matches and any(k in lower for k in ["deg", "cels", "temp", "°", "तापमान", "उष्ण", "ताप"]) else ctx.get("temperature_reading")
 
-        # Source and Target Facility extraction
         source_facility_name = ctx.get("source_facility_name")
         source_facility_id = ctx.get("source_facility_id")
-        target_facility_name = ctx.get("target_facility_name") or facility_name
-        target_facility_id = ctx.get("target_facility_id") or facility_id
 
         from_match = re.search(r'(?:from|source|donor|से)\s+([a-zA-Z0-9\.\-\s]+?)(?:to|for|\,|$|\.|\n)', user_prompt, re.IGNORECASE)
         if from_match:
             cand_src = from_match.group(1).strip()
-            matched_f = next((f for f in active_facilities if cand_src.lower() in f["name"].lower() or cand_src.lower() in f["id"].lower()), None)
+            matched_f = resolve_facility_by_name_or_id(cand_src)
             if matched_f:
                 source_facility_name = matched_f["name"]
                 source_facility_id = matched_f["id"]
-            elif len(cand_src) > 3:
-                source_facility_name = cand_src
 
-        to_match = re.search(r'(?:to|for|at|के लिए)\s+([a-zA-Z0-9\.\-\s]+?)(?:from|source|\,|$|\.|\n)', user_prompt, re.IGNORECASE)
-        if to_match:
-            cand_tgt = to_match.group(1).strip()
-            matched_tgt = next((f for f in active_facilities if cand_tgt.lower() in f["name"].lower() or cand_tgt.lower() in f["id"].lower()), None)
-            if matched_tgt:
-                target_facility_name = matched_tgt["name"]
-                target_facility_id = matched_tgt["id"]
-
-        # 3. Dynamic Intent Determination from Semantic Domain Indicators
+        # 4. Intent Determination
         intent = ctx.get("intent")
         if any(k in lower for k in ["temp", "refrigerator", "fridge", "freeze", "ilr", "तापमान", "खराब", "குளிர்", "ఉష్ణోగ్రత", "cool"]):
             intent = "COLD_CHAIN_ALERT"
@@ -943,31 +994,100 @@ Return ONLY valid JSON matching this schema:
             intent = "STOCK_STATUS_CHECK"
         elif any(k in lower for k in ["need", "urgent", "dispatch", "requisition", "shortage", "send", "भेजें", "आवश्यकता", "पम्पండి", "தேவை", "तातडीने"]) or med_name:
             intent = "EMERGENCY_REQUISITION"
+        elif (detected_district or detected_state) and not target_facility_name:
+            intent = "FACILITY_SELECTION"
+        elif direct_resolved_fac and not intent:
+            intent = "FACILITY_SELECTION"
         elif not intent:
             intent = "GENERAL_QUERY"
 
-        # 4. Dynamic Missing Slot Detection
+        # 5. Check if we need to Recommend Facilities for a State / District
+        if (detected_district or detected_state) and not target_facility_name:
+            recommended_facs = search_facilities_by_state_and_district(
+                state=detected_state,
+                district=detected_district,
+                limit=5
+            )
+            loc_label = f"{detected_district or ''}{', ' if detected_district and detected_state else ''}{detected_state or ''}"
+
+            facility_options = [
+                {
+                    "label": f"🏥 {f['name']}",
+                    "value": f"I am from {f['name']}",
+                    "action_payload": f"I am from {f['name']}"
+                }
+                for f in recommended_facs
+            ]
+
+            recom_prompts = {
+                "en": f"I found {len(recommended_facs)} healthcare facilities in {loc_label}. Which facility are you reporting from? Please select or state your facility name below:",
+                "hi": f"मुझे {loc_label} में {len(recommended_facs)} स्वास्थ्य केंद्र मिले हैं। आप किस केंद्र से संपर्क कर रहे हैं? कृपया नीचे से चुनें या अपने केंद्र का नाम बताएं:",
+                "te": f"{loc_label} లో {len(recommended_facs)} ఆరోగ్య కేంద్రాలు అందుబాటులో ఉన్నాయి. మీరు ఏ కేంద్రం నుండి మాట్లాడుతున్నారు? దయచేసి క్రింద ఎంచుకోండి:",
+                "ta": f"{loc_label} பகுதியில் {len(recommended_facs)} சுகாதார மையங்கள் உள்ளன. நீங்கள் எந்த மையத்திலிருந்து தொடர்பு கொள்கிறீர்கள்? தயவுசெய்து கீழே தேர்ந்தெடுக்கவும்:",
+                "mr": f"{loc_label} मध्ये {len(recommended_facs)} आरोग्य केंद्रे उपलब्ध आहेत. आपण कोणत्या केंद्रातून संपर्क साधत आहात? कृपया खालीलपैकी एक निवडा:",
+                "bn": f"{loc_label}-এ {len(recommended_facs)}টি স্বাস্থ্য কেন্দ্র পাওয়া গেছে। আপনি কোন কেন্দ্র থেকে যোগাযোগ করছেন? অনুগ্রহ করে নিচে থেকে নির্বাচন করুন:",
+                "kn": f"{loc_label} ನಲ್ಲಿ {len(recommended_facs)} ಆರೋಗ್ಯ ಕೇಂದ್ರಗಳು ಲಭ್ಯವಿವೆ. ನೀವು ಯಾವ ಕೇಂದ್ರದಿಂದ ಸಂಪರ್ಕಿಸುತ್ತಿದ್ದೀರಿ? ದಯವಿಟ್ಟು ಕೆಳಗೆ ಆಯ್ಕೆಮಾಡಿ:",
+                "ml": f"{loc_label}-ൽ {len(recommended_facs)} ആരോഗ്യ കേന്ദ്രങ്ങൾ കണ്ടെത്തി. നിങ്ങൾ ഏത് കേന്ദ്രത്തിൽ നിന്നാണ് ബന്ധപ്പെടുന്നത്? ദയവായി താഴെ തിരഞ്ഞെടുക്കുക:"
+            }
+
+            resp_loc = recom_prompts.get(language_code, recom_prompts["en"])
+            return {
+                "intent": "FACILITY_SELECTION",
+                "confidence": 0.96,
+                "urgency_level": "NORMAL",
+                "clinical_rationale": f"Proactively recommending facilities in {loc_label} to frontline health worker.",
+                "extracted_entities": {
+                    "medicine_name": med_name,
+                    "medicine_id": med_id,
+                    "state_name": detected_state,
+                    "district_name": detected_district,
+                    "target_facility_name": None,
+                    "target_facility_id": None
+                },
+                "is_clarification_needed": True,
+                "missing_slots": ["facility_name"],
+                "clarification_prompt_localized": resp_loc,
+                "clarification_prompt_english": recom_prompts["en"],
+                "quick_reply_options": facility_options,
+                "response_text_localized": resp_loc,
+                "response_text_english": recom_prompts["en"],
+                "recommended_action": {
+                    "action_type": "AWAIT_CLARIFICATION",
+                    "action_summary": f"Awaiting facility selection for {loc_label}."
+                },
+                "agents_to_invoke": ["AshaVoiceCopilotAgent"],
+                "tools_to_execute": ["search_facilities_by_state_and_district"]
+            }
+
+        # 6. Dynamic Missing Slot Detection
         missing_slots = []
+        target_display_name = target_facility_name or "Your Facility"
+
         if allow_clarification:
-            if intent == "EMERGENCY_REQUISITION":
+            # If user wants clinical action but facility is not known:
+            if intent in ["EMERGENCY_REQUISITION", "STOCK_STATUS_CHECK", "COLD_CHAIN_ALERT", "FACILITY_BED_CAPACITY", "STAFF_ATTENDANCE"] and not target_facility_name:
+                missing_slots.append("facility_or_location")
+            elif intent == "EMERGENCY_REQUISITION":
                 if not med_name:
                     missing_slots.append("medicine_name")
                 elif not req_qty:
                     missing_slots.append("requested_quantity")
             elif intent == "COLD_CHAIN_ALERT" and temp_reading is None:
                 missing_slots.append("temperature_celsius")
-            elif intent == "EPIDEMIC_FORECAST" and not ctx.get("district_name"):
-                target_fac = next((f for f in active_facilities if f["id"] == facility_id), None)
-                if not target_fac:
-                    missing_slots.append("district_name")
 
         is_clarify = len(missing_slots) > 0
         target_slot = missing_slots[0] if missing_slots else None
 
-        # 5. Build Dynamic Quick Reply Options from Live DB Models
+        # 7. Quick Reply Options Formulation
         quick_reply_options = []
-        if target_slot == "medicine_name":
-            # Select top 3 relevant essential medicines from the live database
+        if target_slot == "facility_or_location":
+            quick_reply_options = [
+                {"label": "📍 Varanasi (Uttar Pradesh)", "value": "My district is Varanasi, Uttar Pradesh", "action_payload": "My district is Varanasi, Uttar Pradesh"},
+                {"label": "📍 Pune (Maharashtra)", "value": "My district is Pune, Maharashtra", "action_payload": "My district is Pune, Maharashtra"},
+                {"label": "🏥 PHC Baragaon (Varanasi)", "value": "I am from Primary Health Centre Baragaon", "action_payload": "I am from Primary Health Centre Baragaon"},
+                {"label": "🏥 Andaman Islands Block PHC", "value": "I am from Andaman Islands Block Primary Health Centre", "action_payload": "I am from Andaman Islands Block Primary Health Centre"}
+            ]
+        elif target_slot == "medicine_name":
             for m in active_medicines[:3]:
                 m_label = f"💊 {m.get('brand_name', m.get('generic_name', 'Medicine'))}"
                 if "snake" in m.get("generic_name", "").lower():
@@ -993,73 +1113,92 @@ Return ONLY valid JSON matching this schema:
                 {"label": "🌡️ 10.5°C (Critical Thermal Breach)", "value": "Critical breach: ILR temperature is 10.5 degrees Celsius", "action_payload": "Critical breach: ILR temperature is 10.5 degrees Celsius"},
                 {"label": "⚡ Power Outage (>2 Hours)", "value": "Power outage for over 2 hours with temperature above 9 degrees", "action_payload": "Power outage for over 2 hours with temperature above 9 degrees"}
             ]
+        elif intent == "FACILITY_SELECTION":
+            quick_reply_options = [
+                {"label": "🐍 Emergency ASV Requisition (25 vials)", "value": "We need 25 vials of Anti-Snake Venom urgently", "action_payload": "We need 25 vials of Anti-Snake Venom urgently"},
+                {"label": "📊 Check Facility Stock Audit", "value": "Check current inventory stock levels", "action_payload": "Check current inventory stock levels"},
+                {"label": "❄️ Cold-Chain Refrigerator Check", "value": "Verify refrigerator ILR temperature and cold-chain status", "action_payload": "Verify refrigerator ILR temperature and cold-chain status"}
+            ]
         elif intent == "GENERAL_QUERY":
-            top_drug_name = active_medicines[0].get("name", "Emergency Medicines") if active_medicines else "Emergency Medicines"
+            top_drug_name = active_medicines[0].get("name", "Anti-Snake Venom") if active_medicines else "Anti-Snake Venom"
             quick_reply_options = [
                 {"label": f"🐍 Emergency Requisition", "value": f"We need 25 units of {top_drug_name} urgently", "action_payload": f"We need 25 units of {top_drug_name} urgently"},
                 {"label": "❄️ Report Cold-Chain SOS (>8°C)", "value": "Report ILR temperature breach above 8.5 degrees Celsius", "action_payload": "Report ILR temperature breach above 8.5 degrees Celsius"},
-                {"label": "📊 Audit Local Stock", "value": f"Check inventory stock level for {facility_name}", "action_payload": f"Check inventory stock level for {facility_name}"},
-                {"label": "📈 Outbreak Demand Forecast", "value": "Check 30-day epidemic disease surge forecast", "action_payload": "Check 30-day epidemic disease surge forecast"}
+                {"label": "📊 Audit Local Stock", "value": f"Check inventory stock level for {target_display_name}", "action_payload": f"Check inventory stock level for {target_display_name}"},
+                {"label": "📍 Find Facilities in My District", "value": "Show healthcare facilities in Varanasi, Uttar Pradesh", "action_payload": "Show healthcare facilities in Varanasi, Uttar Pradesh"}
             ]
 
-        # 6. Localized Dialogue Formatting
+        # 8. Localized Dialogue Formatting
         localized_questions = {
+            "facility_or_location": {
+                "en": "Which healthcare facility are you reporting from? You can directly tell me your Facility Name, or provide your State and District so I can recommend nearby facilities.",
+                "hi": "आप किस स्वास्थ्य केंद्र से संपर्क कर रहे हैं? कृपया अपने स्वास्थ्य केंद्र का नाम बताएं, या अपना राज्य और जिला बताएं ताकि मैं नजदीकी केंद्र सुझा सकूं।",
+                "te": "మీరు ఏ ఆరోగ్య కేంద్రం నుండి మాట్లాడుతున్నారు? దయచేసి మీ ఆరోగ్య కేంద్రం పేరు తెలియజేయండి, లేదా మీ రాష్ట్రం మరియు జిల్లాను పేర్కొనండి.",
+                "ta": "நீங்கள் எந்த சுகாதார மையத்திலிருந்து தொடர்பு கொள்கிறீர்கள்? உங்கள் மையத்தின் பெயரை நேரடியாகக் கூறலாம், அல்லது மாநிலம் மற்றும் மாவட்டத்தைக் குறிப்பிடலாம்.",
+                "mr": "आपण कोणत्या आरोग्य केंद्रातून संपर्क साधत आहात? कृपया आपल्या केंद्राचे नाव सांगा, किंवा आपले राज्य आणि जिल्हा सांगा जेणेकरून मी जवळची केंद्रे सुचवू शकेन.",
+                "bn": "আপনি কোন স্বাস্থ্য কেন্দ্র থেকে যোগাযোগ করছেন? অনুগ্রহ করে আপনার কেন্দ্রের নাম বলুন, অথবা আপনার রাজ্য ও জেলা উল্লেখ করুন।",
+                "kn": "ನೀವು ಯಾವ ಆರೋಗ್ಯ ಕೇಂದ್ರದಿಂದ ಸಂಪರ್ಕಿಸುತ್ತಿದ್ದೀರಿ? ದಯವಿಟ್ಟು ನಿಮ್ಮ ಕೇಂದ್ರದ ಹೆಸರನ್ನು ತಿಳಿಸಿ, ಅಥವಾ ರಾಜ್ಯ ಮತ್ತು ಜಿಲ್ಲೆಯನ್ನು ನಮೂದಿಸಿ.",
+                "ml": "നിങ്ങൾ ഏത് ആരോഗ്യ കേന്ദ്രത്തിൽ നിന്നാണ് ബന്ധപ്പെടുന്നത്? നിങ്ങളുടെ കേന്ദ്രത്തിന്റെ പേര് വ്യക്തമാക്കുക, അല്ലെങ്കിൽ സംസ്ഥാനവും ജില്ലയും പറയുക."
+            },
             "medicine_name": {
-                "hi": f"प्राथमिक स्वास्थ्य केंद्र {facility_name} के लिए आपको किस आवश्यक दवा की आवश्यकता है? कृपया दवा का नाम बताएं।",
-                "te": f"{facility_name} కొరకు మీకు ఏ అత్యవసర ఔషధం అవసరం? దయచేసి ఔషధం పేరు తెలియజేయండి.",
-                "ta": f"{facility_name} மையத்திற்கு எந்த அவசர மருந்து தேவை? தயவுசெய்து மருந்தின் பெயரை தெரிவிக்கவும்.",
-                "mr": f"{facility_name} साठी आपणास कोणत्या अत्यावश्यक औषधाची गरज आहे? कृपया औषधाचे नाव सांगा.",
-                "bn": f"{facility_name}-এর জন্য আপনার কোন জরুরি ওষুধ প্রয়োজন? অনুগ্রহ করে ওষুধের নাম বলুন।",
-                "kn": f"{facility_name} ಗಾಗಿ ನಿಮಗೆ ಯಾವ ತುರ್ತು ಔಷಧಿ ಬೇಕು? ದಯವಿಟ್ಟು ಔಷಧಿಯ ಹೆಸರನ್ನು ತಿಳಿಸಿ.",
-                "ml": f"{facility_name}-ലേക്ക് ഏത് അടിയന്തര മരുന്നാണ് ആവശ്യം? ദയവായി മരുന്നിന്റെ പേര് വ്യക്തമാക്കുക.",
-                "en": f"Which emergency medicine do you require for {facility_name}? Please select or state the medicine name."
+                "en": f"Which emergency medicine do you require for {target_display_name}? Please select or state the medicine name.",
+                "hi": f"{target_display_name} के लिए आपको किस आवश्यक दवा की आवश्यकता है? कृपया दवा का नाम बताएं।",
+                "te": f"{target_display_name} కొరకు మీకు ఏ అత్యవసర ఔషధం అవసరం? దయచేసి ఔషధం పేరు తెలియజేయండి.",
+                "ta": f"{target_display_name} மையத்திற்கு எந்த அவசர மருந்து தேவை? தயவுசெய்து மருந்தின் பெயரை தெரிவிக்கவும்.",
+                "mr": f"{target_display_name} साठी आपणास कोणत्या अत्यावश्यक औषधाची गरज आहे? कृपया औषधाचे नाव सांगा.",
+                "bn": f"{target_display_name}-এর জন্য আপনার কোন জরুরি ওষুধ প্রয়োজন? অনুগ্রহ করে ওষুধের নাম বলুন।",
+                "kn": f"{target_display_name} ಗಾಗಿ ನಿಮಗೆ ಯಾವ ತುರ್ತು ಔಷಧಿ ಬೇಕು? ದಯವಿಟ್ಟು ಔಷಧಿಯ ಹೆಸರನ್ನು ತಿಳಿಸಿ.",
+                "ml": f"{target_display_name}-ലേക്ക് ഏത് അടിയന്തര മരുന്നാണ് ആവശ്യം? ദയവായി മരുന്നിന്റെ പേര് വ്യക്തമാക്കുക."
             },
             "requested_quantity": {
-                "hi": f"{med_name or 'दवा'} की कितनी मात्रा (यूनिट/शीशियां) की आवश्यकता है?",
-                "en": f"How many units/vials of {med_name or 'the medication'} are required for {facility_name}?"
+                "en": f"How many units/vials of {med_name or 'the medication'} are required for {target_display_name}?",
+                "hi": f"{target_display_name} के लिए {med_name or 'दवा'} की कितनी मात्रा (शीशियां/यूनिट) की आवश्यकता है?"
             },
             "temperature_celsius": {
-                "hi": f"शीत-श्रृंखला अलर्ट: {facility_name} के रेफ्रिजरेटर में वर्तमान तापमान (°C) क्या दर्ज किया गया है?",
-                "te": f"కోల్డ్ చైన్ హెచ్చరిక: {facility_name} రిఫ్రిజిరేటర్‌లో ప్రస్తుత ఉష్ణోగ్రత (°C) ఎంత?",
-                "ta": f"குளிர்பதன எச்சரிக்கை: {facility_name} குளிர்சாதன பெட்டியின் தற்போதைய வெப்பநிலை (°C) என்ன?",
-                "mr": f"कोल्ड-चेन अलर्ट: {facility_name} च्या रेफ्रिजरेटरचे सध्याचे तापमान (°C) किती आहे?",
-                "en": f"Cold-Chain Alert: What is the current temperature reading (°C) inside the refrigerator at {facility_name}?"
+                "en": f"Cold-Chain Alert: What is the current temperature reading (°C) inside the refrigerator at {target_display_name}?",
+                "hi": f"शीत-श्रृंखला अलर्ट: {target_display_name} के रेफ्रिजरेटर में वर्तमान तापमान (°C) क्या दर्ज किया गया है?"
             }
-        }
-
-        greeting_responses = {
-            "hi": f"नमस्ते! मैं संजीवनी एआई राष्ट्रीय स्वास्थ्य आपूर्ति श्रृंखला सहायक हूँ (अखिल भारतीय 1,188+ स्वास्थ्य केंद्र नेटवर्क, वर्तमान केंद्र: {facility_name})। मैं किसी भी केंद्र के लिए आपातकालीन दवा मांग, निकटतम अधिशेष (Surplus) अस्पताल से स्वतः स्टॉक पुनःआवंटन, अथवा आपकी पसंद के अस्पताल से दवा स्थानांतरण, शीत-श्रृंखला तापमान अलर्ट और ई-औषधि स्टॉक जांच में आपकी सहायता कर सकता हूँ। आज आपको क्या सहायता चाहिए?",
-            "te": f"నమస్కారం! నేను సంజీవని AI జాతీయ ఆరోగ్య సరఫరా గొలుసు సహాయకుడిని (భారతదేశవ్యాప్తంగా 1,188+ ఆసుపత్రులు, ప్రస్తుత కేంద్రం: {facility_name}). నేను ఏ ఆరోగ్య కేంద్రానికైనా సమీప మిగులు (Surplus) ఆసుపత్రి నుండి అత్యవసర ఔషధాల పునఃపంపిణీ, లేదా మీరు కోరిన ఆసుపత్రి నుండి ఔషధ రవాణా మరియు స్టాక్ ఆడిట్‌లో సహాయపడగలను. నేడు మీకు ఎలా సహాయపడగలను?",
-            "ta": f"வணக்கம்! நான் சஞ்சீவனி AI தேசிய சுகாதார விநியோக உதவியாளர் (இந்தியா முழுவதும் 1,188+ மையங்கள், தற்போதைய மையம்: {facility_name}). அருகிலுள்ள உபரி (Surplus) மருத்துவமனையிலிருந்து அவசர மருந்துகளை வரவழைக்க, அல்லது நீங்கள் குறிப்பிடும் மருத்துவமனையிலிருந்து மறுபங்கீடு செய்ய என்னால் உதவ முடியும். இன்று உங்களுக்கு என்ன உதவி தேவை?",
-            "mr": f"नमस्कार! मी संजीवनी एआय राष्ट्रीय आरोग्य पुरवठा साखळी सहाय्यक आहे (भारतभरातील 1,188+ रुग्णालये, सध्याचे केंद्र: {facility_name}). मी कोणत्याही केंद्रासाठी जवळच्या अतिरिक्त साठा (Surplus) असलेल्या रुग्णालयातून तातडीची औषधे मिळवून देणे, किंवा आपल्या पसंतीच्या रुग्णालयातून औषध हस्तांतरण, कोल्ड-चेन अलर्ट व स्टॉक तपासणीत मदत करू शकतो. आज आपल्याला कशी मदत करू?",
-            "bn": f"নমস্কার! আমি সঞ্জীবনী এআই জাতীয় স্বাস্থ্য সরবরাহ সহকারী (ভারতজুড়ে ১,১৮৮+ কেন্দ্র, বর্তমান কেন্দ্র: {facility_name})। আমি নিকটতম উদ্বৃত্ত (Surplus) হাসপাতাল থেকে জরুরি ওষুধ বরাদ্দ, অথবা আপনার পছন্দের হাসপাতাল থেকে ওষুধ স্থানান্তর এবং স্টক অডিটে সাহায্য করতে পারি। আজ আপনাকে কীভাবে সাহায্য করতে পারি?",
-            "kn": f"ನಮಸ್ಕಾರ! ನಾನು ಸಂಜೀವನಿ AI ರಾಷ್ಟ್ರೀಯ ಆರೋಗ್ಯ ಪೂರೈಕೆ ಸಹಾಯಕ (ಭಾರತದಾದ್ಯಂತ 1,188+ ಆಸ್ಪತ್ರೆಗಳು, ಪ್ರಸ್ತುತ ಕೇಂದ್ರ: {facility_name}). ಸಮೀಪದ ಹೆಚ್ಚುವರಿ ದಾಸ್ತಾನು (Surplus) ಹೊಂದಿರುವ ಆಸ್ಪತ್ರೆಯಿಂದ ತುರ್ತು ಔಷಧ ಮರುಹಂಚಿಕೆ ಅಥವಾ ನೀವು ಆಯ್ಕೆ ಮಾಡಿದ ಆಸ್ಪತ್ರೆಯಿಂದ ಔಷಧ ವರ್ಗಾವಣೆಯಲ್ಲಿ ನೆರವಾಗಬಲ್ಲೆ. ಇಂದು ನಿಮಗೆ ಏನು ಸಹಾಯ ಬೇಕು?",
-            "ml": f"നമസ്കാരം! ഞാൻ സഞ്ജീവനി AI ദേശീയ ആരോഗ്യ വിതരണ അസിസ്റ്റന്റ് ആണ് (ഇന്ത്യയിലുടനീളം 1,188+ കേന്ദ്രങ്ങൾ, നിലവിലെ കേന്ദ്രം: {facility_name}). അടുത്തുള്ള മിച്ച (Surplus) സ്റ്റോക്കുള്ള ആശുപത്രിയിൽ നിന്ന് അടിയന്തര മരുന്നുകൾ ലഭ്യമാക്കാനും നിങ്ങൾ നിർദ്ദേശിക്കുന്ന ആശുപത്രിയിൽ നിന്ന് മരുന്ന് കൈമാറ്റം നടത്താനും സഹായിക്കാം. ഇന്ന് എന്താണ് സഹായം വേണ്ടത്?",
-            "en": f"Hello! I am Sanjeevani AI Healthcare Supply Chain Copilot for the National Health Logistics Network (monitoring 1,188+ healthcare facilities Pan-India, currently focused on {facility_name}). I can find the nearest surplus hospital to dispatch emergency medicines, transfer supplies from a specific facility of your choice, audit e-Aushadhi stock, and monitor cold-chain ILR alerts. Which facility or emergency can I assist you with today?"
         }
 
         if is_clarify:
             slot_qs = localized_questions.get(target_slot, {})
-            localized_resp = slot_qs.get(language_code) or slot_qs.get("en") or f"Please provide {target_slot} for {facility_name}."
-            english_resp = slot_qs.get("en") or f"Please provide {target_slot} for {facility_name}."
+            localized_resp = slot_qs.get(language_code) or slot_qs.get("en") or f"Please provide {target_slot} for {target_display_name}."
+            english_resp = slot_qs.get("en") or f"Please provide {target_slot} for {target_display_name}."
             urgency_level = "CRITICAL" if intent == "EMERGENCY_REQUISITION" else "HIGH"
-            clinical_rationale = f"Awaiting frontline clarification for missing {target_slot} at {facility_name}."
+            clinical_rationale = f"Awaiting frontline clarification for missing {target_slot} before proceeding."
             recommended_action_type = "AWAIT_CLARIFICATION"
-            action_summary = f"Awaiting frontline clarification for missing {target_slot} before executing multi-agent corridor."
+            action_summary = f"Awaiting frontline clarification for missing {target_slot}."
+        elif intent == "FACILITY_SELECTION":
+            confirmed_prompts = {
+                "en": f"Confirmed. Successfully connected to {target_display_name}. How can I assist you with emergency medicines, surplus stock, or cold-chain monitoring today?",
+                "hi": f"पुष्टि की गई। {target_display_name} से सफलतापूर्वक जुड़ गए हैं। आज मैं आपकी आपातकालीन दवा मांग, अधिशेष स्टॉक पुनःआवंटन या कोल्ड-चेन निगरानी में क्या सहायता कर सकता हूँ?",
+                "te": f"ధృవీకరించబడింది. {target_display_name} కు విజయవంతంగా కనెక్ట్ అయ్యారు. అత్యవసర ఔషధాల సరఫరా లేదా కోల్డ్ చైన్ పర్యవేక్షణలో నేను మీకు ఎలా సహాయపడగలను?",
+                "ta": f"உறுதிப்படுத்தப்பட்டது. {target_display_name} மையத்துடன் வெற்றிகரமாக இணைக்கப்பட்டது. அவசர மருந்துகள் அல்லது குளிர்சங்கிலி கண்காணிப்பில் நான் எவ்வாறு உதவ முடியும்?",
+                "mr": f"पुष्टी झाली. {target_display_name} शी यशस्वीरित्या जोडले गेले. आज मी आपल्याला कशी मदत करू शकेन?",
+                "bn": f"নিশ্চিত করা হয়েছে। {target_display_name}-এর সাথে সফলভাবে সংযুক্ত। আজ আমি আপনাকে কীভাবে সাহায্য করতে পারি?",
+                "kn": f"ದೃಢೀಕರಿಸಲಾಗಿದೆ. {target_display_name} ಗೆ ಯಶಸ್ವಿಯಾಗಿ ಸಂಪರ್ಕಿಸಲಾಗಿದೆ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಲ್ಲೆ?",
+                "ml": f"സ്ഥിരീകരിച്ചു. {target_display_name}-ലേക്ക് വിജയകരമായി ബന്ധിപ്പിച്ചു. ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം?"
+            }
+            localized_resp = confirmed_prompts.get(language_code) or confirmed_prompts["en"]
+            english_resp = confirmed_prompts["en"]
+            urgency_level = "NORMAL"
+            clinical_rationale = f"Facility context established for {target_display_name}."
+            recommended_action_type = "FACILITY_CONNECTED"
+            action_summary = f"Connected to {target_display_name}."
         elif intent == "GENERAL_QUERY":
             localized_resp = greeting_responses.get(language_code, greeting_responses["en"])
             english_resp = greeting_responses["en"]
             urgency_level = "NORMAL"
-            clinical_rationale = f"Frontline health worker capability orientation for {facility_name}."
+            clinical_rationale = f"Frontline health worker capability orientation for {target_display_name}."
             recommended_action_type = "GENERAL_ASSISTANCE"
-            action_summary = f"Clinical conversational copilot briefing for {facility_name}."
+            action_summary = f"Clinical conversational copilot briefing for {target_display_name}."
         else:
-            localized_resp = f"प्राथमिक स्वास्थ्य केंद्र {facility_name} के लिए अनुरोध ({intent}) सफलतापूर्वक सत्यापित किया गया।"
-            english_resp = f"Request under protocol {intent} successfully verified and scheduled for {facility_name}."
+            localized_resp = f"{target_display_name} के लिए अनुरोध ({intent}) सफलतापूर्वक सत्यापित किया गया।"
+            english_resp = f"Request under protocol {intent} successfully verified and scheduled for {target_display_name}."
             urgency_level = "CRITICAL" if intent == "EMERGENCY_REQUISITION" else "HIGH"
-            clinical_rationale = f"Clinical autonomous workflow validated for {facility_name} under protocol {intent}."
+            clinical_rationale = f"Clinical autonomous workflow validated for {target_display_name} under protocol {intent}."
             recommended_action_type = "CREATE_DISPATCH_ORDER" if intent == "EMERGENCY_REQUISITION" else ("TRIGGER_COLD_CHAIN_TECH" if intent == "COLD_CHAIN_ALERT" else "AUDIT_INVENTORY")
-            action_summary = f"Autonomous multi-agent execution scheduled for {facility_name} ({intent})."
+            action_summary = f"Autonomous multi-agent execution scheduled for {target_display_name} ({intent})."
 
         return {
             "intent": intent,
@@ -1072,6 +1211,8 @@ Return ONLY valid JSON matching this schema:
                 "requested_quantity": req_qty or (25 if not is_clarify and intent == "EMERGENCY_REQUISITION" else None),
                 "current_stock": 3 if med_name else None,
                 "temperature_reading": temp_reading or (8.7 if not is_clarify and intent == "COLD_CHAIN_ALERT" else None),
+                "state_name": detected_state,
+                "district_name": detected_district,
                 "target_facility_name": target_facility_name,
                 "target_facility_id": target_facility_id,
                 "source_facility_name": source_facility_name,
@@ -1084,6 +1225,8 @@ Return ONLY valid JSON matching this schema:
             "quick_reply_options": quick_reply_options,
             "response_text_localized": localized_resp,
             "response_text_english": english_resp,
+            "facility_id": target_facility_id,
+            "facility_name": target_facility_name,
             "recommended_action": {
                 "action_type": recommended_action_type,
                 "action_summary": action_summary
@@ -1236,8 +1379,8 @@ def analyze_asha_conversational_turn(
     user_prompt: str,
     session_id: Optional[str] = None,
     language_code: str = "hi",
-    facility_id: str = "PHC-BARAGAON-03",
-    facility_name: str = "Primary Health Centre Baragaon",
+    facility_id: Optional[str] = None,
+    facility_name: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     accumulated_context: Optional[Dict[str, Any]] = None,
     allow_clarification: bool = True

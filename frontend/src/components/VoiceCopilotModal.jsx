@@ -8,6 +8,84 @@ import {
 } from 'lucide-react';
 import { chatWithAshaCopilot, fetchFacilities } from '../services/api';
 
+const AGENT_CONFIG = {
+  AshaVoiceCopilotAgent: {
+    label: 'Frontline Copilot',
+    icon: '🎙️',
+    badgeClass: 'bg-cyan-950/60 text-cyan-300 border-cyan-500/40'
+  },
+  FacilityDirectoryAgent: {
+    label: 'Facility Directory',
+    icon: '🏥',
+    badgeClass: 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+  },
+  ContextSynchronizationAgent: {
+    label: 'Context Sync',
+    icon: '🔄',
+    badgeClass: 'bg-indigo-950/60 text-indigo-300 border-indigo-500/40'
+  },
+  ClinicalClarificationAgent: {
+    label: 'Clinical Clarifier',
+    icon: '💬',
+    badgeClass: 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+  },
+  StockoutSentinelAgent: {
+    label: 'Stockout Sentinel',
+    icon: '🔍',
+    badgeClass: 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+  },
+  SupplyChainSupervisorAgent: {
+    label: 'Crisis Supervisor',
+    icon: '⚡',
+    badgeClass: 'bg-purple-950/60 text-purple-300 border-purple-500/40'
+  },
+  AllocationStrategistAgent: {
+    label: 'Allocation Strategist',
+    icon: '🧠',
+    badgeClass: 'bg-indigo-950/60 text-indigo-300 border-indigo-500/40'
+  },
+  FleetRoutingAgent: {
+    label: 'Fleet & Route Dispatch',
+    icon: '🚚',
+    badgeClass: 'bg-blue-950/60 text-blue-300 border-blue-500/40'
+  },
+  LedgerExecutionAgent: {
+    label: 'Ledger Audit & Commit',
+    icon: '📝',
+    badgeClass: 'bg-teal-950/60 text-teal-300 border-teal-500/40'
+  },
+  ColdChainGuardianAgent: {
+    label: 'Cold-Chain Guardian',
+    icon: '❄️',
+    badgeClass: 'bg-rose-950/60 text-rose-300 border-rose-500/40'
+  },
+  TechnicianDispatchAgent: {
+    label: 'Technician Dispatch',
+    icon: '🛠️',
+    badgeClass: 'bg-orange-950/60 text-orange-300 border-orange-500/40'
+  },
+  FacilityReadinessAgent: {
+    label: 'Facility Readiness',
+    icon: '🛏️',
+    badgeClass: 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+  },
+  EpidemicSurveillanceAgent: {
+    label: 'Epidemic Surveillance',
+    icon: '📈',
+    badgeClass: 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+  }
+};
+
+const getAgentInfo = (agentName) => {
+  if (!agentName) return { label: 'Autonomous Agent', icon: '🤖', badgeClass: 'bg-slate-900 text-slate-300 border-slate-700' };
+  const cleanName = agentName.endsWith('Agent') ? agentName : `${agentName}Agent`;
+  return AGENT_CONFIG[cleanName] || AGENT_CONFIG[agentName] || {
+    label: agentName.replace('Agent', ''),
+    icon: '🤖',
+    badgeClass: 'bg-slate-900 text-slate-300 border-slate-700'
+  };
+};
+
 export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerReallocation }) {
   const [selectedLang, setSelectedLang] = useState('hi');
   const [inputText, setInputText] = useState('');
@@ -20,17 +98,25 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [expandedTraceStep, setExpandedTraceStep] = useState(null);
 
-  const defaultFacilities = [
-    { id: 'DH-AND-001', name: 'Andaman Islands District Headquarters Civil Hospital', district: 'Andaman Islands' },
-    { id: 'PHC-AND-001', name: 'Andaman Islands Block Primary Health Centre', district: 'Andaman Islands' },
-    { id: 'DH-NIC-002', name: 'Nicobar Islands District Headquarters Civil Hospital', district: 'Nicobar Islands' },
-    { id: 'PHC-BARAGAON-03', name: 'Primary Health Centre Baragaon', district: 'Varanasi' },
-    { id: 'PHC-VELLORE-02', name: 'Kaniyambadi PHC', district: 'Vellore' },
-    { id: 'CHC-PUNE-04', name: 'Khed CHC', district: 'Pune' }
-  ];
-  const [facilities, setFacilities] = useState(defaultFacilities);
-  const [selectedFacility, setSelectedFacility] = useState(defaultFacilities[0]);
-  const [selectedSourceFacility, setSelectedSourceFacility] = useState('AUTO_NEAREST_SURPLUS');
+  const [selectedFacility, setSelectedFacility] = useState(() => {
+    try {
+      const saved = localStorage.getItem('asha_copilot_active_facility');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [facilities, setFacilities] = useState([]);
+
+  useEffect(() => {
+    try {
+      if (selectedFacility) {
+        localStorage.setItem('asha_copilot_active_facility', JSON.stringify(selectedFacility));
+      } else {
+        localStorage.removeItem('asha_copilot_active_facility');
+      }
+    } catch (_) {}
+  }, [selectedFacility]);
 
   const recognitionRef = useRef(null);
   const chatBottomRef = useRef(null);
@@ -248,22 +334,28 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
     setLoading(true);
 
     try {
-      const isAutoSource = !selectedSourceFacility || selectedSourceFacility === 'AUTO_NEAREST_SURPLUS';
-      const sourceFacObj = isAutoSource ? null : facilities.find(f => f.id === selectedSourceFacility);
-
       const res = await chatWithAshaCopilot({
         prompt: textToSend,
         sessionId: sessionId,
         language: selectedLang,
-        facilityId: selectedFacility?.id || 'DH-AND-001',
-        facilityName: selectedFacility?.name || 'District Hospital',
-        sourceFacilityId: isAutoSource ? undefined : selectedSourceFacility,
-        sourceFacilityName: sourceFacObj ? sourceFacObj.name : undefined
+        facilityId: selectedFacility?.id || null,
+        facilityName: selectedFacility?.name || null,
+        sourceFacilityId: null,
+        sourceFacilityName: null
       });
 
       if (res?.success && res.data) {
         const copilotData = res.data;
         setLatestResult(copilotData);
+
+        if (copilotData.facility_id || copilotData.facility_name) {
+          setSelectedFacility({
+            id: copilotData.facility_id,
+            name: copilotData.facility_name,
+            district: copilotData.extracted_entities?.district_name || '',
+            state: copilotData.extracted_entities?.state_name || ''
+          });
+        }
 
         const assistantMessage = {
           role: 'assistant',
@@ -343,47 +435,32 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                {/* Target Recipient Selector */}
-                <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 py-1">
-                  <Building2 size={12} className="text-cyan-400 shrink-0" />
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Target:</span>
-                  <select
-                    value={selectedFacility.id}
-                    onChange={(e) => {
-                      const found = facilities.find(f => f.id === e.target.value);
-                      if (found) setSelectedFacility(found);
-                    }}
-                    className="bg-transparent text-[11px] font-semibold text-white focus:outline-none cursor-pointer max-w-[140px] truncate"
-                    title="Recipient health facility needing supplies"
-                  >
-                    {facilities.slice(0, 100).map(f => (
-                      <option key={f.id} value={f.id} className="bg-slate-900 text-white">
-                        {f.name} ({f.district})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Source Donor Selector */}
-                <div className="flex items-center gap-1 bg-slate-900/90 border border-emerald-700/70 rounded-lg px-2 py-1">
-                  <Truck size={12} className="text-emerald-400 shrink-0" />
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Source:</span>
-                  <select
-                    value={selectedSourceFacility}
-                    onChange={(e) => setSelectedSourceFacility(e.target.value)}
-                    className="bg-transparent text-[11px] font-semibold text-emerald-300 focus:outline-none cursor-pointer max-w-[150px] truncate"
-                    title="Supplying donor facility or let AI auto-find nearest surplus"
-                  >
-                    <option value="AUTO_NEAREST_SURPLUS" className="bg-slate-900 text-emerald-400 font-bold">
-                      ⚡ Auto Nearest Surplus (AI)
-                    </option>
-                    {facilities.filter(f => f.id !== selectedFacility.id).slice(0, 60).map(f => (
-                      <option key={`modal-src-${f.id}`} value={f.id} className="bg-slate-900 text-slate-200">
-                        {f.name} ({f.district})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Dynamic Conversational Facility Status Badge */}
+                {selectedFacility?.name ? (
+                  <div className="flex items-center gap-1.5 bg-slate-900/90 border border-cyan-500/40 rounded-lg px-2.5 py-1 text-xs">
+                    <span className="flex h-1.5 w-1.5 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500"></span>
+                    </span>
+                    <Building2 size={12} className="text-cyan-400 shrink-0" />
+                    <span className="font-semibold text-white truncate max-w-[170px]" title={selectedFacility.name}>
+                      {selectedFacility.name}
+                      {selectedFacility.district ? ` (${selectedFacility.district})` : ''}
+                    </span>
+                    <button
+                      onClick={() => setSelectedFacility(null)}
+                      className="text-[10px] text-slate-400 hover:text-rose-400 ml-1 font-bold"
+                      title="Disconnect facility to mention a new one in conversation"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 bg-slate-900/80 border border-amber-500/30 rounded-lg px-2.5 py-1 text-[11px] text-amber-300">
+                    <Building2 size={12} className="text-amber-400 shrink-0" />
+                    <span className="text-slate-300">Facility: mention name or state/district</span>
+                  </div>
+                )}
 
                 <span className="text-[10px] font-mono text-cyan-400/80 hidden sm:inline">
                   {sessionId.slice(0, 12)}...
@@ -536,20 +613,24 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
                           <span>{msg.status === 'AWAITING_CLARIFICATION' ? 'Clarification Required — Tap to Answer:' : 'Suggested Frontline Actions — Tap to Send:'}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {msg.quickReplyOptions.map((opt, oIdx) => (
-                            <button
-                              key={oIdx}
-                              onClick={() => handleSendQuery(opt.action_payload || opt.value || opt.label)}
-                              className={`text-xs px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 transition-all hover:scale-105 border ${
-                                msg.status === 'AWAITING_CLARIFICATION'
-                                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-500/40 hover:border-amber-400'
-                                  : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border-cyan-500/40 hover:border-cyan-400'
-                              }`}
-                            >
-                              <span>{opt.label}</span>
-                              <ArrowRight size={11} />
-                            </button>
-                          ))}
+                          {msg.quickReplyOptions.map((opt, oIdx) => {
+                            const optLabel = typeof opt === 'object' && opt !== null ? (opt.label || opt.name || opt.value) : String(opt);
+                            const optPayload = typeof opt === 'object' && opt !== null ? (opt.action_payload || opt.value || opt.label) : String(opt);
+                            return (
+                              <button
+                                key={oIdx}
+                                onClick={() => handleSendQuery(optPayload)}
+                                className={`text-xs px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 transition-all hover:scale-105 border ${
+                                  msg.status === 'AWAITING_CLARIFICATION'
+                                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-500/40 hover:border-amber-400'
+                                    : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border-cyan-500/40 hover:border-cyan-400'
+                                }`}
+                              >
+                                <span>{optLabel}</span>
+                                <ArrowRight size={11} />
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -631,17 +712,64 @@ export default function VoiceCopilotModal({ isOpen, onClose, apiKey, onTriggerRe
                       </div>
                     )}
 
-                    {/* Auditable Multi-Agent Trace Dropdown */}
-                    {!isUser && msg.executionTrace && msg.executionTrace.length > 0 && (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                          <Layers size={11} className="text-indigo-400" />
-                          <span>{msg.executionTrace.length} Multi-Agent Steps Coordinated</span>
-                          <span>•</span>
-                          <span className="text-indigo-300">{msg.agentsInvoked?.join(', ')}</span>
+                    {/* Coordinated Agent Swarm Flow (Picked dynamically per conversation) */}
+                    {!isUser && ((msg.agentsInvoked && msg.agentsInvoked.length > 0) || (msg.executionTrace && msg.executionTrace.length > 0)) && (() => {
+                      const flowAgents = (msg.agentsInvoked && msg.agentsInvoked.length > 0)
+                        ? msg.agentsInvoked
+                        : Array.from(new Set((msg.executionTrace || []).map(s => s.agent_name || s.agentName)));
+                      return (
+                        <div className="pt-2 border-t border-slate-800/80 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <Sparkles size={11} className="text-cyan-400" /> Coordinated Agent Flow ({flowAgents.length} Agents):
+                            </span>
+                          </div>
+
+                          {/* Specialized Agent Swarm Badges */}
+                          <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-[11px] text-slate-300 scrollbar-thin">
+                            {flowAgents.map((agName, aIdx) => {
+                              const agInfo = getAgentInfo(agName);
+                              return (
+                                <React.Fragment key={aIdx}>
+                                  <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg border shadow-sm shrink-0 font-medium ${agInfo.badgeClass}`}>
+                                    <span className="text-xs">{agInfo.icon}</span>
+                                    <span className="font-semibold tracking-tight">{agInfo.label}</span>
+                                  </div>
+                                  {aIdx < flowAgents.length - 1 && (
+                                    <ChevronRight size={10} className="text-slate-600 shrink-0" />
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+
+                          {/* Expandable Autonomous Actions (No raw steps forced directly) */}
+                          {msg.executionTrace && msg.executionTrace.length > 0 && (
+                            <details className="group mt-1 text-[11px] text-slate-400">
+                              <summary className="cursor-pointer text-[10px] font-medium text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-1 select-none">
+                                <Layers size={11} className="text-slate-500 group-hover:text-cyan-400" />
+                                <span>Inspect Agent Reasoning Decisions ({msg.executionTrace.length})</span>
+                                <ChevronDown size={11} className="transition-transform group-open:rotate-180 ml-0.5" />
+                              </summary>
+                              <div className="mt-1.5 space-y-1 pl-2 border-l-2 border-cyan-500/20 bg-slate-950/50 p-2 rounded-r-lg">
+                                {msg.executionTrace.map((step, sIdx) => {
+                                  const agInfo = getAgentInfo(step.agent_name || step.agentName);
+                                  return (
+                                    <div key={sIdx} className="text-[10.5px] leading-relaxed">
+                                      <div className="flex items-baseline gap-1.5 font-semibold text-slate-200">
+                                        <span>{agInfo.icon}</span>
+                                        <span className="text-cyan-300 shrink-0">{agInfo.label}:</span>
+                                        <span className="font-normal text-slate-300">{step.action_summary || step.actionSummary}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </details>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
 
                   {isUser && (

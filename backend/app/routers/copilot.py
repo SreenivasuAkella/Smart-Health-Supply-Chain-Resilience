@@ -79,9 +79,11 @@ async def copilot_chat(request: Request):
         session_id = body.get("session_id") or body.get("sessionId")
         lang_code = body.get("language") or body.get("language_code") or "hi"
 
-        default_fac = _get_default_facility()
-        facility_id = body.get("target_facility_id") or body.get("facility_id") or default_fac["id"]
-        facility_name = body.get("target_facility_name") or body.get("facility_name") or default_fac["name"]
+        raw_fac_id = body.get("target_facility_id") or body.get("facility_id")
+        raw_fac_name = body.get("target_facility_name") or body.get("facility_name")
+        facility_id = str(raw_fac_id).strip() if raw_fac_id and str(raw_fac_id).strip() not in ["null", "undefined", "AUTO", ""] else None
+        facility_name = str(raw_fac_name).strip() if raw_fac_name and str(raw_fac_name).strip() not in ["null", "undefined", "AUTO", ""] else None
+
         source_facility_id = body.get("source_facility_id") or body.get("sourceFacilityId") or body.get("donor_facility_id")
         source_facility_name = body.get("source_facility_name") or body.get("sourceFacilityName") or body.get("donor_facility_name")
         conversation_history = body.get("conversation_history") or body.get("history") or []
@@ -91,9 +93,9 @@ async def copilot_chat(request: Request):
             prompt=str(prompt_text),
             session_id=str(session_id) if session_id else None,
             language_code=str(lang_code),
-            facility_id=str(facility_id),
-            facility_name=str(facility_name),
-            source_facility_id=str(source_facility_id) if source_facility_id else None,
+            facility_id=facility_id,
+            facility_name=facility_name,
+            source_facility_id=str(source_facility_id) if source_facility_id and str(source_facility_id) != "AUTO_NEAREST_SURPLUS" else None,
             source_facility_name=str(source_facility_name) if source_facility_name else None,
             conversation_history=conversation_history,
             custom_api_key=key
@@ -118,9 +120,11 @@ async def copilot_query(request: Request):
 
         lang_code = body.get("language") or body.get("language_code") or "hi"
 
-        default_fac = _get_default_facility()
-        facility_id = body.get("target_facility_id") or body.get("facility_id") or default_fac["id"]
-        facility_name = body.get("target_facility_name") or body.get("facility_name") or default_fac["name"]
+        raw_fac_id = body.get("target_facility_id") or body.get("facility_id")
+        raw_fac_name = body.get("target_facility_name") or body.get("facility_name")
+        facility_id = str(raw_fac_id).strip() if raw_fac_id and str(raw_fac_id).strip() not in ["null", "undefined", "AUTO", ""] else None
+        facility_name = str(raw_fac_name).strip() if raw_fac_name and str(raw_fac_name).strip() not in ["null", "undefined", "AUTO", ""] else None
+
         source_facility_id = body.get("source_facility_id") or body.get("sourceFacilityId") or body.get("donor_facility_id")
         source_facility_name = body.get("source_facility_name") or body.get("sourceFacilityName") or body.get("donor_facility_name")
         key = body.get("apiKey") or body.get("custom_api_key") or body.get("api_key")
@@ -128,9 +132,9 @@ async def copilot_query(request: Request):
         result = process_copilot_query(
             user_prompt=str(prompt_text),
             language_code=str(lang_code),
-            facility_id=str(facility_id),
-            facility_name=str(facility_name),
-            source_facility_id=str(source_facility_id) if source_facility_id else None,
+            facility_id=facility_id or "PHC-BARAGAON-03",
+            facility_name=facility_name or "Primary Health Centre Baragaon",
+            source_facility_id=str(source_facility_id) if source_facility_id and str(source_facility_id) != "AUTO_NEAREST_SURPLUS" else None,
             source_facility_name=str(source_facility_name) if source_facility_name else None,
             custom_api_key=key
         )
