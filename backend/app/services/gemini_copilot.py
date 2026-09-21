@@ -209,7 +209,8 @@ def process_copilot_query(
     facility_name: Optional[str] = None,
     source_facility_id: Optional[str] = None,
     source_facility_name: Optional[str] = None,
-    custom_api_key: Optional[str] = None
+    custom_api_key: Optional[str] = None,
+    user_role: Optional[str] = "PHC_OFFICER"
 ) -> Dict[str, Any]:
     """
     Multilingual Gemini NLU Copilot for ASHA workers, ANMs, and PHC Medical Officers.
@@ -226,7 +227,8 @@ def process_copilot_query(
             facility_name=facility_name,
             source_facility_id=source_facility_id,
             source_facility_name=source_facility_name,
-            custom_api_key=custom_api_key
+            custom_api_key=custom_api_key,
+            user_role=user_role
         )
         if agentic_result:
             try:
@@ -350,7 +352,8 @@ def process_copilot_chat(
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     custom_api_key: Optional[str] = None,
     image_base64: Optional[str] = None,
-    image_mime_type: Optional[str] = "image/jpeg"
+    image_mime_type: Optional[str] = "image/jpeg",
+    user_role: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Conversational GenAI Multi-Turn Chat Controller with Multimodal Agentic Vision.
@@ -530,7 +533,8 @@ def process_copilot_chat(
                 session_id=sid,
                 conversation_history=session["messages"],
                 accumulated_context=session["context"],
-                allow_clarification=True
+                allow_clarification=True,
+                user_role=user_role
             )
         except Exception as e:
             print(f"[Conversational Copilot agent error]: {e}")
@@ -732,7 +736,8 @@ def process_copilot_chat_streaming(
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     custom_api_key: Optional[str] = None,
     image_base64: Optional[str] = None,
-    image_mime_type: Optional[str] = "image/jpeg"
+    image_mime_type: Optional[str] = "image/jpeg",
+    user_role: Optional[str] = None
 ):
     """
     Streaming generator for Copilot chat — yields SSE events as each pipeline
@@ -861,7 +866,8 @@ def process_copilot_chat_streaming(
                     session_id=sid,
                     conversation_history=session["messages"],
                     accumulated_context=session["context"],
-                    allow_clarification=True
+                    allow_clarification=True,
+                    user_role=user_role
                 )
             except Exception as e:
                 print(f"[Streaming Copilot agent error]: {e}")

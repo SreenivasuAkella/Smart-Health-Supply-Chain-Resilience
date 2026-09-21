@@ -15,6 +15,10 @@ import CrisisSandbox from './CrisisSandbox';
 import InventoryLedger from './InventoryLedger';
 import GoogleTechArchitectureModal from './GoogleTechArchitectureModal';
 import ApiKeyModal from './ApiKeyModal';
+import LoginModal from './LoginModal';
+import RoleRestrictedGuard from './RoleRestrictedGuard';
+import { useAuth } from '../context/AuthContext';
+import { hasTabAccess } from '../utils/rbac';
 import { 
   fetchFacilities, 
   fetchSurveillanceDistricts, 
@@ -33,6 +37,18 @@ const VALID_TABS = [
   'vision', 
   'voice'
 ];
+
+const TAB_TITLES = {
+  overview: "National Command Center",
+  map: "Geospatial Rebalancer",
+  inventory: "e-Aushadhi National Ledger",
+  forecasting: "Epidemic Outbreak Forecasting",
+  coldchain: "Cold-Chain IoT Digital Twin",
+  federated: "Federated Multi-State AI",
+  simulation: "Crisis Sandbox Drills",
+  vision: "Gemini Vision Scanner",
+  voice: "ASHA Voice Copilot"
+};
 
 function getTabFromPath(path) {
   if (!path || path === '/' || path === '/overview') return 'overview';
@@ -53,6 +69,8 @@ export default function MainLayout({ initialTab }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const { user, isAuthenticated, isLoading: authLoading, isLoginModalOpen, closeLoginModal, openLoginModal } = useAuth();
 
   const [facilities, setFacilities] = useState([]);
   const [medicines, setMedicines] = useState([]);
@@ -141,6 +159,8 @@ export default function MainLayout({ initialTab }) {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const storedKey = localStorage.getItem('SANJEEVANI_GEMINI_KEY');
     if (storedKey) setGeminiApiKey(storedKey);
 
@@ -178,7 +198,7 @@ export default function MainLayout({ initialTab }) {
     return () => {
       if (unsubscribeSSE) unsubscribeSSE();
     };
-  }, [areAlertsMuted]);
+  }, [areAlertsMuted, isAuthenticated]);
 
   const handleSaveApiKey = (key) => {
     setGeminiApiKey(key);
@@ -207,6 +227,53 @@ export default function MainLayout({ initialTab }) {
     }
     setStockoutToast(null);
   };
+
+  // 1. Fullscreen loading screen while verifying stored credentials/session
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-300 p-4 select-none">
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-cyan-500/30 flex items-center justify-center p-2 shadow-2xl shadow-cyan-500/20">
+            <img src="/team_logo.jpg" alt="Sanjeevani AI" className="w-full h-full object-cover rounded-xl" />
+          </div>
+          <div className="absolute -inset-2 border-2 border-cyan-400/40 rounded-3xl animate-ping opacity-30" />
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-bold text-white tracking-wide">SANJEEVANI AI</span>
+        </div>
+        <p className="text-xs text-slate-400 font-mono">Verifying Public Health Grid Security Credentials...</p>
+      </div>
+    );
+  }
+
+  // 2. Strict Access Control Gate: If user is not logged in, restrict the entire website and display ONLY the Login Gateway
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        {/* Subtle Ambient Grid Background */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(14,165,233,0.15),rgba(255,255,255,0))] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+
+        {/* Centered Brand Title Header */}
+        <div className="mb-6 text-center z-10 animate-fadeIn">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold mb-3">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            Ministry of Health &amp; Family Welfare
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            SANJEEVANI <span className="bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">AI</span>
+          </h1>
+          <p className="text-xs text-slate-400 max-w-sm mt-1">
+            Autonomous Public Health &amp; Vaccine Supply Chain Resilience Operating System
+          </p>
+        </div>
+
+        {/* Mandatory Login Gateway Modal */}
+        <LoginModal isOpen={true} isMandatory={true} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
@@ -288,73 +355,86 @@ export default function MainLayout({ initialTab }) {
           isKeyConfigured={Boolean(geminiApiKey)}
           onDataRefresh={handleRefresh}
           sseConnected={sseConnected}
+          onOpenLoginModal={openLoginModal}
         />
 
         {/* Tab Viewport */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {activeTab === 'overview' && (
-            <OverviewDashboard
-              key={refreshKey}
-              isLoading={isLoading}
-              telemetry={telemetry}
-              onNavigate={navigateToTab}
-              onTriggerReallocation={handleTriggerReallocation}
-              onOpenCopilot={handleOpenCopilot}
+          {!hasTabAccess(user?.role, activeTab) ? (
+            <RoleRestrictedGuard
+              tabId={activeTab}
+              tabTitle={TAB_TITLES[activeTab] || activeTab}
+              user={user}
+              onReturnToOverview={() => navigateToTab('overview')}
             />
-          )}
+          ) : (
+            <>
+              {activeTab === 'overview' && (
+                <OverviewDashboard
+                  key={refreshKey}
+                  isLoading={isLoading}
+                  telemetry={telemetry}
+                  user={user}
+                  onNavigate={navigateToTab}
+                  onTriggerReallocation={handleTriggerReallocation}
+                  onOpenCopilot={handleOpenCopilot}
+                />
+              )}
 
-          {activeTab === 'map' && (
-            <InteractiveMap
-              key={refreshKey}
-              isLoading={isLoading}
-              facilities={facilities}
-              surveillanceDistricts={surveillanceDistricts}
-              activeReallocation={activeReallocation}
-              onSelectFacility={(fac) => handleTriggerReallocation(fac.id)}
-            />
-          )}
+              {activeTab === 'map' && (
+                <InteractiveMap
+                  key={refreshKey}
+                  isLoading={isLoading}
+                  facilities={facilities}
+                  surveillanceDistricts={surveillanceDistricts}
+                  activeReallocation={activeReallocation}
+                  onSelectFacility={(fac) => handleTriggerReallocation(fac.id)}
+                />
+              )}
 
-          {activeTab === 'federated' && (
-            <FederatedLearningHub />
-          )}
+              {activeTab === 'federated' && (
+                <FederatedLearningHub />
+              )}
 
-          {activeTab === 'vision' && (
-            <MultimodalVisionScanner
-              apiKey={geminiApiKey}
-              onStockUpdated={handleRefresh}
-              facilities={facilities}
-            />
-          )}
+              {activeTab === 'vision' && (
+                <MultimodalVisionScanner
+                  apiKey={geminiApiKey}
+                  onStockUpdated={handleRefresh}
+                  facilities={facilities}
+                />
+              )}
 
-          {activeTab === 'voice' && (
-            <VoiceCopilotView
-              apiKey={geminiApiKey}
-              onTriggerReallocation={handleTriggerReallocation}
-            />
-          )}
+              {activeTab === 'voice' && (
+                <VoiceCopilotView
+                  apiKey={geminiApiKey}
+                  onTriggerReallocation={handleTriggerReallocation}
+                />
+              )}
 
-          {activeTab === 'coldchain' && (
-            <ColdChainDigitalTwin />
-          )}
+              {activeTab === 'coldchain' && (
+                <ColdChainDigitalTwin />
+              )}
 
-          {activeTab === 'forecasting' && (
-            <OutbreakForecasting
-              onTriggerReallocation={handleTriggerReallocation}
-            />
-          )}
+              {activeTab === 'forecasting' && (
+                <OutbreakForecasting
+                  onTriggerReallocation={handleTriggerReallocation}
+                />
+              )}
 
-          {activeTab === 'simulation' && (
-            <CrisisSandbox
-              onNavigateToMap={() => navigateToTab('map')}
-            />
-          )}
+              {activeTab === 'simulation' && (
+                <CrisisSandbox
+                  onNavigateToMap={() => navigateToTab('map')}
+                />
+              )}
 
-          {activeTab === 'inventory' && (
-            <InventoryLedger
-              key={refreshKey}
-              isLoading={isLoading}
-              onRefresh={handleRefresh}
-            />
+              {activeTab === 'inventory' && (
+                <InventoryLedger
+                  key={refreshKey}
+                  isLoading={isLoading}
+                  onRefresh={handleRefresh}
+                />
+              )}
+            </>
           )}
         </main>
       </div>
@@ -390,6 +470,11 @@ export default function MainLayout({ initialTab }) {
         onClose={() => setIsKeyModalOpen(false)}
         apiKey={geminiApiKey}
         onSaveKey={handleSaveApiKey}
+      />
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={closeLoginModal}
       />
     </div>
   );

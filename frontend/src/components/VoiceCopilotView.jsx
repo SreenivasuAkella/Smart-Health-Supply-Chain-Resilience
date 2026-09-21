@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, Layers, Bot, Building2, ExternalLink, Navigation,
   MessageSquare, User, HelpCircle, History, PlusCircle, Thermometer, Box,
   Camera, UploadCloud, FileText, AlertOctagon, Image as ImageIcon, X,
-  Search, Check, Pill, MapPin, Gauge, ShieldCheck, Save, Database
+  Search, Check, Pill, MapPin, Gauge, ShieldCheck, Save, Database, Lock
 } from 'lucide-react';
 import { 
   chatWithAshaCopilot,
@@ -22,6 +22,12 @@ import { mapBackendName, formatCopilotTime } from '../utils/formatters';
 import OpenFDAClinicalCard from './OpenFDAClinicalCard';
 
 const AGENT_CONFIG = {
+  RolePermissionGuardAgent: {
+    label: 'Role Permission Guard',
+    icon: '🛡️',
+    role: 'MoHFW Sovereign Clearance & Audit',
+    badgeClass: 'bg-rose-950/70 text-rose-300 border-rose-500/40'
+  },
   AshaVoiceCopilotAgent: {
     label: 'Frontline Copilot',
     icon: '🎙️',
@@ -1260,6 +1266,78 @@ export default function VoiceCopilotView({ apiKey, onTriggerReallocation }) {
                               <ArrowRight size={12} />
                             </button>
                           )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sovereign Role Permission Guard / Code 4007 Lock Card */}
+                    {!isUser && (msg.status === 'ROLE_RESTRICTED' || msg.error_code === 4007 || msg.recommended_action?.error_code === 4007 || msg.intent === 'ROLE_PERMISSION_DENIED') && (
+                      <div className="bg-rose-950/30 border-2 border-rose-500/50 rounded-2xl p-4 space-y-3 shadow-xl backdrop-blur-md relative overflow-hidden">
+                        {/* Background watermark */}
+                        <div className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10 pointer-events-none">
+                          <img src="/team_logo.jpg" alt="Sanjeevani Seal" className="w-full h-full object-contain rounded-full" />
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-500/30 pb-2.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl border border-rose-400/40 p-0.5 bg-rose-900/40 shadow-inner overflow-hidden shrink-0">
+                              <img 
+                                src="/team_logo.jpg" 
+                                alt="Sanjeevani Team Logo" 
+                                className="w-full h-full object-cover rounded-lg"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-rose-300 tracking-wide uppercase">
+                                  Role Clearance Guard Intercept
+                                </span>
+                                <span className="bg-rose-500/30 text-rose-200 font-mono text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-rose-500/60 shadow-sm animate-pulse">
+                                  CODE 4007
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-rose-200/80 font-medium">
+                                MoHFW Sovereign Role-Based Access Control Active
+                              </span>
+                            </div>
+                          </div>
+                          <span className="bg-rose-900/60 text-rose-200 border border-rose-500/50 text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1">
+                            <ShieldAlert size={12} className="text-rose-400" /> RESTRICTED
+                          </span>
+                        </div>
+
+                        {/* Audit Details */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-950/80 p-2.5 rounded-xl border border-rose-500/30 text-xs">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block">Current Authenticated Role:</span>
+                            <span className="font-mono font-bold text-amber-300">
+                              {msg.guard_details?.user_role || msg.recommended_action?.user_role || 'PHC_OFFICER'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block">Required Authorization Level:</span>
+                            <span className="font-mono font-bold text-rose-300">
+                              {(msg.guard_details?.required_roles || msg.recommended_action?.required_roles || ['NATIONAL_DIRECTOR']).join(' • ')}
+                            </span>
+                          </div>
+                          {msg.guard_details?.restricted_action && (
+                            <div className="sm:col-span-2 pt-1 border-t border-slate-800">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">Restricted Operation:</span>
+                              <span className="text-slate-200 text-[11px] font-medium">
+                                {msg.guard_details.restricted_action}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] text-slate-300 bg-rose-950/20 px-3 py-1.5 rounded-lg border border-rose-500/20">
+                          <span className="flex items-center gap-1 text-rose-300">
+                            <Lock size={12} /> Contact Apex National Command for sovereign override clearance.
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            Agent: RolePermissionGuardAgent
+                          </span>
                         </div>
                       </div>
                     )}

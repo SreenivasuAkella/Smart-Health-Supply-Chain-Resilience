@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from ..services.reallocation import generate_reallocation_plan
@@ -7,6 +7,7 @@ from ..services.ai_agents_service import run_auto_relocation_pipeline, sentinel_
 from ..services.firebase_service import firebase_service
 from ..services.bigquery_service import bigquery_service
 from ..utils.response_helper import success_response, error_response
+from .auth import require_role
 
 router = APIRouter(prefix="/api/reallocation", tags=["Autonomous Reallocation & Route Optimizer"])
 
@@ -65,7 +66,7 @@ def optimize_reallocation(req: ReallocationRequest):
             message=f"Reallocation plan generated (local engine fallback)."
         )
 
-@router.post("/dispatch")
+@router.post("/dispatch", dependencies=[Depends(require_role(["NATIONAL_DIRECTOR", "LOGISTICS_COORDINATOR"]))])
 def confirm_dispatch(req: ReallocationRequest):
     """
     Confirms and authorizes emergency dispatch.
@@ -83,7 +84,7 @@ def confirm_dispatch(req: ReallocationRequest):
         message=f"Dispatch {record.get('dispatch_id')} authorized and logged to database."
     )
 
-@router.post("/auto-relocate")
+@router.post("/auto-relocate", dependencies=[Depends(require_role(["NATIONAL_DIRECTOR", "LOGISTICS_COORDINATOR"]))])
 def run_autonomous_relocation():
     """
     Autonomous AI Sentinel Trigger:

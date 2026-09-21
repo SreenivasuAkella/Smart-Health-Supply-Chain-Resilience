@@ -33,6 +33,28 @@ def _get_default_facility() -> Dict[str, str]:
         pass
     return {"id": "PHC-AND-001", "name": "Andaman Islands Block Primary Health Centre"}
 
+
+def _extract_user_role(request: Request, body_or_params: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Extracts the authenticated user's role from the Authorization header Bearer token.
+    Falls back to payload user_role/role, or defaults to 'PHC_OFFICER'.
+    """
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+        try:
+            from ..services.auth_service import auth_service
+            payload = auth_service.verify_access_token(token)
+            if payload and payload.get("role"):
+                return str(payload.get("role")).upper()
+        except Exception:
+            pass
+    if body_or_params and isinstance(body_or_params, dict):
+        role = body_or_params.get("user_role") or body_or_params.get("role")
+        if role:
+            return str(role).upper()
+    return "PHC_OFFICER"
+
 @router.get("/api/copilot/status")
 def copilot_status():
     return {
@@ -100,6 +122,8 @@ async def copilot_chat(request: Request):
         image_base64 = body.get("image_base64") or body.get("imageBase64")
         image_mime_type = body.get("image_mime_type") or body.get("mimeType") or "image/jpeg"
 
+        user_role = _extract_user_role(request, body)
+
         _t0 = time.monotonic()
         result = process_copilot_chat(
             prompt=str(prompt_text),
@@ -112,7 +136,8 @@ async def copilot_chat(request: Request):
             conversation_history=conversation_history,
             custom_api_key=key,
             image_base64=str(image_base64) if image_base64 else None,
-            image_mime_type=str(image_mime_type)
+            image_mime_type=str(image_mime_type),
+            user_role=user_role
         )
         log_ai_response(
             source=SOURCE_COPILOT,
@@ -162,6 +187,7 @@ async def copilot_chat_stream(request: Request):
         key = params.get("apiKey") or params.get("api_key")
         image_base64 = params.get("image_base64")
         image_mime_type = params.get("image_mime_type") or "image/jpeg"
+        user_role = _extract_user_role(request, params)
 
         generator = process_copilot_chat_streaming(
             prompt=prompt_text,
@@ -173,7 +199,8 @@ async def copilot_chat_stream(request: Request):
             source_facility_name=str(source_facility_name) if source_facility_name else None,
             custom_api_key=key,
             image_base64=str(image_base64) if image_base64 else None,
-            image_mime_type=str(image_mime_type)
+            image_mime_type=str(image_mime_type),
+            user_role=user_role
         )
 
         return StreamingResponse(
@@ -218,6 +245,7 @@ async def copilot_chat_stream_post(request: Request):
         image_base64 = body.get("image_base64") or body.get("imageBase64")
         image_mime_type = body.get("image_mime_type") or body.get("mimeType") or "image/jpeg"
         conversation_history = body.get("conversation_history") or body.get("history") or []
+        user_role = _extract_user_role(request, body)
 
         generator = process_copilot_chat_streaming(
             prompt=str(prompt_text),
@@ -230,7 +258,8 @@ async def copilot_chat_stream_post(request: Request):
             conversation_history=conversation_history,
             custom_api_key=key,
             image_base64=str(image_base64) if image_base64 else None,
-            image_mime_type=str(image_mime_type)
+            image_mime_type=str(image_mime_type),
+            user_role=user_role
         )
 
         return StreamingResponse(
@@ -348,6 +377,7 @@ async def copilot_query(request: Request):
         source_facility_id = body.get("source_facility_id") or body.get("sourceFacilityId") or body.get("donor_facility_id")
         source_facility_name = body.get("source_facility_name") or body.get("sourceFacilityName") or body.get("donor_facility_name")
         key = body.get("apiKey") or body.get("custom_api_key") or body.get("api_key")
+        user_role = _extract_user_role(request, body)
 
         result = process_copilot_query(
             user_prompt=str(prompt_text),
@@ -356,7 +386,8 @@ async def copilot_query(request: Request):
             facility_name=facility_name or "Primary Health Centre Baragaon",
             source_facility_id=str(source_facility_id) if source_facility_id and str(source_facility_id) != "AUTO_NEAREST_SURPLUS" else None,
             source_facility_name=str(source_facility_name) if source_facility_name else None,
-            custom_api_key=key
+            custom_api_key=key,
+            user_role=user_role
         )
         return result
     except Exception as e:

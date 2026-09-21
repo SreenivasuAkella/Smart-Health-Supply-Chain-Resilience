@@ -9,18 +9,124 @@ const API_BASE_URL = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC
 // In-Flight Request Deduplication Map: Prevents identical GET requests from firing concurrently
 const inFlightRequests = new Map();
 
+function getStoredAccessToken() {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('sanjeevani_access_token');
+  }
+  return null;
+}
+
+function getStoredRefreshToken() {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('sanjeevani_refresh_token');
+  }
+  return null;
+}
+
+export function getStoredUserRole() {
+  if (typeof window !== 'undefined') {
+    try {
+      const p = localStorage.getItem('sanjeevani_user_profile');
+      if (p) {
+        const u = JSON.parse(p);
+        return u.role || 'PHC_OFFICER';
+      }
+    } catch {}
+  }
+  return 'PHC_OFFICER';
+}
+
+function getAuthHeaders(extra = {}) {
+  const headers = { 'Content-Type': 'application/json', ...extra };
+  const token = getStoredAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+function onRefreshed(newAccessToken) {
+  refreshSubscribers.forEach(cb => cb(newAccessToken));
+  refreshSubscribers = [];
+}
+
 async function dedupedFetch(url, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
+
+  const headers = new Headers(options.headers || {});
+  const token = getStoredAccessToken();
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  options.headers = headers;
+
+  const performFetch = async (fetchUrl, fetchOpts) => {
+    let res = await fetch(fetchUrl, fetchOpts);
+    // If 401 Unauthorized and not an auth call, attempt silent refresh
+    if (res.status === 401 && !fetchUrl.includes('/auth/login') && !fetchUrl.includes('/auth/refresh')) {
+      const refreshToken = getStoredRefreshToken();
+      if (refreshToken) {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          try {
+            const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refresh_token: refreshToken })
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              const payload = refreshData.data || refreshData;
+              const token = payload.access_token || refreshData.access_token;
+              const nextRefresh = payload.refresh_token || refreshData.refresh_token;
+              const user = payload.user || refreshData.user;
+              if (token && typeof window !== 'undefined') {
+                localStorage.setItem('sanjeevani_access_token', token);
+                if (nextRefresh) localStorage.setItem('sanjeevani_refresh_token', nextRefresh);
+                if (user) {
+                  localStorage.setItem('sanjeevani_user_profile', JSON.stringify(user));
+                }
+                isRefreshing = false;
+                onRefreshed(token);
+                const retryHeaders = new Headers(fetchOpts.headers || {});
+                retryHeaders.set('Authorization', `Bearer ${token}`);
+                return fetch(fetchUrl, { ...fetchOpts, headers: retryHeaders });
+              }
+            }
+          } catch (e) {
+            console.warn('[Token Refresh Failed]:', e);
+          }
+          isRefreshing = false;
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('sanjeevani_auth_expired'));
+          }
+        } else {
+          return new Promise(resolve => {
+            refreshSubscribers.push(newToken => {
+              const retryHeaders = new Headers(fetchOpts.headers || {});
+              if (newToken) retryHeaders.set('Authorization', `Bearer ${newToken}`);
+              resolve(fetch(fetchUrl, { ...fetchOpts, headers: retryHeaders }));
+            });
+          });
+        }
+      }
+    }
+    return res;
+  };
+
   // Only deduplicate GET requests
   if (method !== 'GET') {
-    return fetch(url, options);
+    return performFetch(url, options);
   }
 
   if (inFlightRequests.has(url)) {
     return inFlightRequests.get(url).then(res => res.clone());
   }
 
-  const promise = fetch(url, options)
+  const promise = performFetch(url, options)
     .then(async (res) => {
       inFlightRequests.delete(url);
       return res;
@@ -136,14 +242,15 @@ export async function fetchSurveillanceDistricts(page = 1, pageSize = 100, filte
     const res = await dedupedFetch(`${API_BASE_URL}/analytics/surveillance-districts?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch surveillance districts");
     const json = await res.json();
-    if (json.data && Array.isArray(json.data)) {
+    const payload = json.data || json;
+    if (Array.isArray(payload)) {
       const mapped = {};
-      json.data.forEach(d => {
+      payload.forEach(d => {
         if (d.district) mapped[d.district] = d;
       });
       return mapped;
     }
-    return json.districts || json.data || {};
+    return payload.districts || payload || {};
   } catch (err) {
     console.error("fetchSurveillanceDistricts error:", err);
     return {};
@@ -172,18 +279,16 @@ export async function fetchForecasting(facilityId = "", page = 1, pageSize = 50)
     const res = await dedupedFetch(`${API_BASE_URL}/forecasting/outbreak-risk?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch forecast");
     const json = await res.json();
-    if (json.data && Array.isArray(json.data)) {
-      return {
-        model_framework: json.metadata?.model_framework || "Google Gemini 3.6 Flash Bio-Climatic Vector Risk Modeler",
-        confidence_interval: json.metadata?.confidence_interval || "96.2%",
-        forecast_horizon: json.metadata?.forecast_horizon || "14 to 30 Days",
-        critical_alerts_count: json.metadata?.critical_alerts_count || 0,
-        high_risk_alerts: json.metadata?.high_risk_alerts || [],
-        facility_forecasts: json.data,
-        pagination: json.pagination
-      };
-    }
-    return json;
+    const items = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+    return {
+      model_framework: json.metadata?.model_framework || "Google Gemini 3.6 Flash Bio-Climatic Vector Risk Modeler",
+      confidence_interval: json.metadata?.confidence_interval || "96.2%",
+      forecast_horizon: json.metadata?.forecast_horizon || "14 to 30 Days",
+      critical_alerts_count: items.filter(f => (f.overall_vulnerability_score || 0) > 70).length,
+      high_risk_alerts: items.filter(f => (f.overall_vulnerability_score || 0) > 70),
+      facility_forecasts: items,
+      pagination: json.pagination || { page, page_size: pageSize, total_records: items.length, total_pages: Math.ceil(items.length / pageSize) || 1 }
+    };
   } catch (err) {
     console.error("fetchForecasting error:", err);
     return null;
@@ -215,7 +320,7 @@ export async function optimizeReallocationPlan(facilityId = "DH-VAR-001", medici
 
 export async function confirmReallocationDispatch(facilityId = "PHC-BARAGAON-03", medicineId = "MED-ASV-001", quantity = 25) {
   try {
-    const res = await fetch(`${API_BASE_URL}/reallocation/dispatch`, {
+    const res = await dedupedFetch(`${API_BASE_URL}/reallocation/dispatch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -235,7 +340,7 @@ export async function confirmReallocationDispatch(facilityId = "PHC-BARAGAON-03"
 
 export async function triggerAutoRelocationAgent() {
   try {
-    const res = await fetch(`${API_BASE_URL}/reallocation/auto-relocate`, {
+    const res = await dedupedFetch(`${API_BASE_URL}/reallocation/auto-relocate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -330,7 +435,7 @@ export async function analyzeMedicineImage(imageInput, mimeType = "image/jpeg", 
       throw new Error("No image data provided for vision analysis");
     }
 
-    const res = await fetch(`${API_BASE_URL}/ai/vision-scan`, {
+    const res = await dedupedFetch(`${API_BASE_URL}/ai/vision-scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -340,11 +445,11 @@ export async function analyzeMedicineImage(imageInput, mimeType = "image/jpeg", 
         user_context_hint: effectiveHint
       })
     });
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(`Vision API error (${res.status}): ${errText || res.statusText}`);
+      const errMsg = json?.data || json?.detail || json?.status?.message || `Vision API error (${res.status})`;
+      throw new Error(errMsg);
     }
-    const json = await res.json();
     return json.data || json;
   } catch (err) {
     console.error("analyzeMedicineImage error:", err);
@@ -365,7 +470,8 @@ export async function askAshaCopilot(param1, language = "hi", facilityId = "PHC-
         facility_name: param1.facilityName || param1.facility_name || "",
         source_facility_id: param1.sourceFacilityId || param1.source_facility_id || "",
         source_facility_name: param1.sourceFacilityName || param1.source_facility_name || "",
-        custom_api_key: param1.apiKey || param1.custom_api_key || ""
+        custom_api_key: param1.apiKey || param1.custom_api_key || "",
+        user_role: param1.user_role || param1.userRole || param1.role || getStoredUserRole()
       };
     } else {
       payload = {
@@ -375,13 +481,14 @@ export async function askAshaCopilot(param1, language = "hi", facilityId = "PHC-
         facility_name: facilityName || "",
         source_facility_id: sourceFacilityId || "",
         source_facility_name: sourceFacilityName || "",
-        custom_api_key: apiKey
+        custom_api_key: apiKey,
+        user_role: getStoredUserRole()
       };
     }
 
     const res = await fetch(`${API_BASE_URL}/copilot/ask`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error("Copilot API failed");
@@ -398,7 +505,7 @@ export async function fetchCopilotHistory() {
     const res = await dedupedFetch(`${API_BASE_URL}/copilot/history`);
     if (!res.ok) throw new Error("Failed to fetch copilot history");
     const json = await res.json();
-    return json.dispatches || [];
+    return Array.isArray(json.data) ? json.data : (json.data?.dispatches || json.dispatches || []);
   } catch (err) {
     console.warn("fetchCopilotHistory fallback:", err);
     return [];
@@ -418,9 +525,11 @@ export async function chatWithAshaCopilot({
   history = [],
   apiKey = "",
   imageBase64 = null,
-  mimeType = "image/jpeg"
+  mimeType = "image/jpeg",
+  userRole = null
 } = {}) {
   try {
+    const activeRole = userRole || getStoredUserRole();
     const payload = {
       prompt,
       session_id: sessionId,
@@ -432,12 +541,13 @@ export async function chatWithAshaCopilot({
       conversation_history: history,
       api_key: apiKey,
       image_base64: imageBase64,
-      image_mime_type: mimeType
+      image_mime_type: mimeType,
+      user_role: activeRole
     };
 
     const res = await fetch(`${API_BASE_URL}/copilot/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error("Copilot Chat API failed");
@@ -467,8 +577,10 @@ export async function streamCopilotChat({
   apiKey = "",
   imageBase64 = null,
   mimeType = "image/jpeg",
+  userRole = null,
   onEvent = () => {}
 } = {}) {
+  const activeRole = userRole || getStoredUserRole();
   const payload = {
     prompt,
     session_id: sessionId,
@@ -480,14 +592,15 @@ export async function streamCopilotChat({
     conversation_history: history,
     api_key: apiKey,
     image_base64: imageBase64,
-    image_mime_type: mimeType
+    image_mime_type: mimeType,
+    user_role: activeRole
   };
 
   return new Promise(async (resolve, reject) => {
     try {
       const response = await fetch(`${API_BASE_URL}/copilot/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
 
@@ -625,7 +738,7 @@ export async function fetchCopilotSessions() {
     const res = await dedupedFetch(`${API_BASE_URL}/copilot/sessions`);
     if (!res.ok) throw new Error("Failed to fetch sessions");
     const json = await res.json();
-    return json.sessions || [];
+    return Array.isArray(json.data) ? json.data : (json.data?.sessions || json.sessions || []);
   } catch (err) {
     console.warn("fetchCopilotSessions fallback:", err);
     return [];
@@ -637,7 +750,7 @@ export async function fetchCopilotSessionDetail(sessionId) {
     const res = await dedupedFetch(`${API_BASE_URL}/copilot/sessions/${sessionId}`);
     if (!res.ok) throw new Error("Failed to fetch session detail");
     const json = await res.json();
-    return json.session || null;
+    return json.data?.session || json.data || json.session || null;
   } catch (err) {
     console.warn("fetchCopilotSessionDetail error:", err);
     return null;
@@ -646,7 +759,7 @@ export async function fetchCopilotSessionDetail(sessionId) {
 
 export async function runCrisisSimulation(crisisType = "MONSOON_FLOOD_ISOLATION", targetFacility = "DH-VAR-001", severity = "HIGH") {
   try {
-    const res = await fetch(`${API_BASE_URL}/simulation/crisis-sandbox`, {
+    const res = await dedupedFetch(`${API_BASE_URL}/simulation/crisis-sandbox`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -688,7 +801,7 @@ export async function updateStockLedger(medicineId, facilityId, changeQty = 10, 
       };
     }
 
-    const res = await fetch(`${API_BASE_URL}/inventory/update-stock`, {
+    const res = await dedupedFetch(`${API_BASE_URL}/inventory/update-stock`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -728,7 +841,20 @@ export async function fetchBigQueryAnalytics(params = {}) {
     const res = await dedupedFetch(`${API_BASE_URL}/analytics/bigquery-morbidity?${queryParams.toString()}`);
     if (!res.ok) throw new Error("BigQuery analytics failed");
     const json = await res.json();
-    return json;
+    const rows = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+    const pSize = (typeof params === 'object' && params?.pageSize) || 25;
+    const pNum = (typeof params === 'object' && params?.page) || 1;
+    return {
+      data: rows,
+      pagination: json.pagination || {
+        page: pNum,
+        page_size: pSize,
+        total_records: rows.length,
+        total_pages: Math.ceil(rows.length / pSize) || 1
+      },
+      metadata: json.metadata || { source: "Live BigQuery / NHM Warehouse" },
+      status: json.status || { code: 2000, message: "Success" }
+    };
   } catch (err) {
     console.error("fetchBigQueryAnalytics error:", err);
     return null;
@@ -742,9 +868,23 @@ export async function executeBigQuerySQL(sqlQuery, page = 1, pageSize = 25) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sql: sqlQuery })
     });
-    if (!res.ok) throw new Error("BigQuery SQL execution failed");
     const json = await res.json();
-    return json;
+    if (!res.ok || (json.status && json.status.code && json.status.code >= 400)) {
+      const errMsg = typeof json.data === 'string' ? json.data : (json.status?.message || "BigQuery SQL execution failed");
+      return { status: "error", message: errMsg, data: [] };
+    }
+    const rows = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+    return {
+      data: rows,
+      status: "success",
+      pagination: json.pagination || {
+        page,
+        page_size: pageSize,
+        total_records: rows.length,
+        total_pages: Math.ceil(rows.length / pageSize) || 1
+      },
+      metadata: json.metadata || {}
+    };
   } catch (err) {
     console.error("executeBigQuerySQL error:", err);
     return { status: "error", message: err.message, data: [] };
@@ -803,10 +943,10 @@ export async function fetchAttendanceSummary(state = "", page = 1, pageSize = 50
     const res = await dedupedFetch(`${API_BASE_URL}/attendance/summary?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch attendance summary");
     const json = await res.json();
-    return json;
+    return Array.isArray(json.data) ? json.data : (json.data || json);
   } catch (err) {
     console.error("fetchAttendanceSummary error:", err);
-    return null;
+    return [];
   }
 }
 
@@ -816,7 +956,11 @@ export async function fetchActiveAlerts(state = "") {
     const res = await dedupedFetch(`${API_BASE_URL}/alerts/active?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch active alerts");
     const json = await res.json();
-    return json.data || json;
+    const payload = json.data || json;
+    return {
+      alerts: Array.isArray(payload.alerts) ? payload.alerts : (Array.isArray(payload) ? payload : []),
+      total: typeof payload.total === 'number' ? payload.total : (Array.isArray(payload.alerts) ? payload.alerts.length : 0)
+    };
   } catch (err) {
     console.error("fetchActiveAlerts error:", err);
     return { alerts: [], total: 0 };
@@ -971,4 +1115,129 @@ export function subscribeToLiveSSE(onEvent, onError, onStatusChange) {
       eventSource = null;
     }
   };
+}
+
+// --- Authentication & Base64 Provisioning Services ---
+
+export async function loginApi(email, password) {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    let errorMsg = 'Invalid credentials. Please verify your email and password.';
+    if (json?.data && typeof json.data === 'string') {
+      errorMsg = json.data;
+    } else if (json?.detail && typeof json.detail === 'string') {
+      errorMsg = json.detail;
+    } else if (json?.status?.message && typeof json.status.message === 'string') {
+      errorMsg = json.status.message;
+    }
+    return { status: 'error', error: errorMsg, detail: errorMsg };
+  }
+  const payload = json.data || json;
+  return {
+    status: 'success',
+    access_token: payload.access_token,
+    refresh_token: payload.refresh_token,
+    user: payload.user,
+    expires_in: payload.expires_in
+  };
+}
+
+export async function refreshTokensApi(refreshToken) {
+  const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken })
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const errorMsg = json?.data || json?.detail || 'Refresh token expired';
+    return { status: 'error', error: errorMsg };
+  }
+  const payload = json.data || json;
+  return {
+    status: 'success',
+    access_token: payload.access_token,
+    refresh_token: payload.refresh_token,
+    user: payload.user,
+    expires_in: payload.expires_in
+  };
+}
+
+export async function logoutApi(refreshToken) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    return res.json();
+  } catch {
+    return { status: 'success' };
+  }
+}
+
+export async function fetchCurrentUserApi(accessToken) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE_URL}/auth/me`, { headers });
+  const json = await res.json();
+  if (!res.ok) {
+    return { status: 'error', error: json?.data || json?.detail || 'Unauthorized' };
+  }
+  const payload = json.data || json;
+  return {
+    status: 'success',
+    user: payload.user || payload
+  };
+}
+
+export async function provisionUserApi(base64Secret, userData) {
+  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Secret': base64Secret
+    },
+    body: JSON.stringify(userData)
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const errorMsg = json?.data || json?.detail || json?.status?.message || 'Provisioning failed. Check your Base64 secret key.';
+    return { status: 'error', detail: errorMsg, error: errorMsg };
+  }
+  const payload = json.data || json;
+  return {
+    status: 'success',
+    message: payload.message || 'Personnel account successfully provisioned.',
+    user: payload.user || payload
+  };
+}
+
+export async function listRegisteredUsersApi(base64Secret, accessToken) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (base64Secret) headers['X-Admin-Secret'] = base64Secret;
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE_URL}/auth/users`, { headers });
+  return res.json();
+}
+
+export async function fetchGeographyApi() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/geography`);
+    if (!res.ok) throw new Error("Failed to fetch geography");
+    const json = await res.json();
+    const payload = json.data || json;
+    return {
+      states: payload.states || [],
+      districts_by_state: payload.districts_by_state || {}
+    };
+  } catch (err) {
+    console.error("fetchGeographyApi error:", err);
+    return { states: [], districts_by_state: {} };
+  }
 }

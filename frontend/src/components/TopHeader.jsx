@@ -17,9 +17,15 @@ import {
   Zap, 
   FileSpreadsheet,
   Wifi,
-  WifiOff
+  WifiOff,
+  Lock,
+  LogOut,
+  UserCheck,
+  ShieldCheck
 } from 'lucide-react';
 import { triggerLiveDatasetSync } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { getRoleTitle, getUserJurisdiction } from '../utils/rbac';
 
 const TAB_METADATA = {
   overview: { title: "National Command Center", subtitle: "Real-time PHC Resource, Bed Occupancy & Staff Mesh", icon: Activity },
@@ -41,8 +47,10 @@ export default function TopHeader({
   onOpenCopilot,
   isKeyConfigured,
   onDataRefresh,
-  sseConnected = true
+  sseConnected = true,
+  onOpenLoginModal
 }) {
+  const { user, isAuthenticated, logout, openLoginModal } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
 
@@ -87,8 +95,9 @@ export default function TopHeader({
                 <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   {currentTab.title}
                 </h2>
-                <span className="hidden md:inline-block bg-slate-900 text-slate-400 border border-slate-800 text-[10px] font-mono px-2 py-0.5 rounded">
-                  India Grid
+                <span className="hidden md:inline-flex items-center gap-1.5 bg-slate-900 text-slate-300 border border-slate-800 text-[10px] font-mono px-2 py-0.5 rounded">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                  <span>{getUserJurisdiction(user)}</span>
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block truncate max-w-md">
@@ -171,6 +180,39 @@ export default function TopHeader({
             <Key size={13} />
             <span className="hidden xl:inline">{isKeyConfigured ? "Gemini Ready" : "Set Gemini Key"}</span>
           </button>
+
+          {/* User Profile Badge / Sign In Button */}
+          {isAuthenticated && user ? (
+            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/70 rounded-xl px-2.5 py-1.5 shadow-sm">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-400 to-indigo-500 flex items-center justify-center text-slate-950 font-bold text-xs shadow-inner">
+                {user.full_name ? user.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : 'U'}
+              </div>
+              <div className="hidden md:flex flex-col text-left">
+                <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[130px]">
+                  {user.full_name || user.email}
+                </span>
+                <span className="text-[9px] font-mono text-cyan-300 truncate max-w-[130px]">
+                  {getRoleTitle(user.role)}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                title="Sign Out"
+                className="p-1 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors ml-1"
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenLoginModal || openLoginModal}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-md shadow-cyan-500/20"
+              title="Official Healthcare Personnel Access"
+            >
+              <Lock size={13} />
+              <span>Sign In</span>
+            </button>
+          )}
         </div>
 
       </div>

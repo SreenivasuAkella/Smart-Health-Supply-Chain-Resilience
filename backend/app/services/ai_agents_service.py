@@ -325,6 +325,124 @@ class LedgerExecutionAgent:
 
 
 # =============================================================================
+# Worker Agent 6: Role Permission Guard AI Agent (RBAC Security Sentinel)
+# =============================================================================
+class RolePermissionGuardAgent:
+    """
+    Worker Agent 6: Role Permission Guard AI Agent
+    - Audits every Copilot interaction against user's authenticated grid role and clearance level.
+    - Enforces code 4007 role restriction on unauthorized cross-district dispatches, crisis simulations,
+      federated ML weights, or sovereign system commands.
+    - Generates auditable execution trace and role-specific localized explanations in 8 Indian languages.
+    """
+    def __init__(self, registry: MCPToolRegistry = mcp_tool_registry):
+        self.registry = registry
+        self.name = "RolePermissionGuardAgent"
+
+    def audit_role_permission(
+        self,
+        user_role: Optional[str],
+        user_prompt: str,
+        intent: str = "GENERAL_QUERY",
+        facility_id: Optional[str] = None,
+        language_code: str = "hi"
+    ) -> Dict[str, Any]:
+        role = (user_role or "PHC_OFFICER").upper().strip()
+        prompt_lower = (user_prompt or "").lower()
+        intent_upper = (intent or "").upper()
+
+        # National Director holds supreme clearance (all operations permitted)
+        if role == "NATIONAL_DIRECTOR":
+            return {
+                "is_permitted": True,
+                "status": "PERMITTED",
+                "code": 2000,
+                "role": role,
+                "action": "Supreme National Director clearance verified. All command privileges permitted."
+            }
+
+        # Rules for restricted intents and privileged actions:
+        restricted = False
+        required_roles = ["NATIONAL_DIRECTOR"]
+        reason = ""
+
+        # 1. Multi-State / Global Simulation Drills & Crisis Sandboxes
+        if any(w in prompt_lower for w in ["simulation", "crisis sandbox", "drill", "flood simulation", "cyclone drill", "outbreak drill", "sandbox"]):
+            if role not in ["NATIONAL_DIRECTOR", "LOGISTICS_COORDINATOR", "SURVEILLANCE_EPIDEMIOLOGIST"]:
+                restricted = True
+                required_roles = ["NATIONAL_DIRECTOR", "LOGISTICS_COORDINATOR", "SURVEILLANCE_EPIDEMIOLOGIST"]
+                reason = "Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance."
+
+        # 2. Federated ML Model Synchronization & Global Training Weights
+        elif any(w in prompt_lower for w in ["federated", "model weights", "global model", "fedavg", "federated learning", "aggregate weights", "mesh sync"]):
+            if role not in ["NATIONAL_DIRECTOR", "SURVEILLANCE_EPIDEMIOLOGIST"]:
+                restricted = True
+                required_roles = ["NATIONAL_DIRECTOR", "SURVEILLANCE_EPIDEMIOLOGIST"]
+                reason = "Synchronizing cross-state federated ML training models requires Surveillance Epidemiologist or National Director clearance."
+
+        # 3. Inter-District Fleet Dispatch Requisition & Global Stock Transfer
+        elif any(w in prompt_lower for w in ["transfer all", "reallocate across state", "national buffer", "override dispatch", "cancel all deliveries", "pan-india", "global dispatch"]):
+            if role not in ["NATIONAL_DIRECTOR", "LOGISTICS_COORDINATOR"]:
+                restricted = True
+                required_roles = ["NATIONAL_DIRECTOR", "LOGISTICS_COORDINATOR"]
+                reason = "Inter-district fleet requisition and pan-India corridor transfers require Logistics Coordinator or National Director clearance."
+
+        # 4. Personnel Provisioning & System Admin Secrets
+        elif any(w in prompt_lower for w in ["provision user", "create personnel", "register officer", "admin secret", "base64 secret", "delete user"]):
+            if role != "NATIONAL_DIRECTOR":
+                restricted = True
+                required_roles = ["NATIONAL_DIRECTOR"]
+                reason = "Healthcare personnel provisioning requires Apex National Director credentials."
+
+        # 5. Diagnostic Drug OCR analysis (Logistics Coordinators cannot issue clinical prescriptions)
+        elif any(w in prompt_lower for w in ["prescribe", "clinical diagnosis", "patient prescription"]):
+            if role == "LOGISTICS_COORDINATOR":
+                restricted = True
+                required_roles = ["NATIONAL_DIRECTOR", "PHC_OFFICER"]
+                reason = "Clinical diagnostic prescription appraisals require PHC Medical Officer clinical clearance."
+
+        if restricted:
+            role_titles = {
+                "PHC_OFFICER": "PHC Medical Officer",
+                "LOGISTICS_COORDINATOR": "Logistics Coordinator",
+                "SURVEILLANCE_EPIDEMIOLOGIST": "Surveillance Epidemiologist",
+                "NATIONAL_DIRECTOR": "National Director"
+            }
+            curr_title = role_titles.get(role, role)
+            req_str = " or ".join([role_titles.get(r, r) for r in required_roles])
+
+            loc_msgs = {
+                "hi": f"⛔ सुरक्षा प्रतिबंध (कोड 4007 • Role Permission Denied): आपकी भूमिका '{curr_title}' इस कार्रवाई के लिए अधिकृत नहीं है। MoHFW प्रोटोकॉल के तहत इसके लिए {req_str} की अनुमति आवश्यक है।",
+                "en": f"⛔ Security Restriction (Code 4007 • Role Permission Denied): Your assigned role '{curr_title}' is not authorized to execute this operation. Under MoHFW sovereign grid protocol, this action requires {req_str} clearance.",
+                "te": f"⛔ భద్రతా పరిమితి (కోడ్ 4007 • Role Permission Denied): మీ పాత్ర '{curr_title}' కి ఈ చర్య అమలు చేయడానికి అనుమతి లేదు. దీనికి {req_str} క్లియరెన్స్ అవసరం.",
+                "ta": f"⛔ பாதுகாப்பு கட்டுப்பாடு (குறியீடு 4007 • Role Permission Denied): உங்கள் பாத்திரம் '{curr_title}' இந்த நடவடிக்கையை இயக்க அனுமதி இல்லை. இதற்கு {req_str} அனுமதி தேவை.",
+                "mr": f"⛔ सुरक्षा निर्बंध (कोड 4007 • Role Permission Denied): तुमची भूमिका '{curr_title}' या कारवाईसाठी अधिकृत नाही. यासाठी {req_str} मंजुरी आवश्यक आहे.",
+                "bn": f"⛔ সুরক্ষা নিষেধাজ্ঞা (কোড 4007 • Role Permission Denied): আপনার ভূমিকা '{curr_title}' এই কার্যক্রম পরিচালনার অনুমতিপ্রাপ্ত নয়। এর জন্য {req_str} ছাড়পত্র প্রয়োজন।",
+                "kn": f"⛔ ಭದ್ರತಾ ನಿರ್ಬಂಧ (ಕೋಡ್ 4007 • Role Permission Denied): ನಿಮ್ಮ ಪಾತ್ರ '{curr_title}' ಗೆ ಈ ಕಾರ್ಯಾಚರಣೆಯನ್ನು ಕಾರ್ಯಗತಗೊಳಿಸಲು ಅನುಮತಿಯಿಲ್ಲ. ಇದಕ್ಕೆ {req_str} ಅನುಮತಿ ಅಗತ್ಯವಿದೆ.",
+                "ml": f"⛔ സുരക്ഷാ നിയന്ത്രണം (കോഡ് 4007 • Role Permission Denied): നിങ്ങളുടെ പദവി '{curr_title}' ഈ പ്രവർത്തനം നടത്താൻ അധികാരപ്പെടുത്തിയിട്ടില്ല. ഇതിനായി {req_str} അനുമതി ആവശ്യമാണ്."
+            }
+
+            return {
+                "is_permitted": False,
+                "status": "RESTRICTED",
+                "code": 4007,
+                "role": role,
+                "required_roles": required_roles,
+                "reason": reason,
+                "message_localized": loc_msgs.get(language_code, loc_msgs["en"]),
+                "message_english": f"Security Restriction (Code 4007 • Role Permission Denied): Your assigned role '{curr_title}' is not authorized to execute this operation. Requires {req_str} clearance."
+            }
+
+        return {
+            "is_permitted": True,
+            "status": "PERMITTED",
+            "code": 2000,
+            "role": role,
+            "action": f"Role '{role}' cleared for operation '{intent}'."
+        }
+
+
+# =============================================================================
 # Worker Agent 5: ASHA Frontline Multilingual Voice Copilot AI Agent
 # =============================================================================
 class AshaVoiceCopilotAgent:
@@ -340,12 +458,14 @@ class AshaVoiceCopilotAgent:
         self,
         registry: MCPToolRegistry = mcp_tool_registry,
         llm_service: VertexAIService = vertex_ai_service,
-        supervisor: Optional[Any] = None
+        supervisor: Optional[Any] = None,
+        permission_guard: Optional[Any] = None
     ):
         self.registry = registry
         self.llm = llm_service
         self.name = "AshaVoiceCopilotAgent"
         self.supervisor = supervisor
+        self.permission_guard = permission_guard or RolePermissionGuardAgent(registry)
 
     def process_frontline_voice_command(
         self,
@@ -383,7 +503,8 @@ class AshaVoiceCopilotAgent:
         conversation_history: Optional[List[Dict[str, Any]]] = None,
         accumulated_context: Optional[Dict[str, Any]] = None,
         custom_api_key: Optional[str] = None,
-        allow_clarification: bool = True
+        allow_clarification: bool = True,
+        user_role: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Conversational Multi-Turn GenAI Agentic Orchestrator for ASHA workers, ANMs, and MOs.
@@ -429,6 +550,64 @@ class AshaVoiceCopilotAgent:
             target_fac = resolve_facility_by_name_or_id(ctx["facility_name"])
         resolved_fac_id = target_fac["id"] if target_fac else None
         resolved_fac_name = target_fac["name"] if target_fac else None
+
+        # ---------------------------------------------------------------------
+        # 0. RBAC Role Clearance Audit by RolePermissionGuardAgent
+        # ---------------------------------------------------------------------
+        t0_perm = time.time()
+        effective_role = user_role or ctx.get("user_role") or "PHC_OFFICER"
+        perm_check = self.permission_guard.audit_role_permission(
+            user_role=effective_role,
+            user_prompt=user_prompt,
+            intent=ctx.get("intent", "GENERAL_QUERY"),
+            facility_id=resolved_fac_id,
+            language_code=language_code
+        )
+        perm_duration = (time.time() - t0_perm) * 1000
+
+        _log_step(
+            agent_name=self.permission_guard.name,
+            tool_name="verify_role_authorization",
+            action=f"RBAC Clearance Audit for role '{perm_check.get('role')}': Status {perm_check.get('status')} (Code {perm_check.get('code')}). {perm_check.get('reason', 'Role authorized for operation.')}",
+            duration_ms=perm_duration,
+            details=perm_check
+        )
+
+        if not perm_check["is_permitted"]:
+            total_duration = round((time.time() - overall_start) * 1000, 2)
+            return {
+                "session_id": sid,
+                "status": "ROLE_RESTRICTED",
+                "code": 4007,
+                "error_code": 4007,
+                "guard_details": perm_check,
+                "intent": "ROLE_PERMISSION_DENIED",
+                "response_text_localized": perm_check["message_localized"],
+                "response_text_english": perm_check["message_english"],
+                "is_clarification_needed": False,
+                "missing_slots": [],
+                "confidence": 1.0,
+                "urgency_level": "RESTRICTED",
+                "total_agents_involved": 1,
+                "agents_invoked": [self.permission_guard.name],
+                "tools_executed": ["verify_role_authorization"],
+                "execution_trace": [asdict(t) for t in execution_trace],
+                "orchestration_duration_ms": total_duration,
+                "recommended_action": {
+                    "action_type": "ROLE_RESTRICTION",
+                    "code": 4007,
+                    "role": perm_check.get("role"),
+                    "required_roles": perm_check.get("required_roles", ["NATIONAL_DIRECTOR"]),
+                    "reason": perm_check.get("reason"),
+                    "team_logo": "/team_logo.jpg"
+                },
+                "quick_reply_options": [
+                    "Check facility inventory buffer",
+                    "View local cold-chain temperature",
+                    "Report medicine stock receipt",
+                    "Switch to authorized personnel"
+                ]
+            }
 
         # ---------------------------------------------------------------------
         # Dynamic Frontline Voice & Signal Intake
@@ -1053,7 +1232,8 @@ class SupplyChainSupervisorAgent:
         self.strategist = AllocationStrategistAgent(registry, llm_service)
         self.fleet = FleetRoutingAgent(registry, llm_service)
         self.ledger = LedgerExecutionAgent(registry, llm_service)
-        self.asha_copilot = AshaVoiceCopilotAgent(registry, llm_service, supervisor=self)
+        self.permission_guard = RolePermissionGuardAgent(registry)
+        self.asha_copilot = AshaVoiceCopilotAgent(registry, llm_service, supervisor=self, permission_guard=self.permission_guard)
 
     def orchestrate_emergency_reallocation(
         self,
@@ -1355,6 +1535,7 @@ sentinel_agent = supervisor_agent.sentinel
 strategist_agent = supervisor_agent.strategist
 fleet_agent = supervisor_agent.fleet
 ledger_agent = supervisor_agent.ledger
+role_permission_agent = supervisor_agent.permission_guard
 asha_copilot_agent = supervisor_agent.asha_copilot
 
 
@@ -1384,7 +1565,8 @@ def run_asha_voice_pipeline(
     session_id: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     accumulated_context: Optional[Dict[str, Any]] = None,
-    allow_clarification: bool = False
+    allow_clarification: bool = False,
+    user_role: Optional[str] = None
 ) -> Dict[str, Any]:
     """Frontline ASHA Voice Copilot invocation routing to the AshaVoiceCopilotAgent."""
     return asha_copilot_agent.process_conversational_turn(
@@ -1398,7 +1580,8 @@ def run_asha_voice_pipeline(
         conversation_history=conversation_history,
         accumulated_context=accumulated_context,
         custom_api_key=custom_api_key,
-        allow_clarification=allow_clarification
+        allow_clarification=allow_clarification,
+        user_role=user_role
     )
 
 

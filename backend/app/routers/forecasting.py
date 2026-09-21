@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 from typing import Optional
 from ..services.forecasting import get_outbreak_predictions
 from ..utils.response_helper import paginated_response, success_response
+from .auth import require_role
 
-router = APIRouter(tags=["Predictive Outbreak & Stockout Engine"])
+router = APIRouter(
+    tags=["Predictive Outbreak & Stockout Engine"],
+    dependencies=[Depends(require_role(["NATIONAL_DIRECTOR", "SURVEILLANCE_EPIDEMIOLOGIST"]))]
+)
 
 
 @router.get("/api/forecasting/outbreak-risk")

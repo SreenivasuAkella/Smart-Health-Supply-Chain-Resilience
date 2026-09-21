@@ -1,10 +1,14 @@
 import base64
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 from ..services.gemini_vision import analyze_medicine_image
+from .auth import require_role
 
-router = APIRouter(tags=["Gemini Multimodal Vision"])
+router = APIRouter(
+    tags=["Gemini Multimodal Vision"],
+    dependencies=[Depends(require_role(["NATIONAL_DIRECTOR", "PHC_OFFICER"]))]
+)
 
 class VisionBase64Request(BaseModel):
     image_base64: str

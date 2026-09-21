@@ -6,13 +6,15 @@ import {
   CheckCircle2, RefreshCw, Bed, Users, UserCheck, Stethoscope, 
   HeartPulse, Search, Filter, ChevronLeft, ChevronRight, CloudRain,
   Navigation, Radio, Zap, ChevronsLeft, ChevronsRight, Loader2,
-  Languages, Pill, Clock
+  Languages, Pill, Clock, Lock
 } from 'lucide-react';
 import { fetchFacilitiesPaginated } from '../services/api';
+import { hasTabAccess } from '../utils/rbac';
 
 export default function OverviewDashboard({ 
   isLoading: parentLoading = false,
   telemetry = {}, 
+  user = null,
   onNavigate, 
   onTriggerReallocation,
   onOpenCopilot 
@@ -577,10 +579,18 @@ export default function OverviewDashboard({
 
             <button
               onClick={() => onNavigate('coldchain')}
-              className="w-full btn-secondary text-xs justify-center py-2 font-semibold"
+              className={`w-full text-xs justify-center py-2 font-semibold flex items-center gap-1.5 rounded-xl border transition-all ${
+                !hasTabAccess(user?.role, 'coldchain')
+                  ? 'bg-slate-900/60 text-slate-400 border-amber-500/30 hover:border-amber-500/60'
+                  : 'btn-secondary'
+              }`}
             >
               <span>Inspect Cold-Chain Digital Twin</span>
-              <ArrowUpRight size={13} className="text-cyan-400" />
+              {!hasTabAccess(user?.role, 'coldchain') ? (
+                <Lock size={12} className="text-amber-400" />
+              ) : (
+                <ArrowUpRight size={13} className="text-cyan-400" />
+              )}
             </button>
           </div>
 
@@ -613,16 +623,32 @@ export default function OverviewDashboard({
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 onClick={() => onNavigate('forecasting')}
-                className="btn-secondary text-xs justify-center py-2 font-semibold"
+                className={`text-xs justify-center py-2 font-semibold flex items-center gap-1.5 rounded-xl border transition-all ${
+                  !hasTabAccess(user?.role, 'forecasting')
+                    ? 'bg-slate-900/60 text-slate-400 border-amber-500/30 hover:border-amber-500/60'
+                    : 'btn-secondary'
+                }`}
               >
                 <span>Outbreak Forecast</span>
-                <ArrowUpRight size={12} className="text-cyan-400" />
+                {!hasTabAccess(user?.role, 'forecasting') ? (
+                  <Lock size={11} className="text-amber-400" />
+                ) : (
+                  <ArrowUpRight size={12} className="text-cyan-400" />
+                )}
               </button>
               <button
                 onClick={() => onNavigate('simulation')}
-                className="bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 rounded-xl py-2 px-3 flex items-center justify-center gap-1.5 transition-colors font-semibold text-xs"
+                className={`rounded-xl py-2 px-3 flex items-center justify-center gap-1.5 transition-colors font-semibold text-xs border ${
+                  !hasTabAccess(user?.role, 'simulation')
+                    ? 'bg-slate-900/60 text-slate-400 border-amber-500/30 hover:border-amber-500/60'
+                    : 'bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border-indigo-500/30'
+                }`}
               >
-                <Zap size={13} />
+                {!hasTabAccess(user?.role, 'simulation') ? (
+                  <Lock size={12} className="text-amber-400" />
+                ) : (
+                  <Zap size={13} />
+                )}
                 <span>Crisis Sandbox</span>
               </button>
             </div>

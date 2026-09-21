@@ -1,8 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from ..services.federated_learning import get_federated_network_status
 from ..utils.response_helper import success_response
+from .auth import require_role
 
-router = APIRouter(prefix="/api/federated", tags=["Federated Multi-State & BRICS Learning"])
+router = APIRouter(
+    prefix="/api/federated",
+    tags=["Federated Multi-State & BRICS Learning"],
+    dependencies=[Depends(require_role(["NATIONAL_DIRECTOR", "SURVEILLANCE_EPIDEMIOLOGIST"]))]
+)
 
 @router.get("/status")
 def fetch_federated_status():

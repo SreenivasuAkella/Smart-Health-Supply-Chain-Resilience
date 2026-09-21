@@ -1,4 +1,411 @@
 {
+  "SESS-01BCE280": {
+    "session_id": "SESS-01BCE280",
+    "facility_id": "PHC-BARAGAON-03",
+    "facility_name": "Primary Health Centre Baragaon",
+    "language_code": "en",
+    "messages": [
+      {
+        "id": "MSG-24A5A6",
+        "role": "user",
+        "content": "Check paracetamol stock at PHC Baragaon and provide fever guidance",
+        "language_code": "en",
+        "timestamp": "2026-09-21T07:49:41.367262Z",
+        "has_image": false,
+        "image_base64": null,
+        "vision_result": null
+      },
+      {
+        "id": "MSG-D0B518",
+        "role": "assistant",
+        "content": "I am checking the Paracetamol stock at PHC Baragaon right now. For basic fever management: ensure the patient rests, stays well-hydrated, and receives Paracetamol (500mg/650mg for adults) every 4 to 6 hours as needed (maximum 4g per day). If the fever persists for more than 3 days, or is accompanied by high-risk symptoms like a stiff neck, breathing difficulty, or rash, please refer them to the Medical Officer immediately.",
+        "content_english": "I am checking the Paracetamol stock at PHC Baragaon right now. For basic fever management: ensure the patient rests, stays well-hydrated, and receives Paracetamol (500mg/650mg for adults) every 4 to 6 hours as needed (maximum 4g per day). If the fever persists for more than 3 days, or is accompanied by high-risk symptoms like a stiff neck, breathing difficulty, or rash, please refer them to the Medical Officer immediately.",
+        "status": "IMPLEMENTED",
+        "intent": "STOCK_STATUS_CHECK",
+        "is_clarification_needed": false,
+        "missing_slots": [],
+        "quick_reply_options": [
+          {
+            "label": "\ud83d\udcca View Stock Details",
+            "action_payload": "Show stock details for Paracetamol at PHC Baragaon",
+            "value": "Show stock details for Paracetamol at PHC Baragaon"
+          },
+          {
+            "label": "\ud83c\udf21\ufe0f Fever Protocol",
+            "action_payload": "Show full clinical protocol for fever management",
+            "value": "Show full clinical protocol for fever management"
+          },
+          {
+            "label": "\ud83d\udcde Contact Medical Officer",
+            "action_payload": "Get contact details for PHC Baragaon MO",
+            "value": "Get contact details for PHC Baragaon MO"
+          }
+        ],
+        "recommended_action": {
+          "action_type": "UPDATE_INVENTORY",
+          "action_summary": "Facility ledger synchronized with e-Aushadhi national health cloud repository for Primary Health Centre Baragaon.",
+          "suggested_source_facility": "Regional Central Drug Stores Depot",
+          "dispatch_id": null,
+          "eta": "Immediate",
+          "vehicle_type": null,
+          "target_facility_id": "PHC-BARAGAON-03",
+          "target_facility_name": "Primary Health Centre Baragaon",
+          "source_facility_id": null,
+          "source_facility_name": "District Hospital",
+          "medicine_id": "PUB-MED-005",
+          "quantity": null,
+          "dispatch_package": null
+        },
+        "target_facility_id": "PHC-BARAGAON-03",
+        "target_facility_name": "Primary Health Centre Baragaon",
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "RolePermissionGuardAgent",
+            "mcp_tool_called": "verify_role_authorization",
+            "action_summary": "RBAC Clearance Audit for role 'PHC_OFFICER': Status PERMITTED (Code 2000). Role authorized for operation.",
+            "duration_ms": 0.01,
+            "timestamp": "2026-09-21T07:49:41.368463Z",
+            "details": {
+              "is_permitted": true,
+              "status": "PERMITTED",
+              "code": 2000,
+              "role": "PHC_OFFICER",
+              "action": "Role 'PHC_OFFICER' cleared for operation 'GENERAL_QUERY'."
+            }
+          },
+          {
+            "step_number": 2,
+            "agent_name": "AshaVoiceCopilotAgent",
+            "mcp_tool_called": "asha_conversational_intake",
+            "action_summary": "Clinical conversational intake in 'en': Identified intent STOCK_STATUS_CHECK (Urgency: NORMAL). The user is requesting a stock check for Paracetamol (essential antipyretic) at PHC Baragaon alongside basic fever management guidance.",
+            "duration_ms": 84503.88,
+            "timestamp": "2026-09-21T07:51:05.872443Z",
+            "details": {
+              "intent": "STOCK_STATUS_CHECK",
+              "confidence": 0.98,
+              "urgency": "NORMAL",
+              "entities": {
+                "medicine_name": "Paracetamol",
+                "medicine_id": "PUB-MED-005",
+                "requested_quantity": null,
+                "current_stock": null,
+                "temperature_reading": null,
+                "state_name": "Uttar Pradesh",
+                "district_name": "Varanasi",
+                "target_facility_name": "Primary Health Centre Baragaon",
+                "target_facility_id": "PHC-BARAGAON-03",
+                "source_facility_name": null,
+                "source_facility_id": null
+              },
+              "is_clarification_needed": false,
+              "missing_slots": [],
+              "clinical_rationale": "The user is requesting a stock check for Paracetamol (essential antipyretic) at PHC Baragaon alongside basic fever management guidance.",
+              "engine": "Google Gemini (gemini-3.5-flash)",
+              "model": "gemini-3.5-flash"
+            }
+          },
+          {
+            "step_number": 3,
+            "agent_name": "StockoutSentinelAgent",
+            "mcp_tool_called": "asha_audit_node_inventory",
+            "action_summary": "Audited e-Aushadhi node ledger balance for 'Paracetamol'. Stock balance: 28 units (8.0 days buffer).",
+            "duration_ms": 15.12,
+            "timestamp": "2026-09-21T07:51:05.887599Z",
+            "details": {
+              "facility_id": "PHC-BARAGAON-03",
+              "facility_name": "Primary Health Centre Baragaon",
+              "medicine_id": "PUB-MED-005",
+              "medicine_name": "Paracetamol (PARACETAMOL)",
+              "current_stock": 28,
+              "daily_consumption_burn": 3.5,
+              "days_of_supply_remaining": 8.0,
+              "is_deficit": false,
+              "buffer_status": "ADEQUATE",
+              "recommended_reorder_qty": 0,
+              "storage_requirement": "Ambient (15\u00b0C to 30\u00b0C)"
+            }
+          }
+        ],
+        "agents_invoked": [
+          "AshaVoiceCopilotAgent",
+          "StockoutSentinelAgent"
+        ],
+        "tools_executed": [
+          "asha_conversational_intake",
+          "asha_audit_node_inventory"
+        ],
+        "vision_analysis": null,
+        "openfda_clinical_insights": null,
+        "clinical_protocol_card": null,
+        "timestamp": "2026-09-21T07:51:05.888648Z"
+      }
+    ],
+    "context": {
+      "facility_id": "PHC-BARAGAON-03",
+      "facility_name": "Primary Health Centre Baragaon",
+      "intent": "STOCK_STATUS_CHECK",
+      "medicine_name": "Paracetamol",
+      "medicine_id": "PUB-MED-005"
+    },
+    "created_at": "2026-09-21T07:49:41.337347Z",
+    "updated_at": "2026-09-21T07:51:05.888537Z"
+  },
+  "SESS-036B767C": {
+    "session_id": "SESS-036B767C",
+    "facility_id": null,
+    "facility_name": null,
+    "language_code": "en",
+    "messages": [
+      {
+        "id": "MSG-89C4A0",
+        "role": "user",
+        "content": "Run national crisis simulation drill with 90% power blackout across all states",
+        "language_code": "en",
+        "timestamp": "2026-09-21T07:49:40.838047Z",
+        "has_image": false,
+        "image_base64": null,
+        "vision_result": null
+      },
+      {
+        "id": "MSG-339695",
+        "role": "assistant",
+        "content": "\u26d4 Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Under MoHFW sovereign grid protocol, this action requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+        "content_english": "Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+        "status": "ROLE_RESTRICTED",
+        "intent": "ROLE_PERMISSION_DENIED",
+        "is_clarification_needed": false,
+        "missing_slots": [],
+        "quick_reply_options": [
+          "Check facility inventory buffer",
+          "View local cold-chain temperature",
+          "Report medicine stock receipt",
+          "Switch to authorized personnel"
+        ],
+        "recommended_action": {
+          "action_type": "ROLE_RESTRICTION",
+          "code": 4007,
+          "role": "PHC_OFFICER",
+          "required_roles": [
+            "NATIONAL_DIRECTOR",
+            "LOGISTICS_COORDINATOR",
+            "SURVEILLANCE_EPIDEMIOLOGIST"
+          ],
+          "reason": "Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+          "team_logo": "/team_logo.jpg"
+        },
+        "target_facility_id": null,
+        "target_facility_name": null,
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "RolePermissionGuardAgent",
+            "mcp_tool_called": "verify_role_authorization",
+            "action_summary": "RBAC Clearance Audit for role 'PHC_OFFICER': Status RESTRICTED (Code 4007). Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+            "duration_ms": 0.02,
+            "timestamp": "2026-09-21T07:49:40.846101Z",
+            "details": {
+              "is_permitted": false,
+              "status": "RESTRICTED",
+              "code": 4007,
+              "role": "PHC_OFFICER",
+              "required_roles": [
+                "NATIONAL_DIRECTOR",
+                "LOGISTICS_COORDINATOR",
+                "SURVEILLANCE_EPIDEMIOLOGIST"
+              ],
+              "reason": "Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+              "message_localized": "\u26d4 Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Under MoHFW sovereign grid protocol, this action requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+              "message_english": "Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance."
+            }
+          }
+        ],
+        "agents_invoked": [
+          "RolePermissionGuardAgent"
+        ],
+        "tools_executed": [
+          "verify_role_authorization"
+        ],
+        "vision_analysis": null,
+        "openfda_clinical_insights": null,
+        "clinical_protocol_card": null,
+        "timestamp": "2026-09-21T07:49:40.846197Z"
+      }
+    ],
+    "context": {},
+    "created_at": "2026-09-21T07:49:40.813497Z",
+    "updated_at": "2026-09-21T07:49:40.846182Z"
+  },
+  "SESS-1494F6C2": {
+    "session_id": "SESS-1494F6C2",
+    "facility_id": null,
+    "facility_name": null,
+    "language_code": "en",
+    "messages": [
+      {
+        "id": "MSG-AB758A",
+        "role": "user",
+        "content": "Run national crisis simulation drill with 90% power blackout across all states",
+        "language_code": "en",
+        "timestamp": "2026-09-21T07:49:25.647233Z",
+        "has_image": false,
+        "image_base64": null,
+        "vision_result": null
+      },
+      {
+        "id": "MSG-89E202",
+        "role": "assistant",
+        "content": "\u26d4 Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Under MoHFW sovereign grid protocol, this action requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+        "content_english": "Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+        "status": "ROLE_RESTRICTED",
+        "intent": "ROLE_PERMISSION_DENIED",
+        "is_clarification_needed": false,
+        "missing_slots": [],
+        "quick_reply_options": [
+          "Check facility inventory buffer",
+          "View local cold-chain temperature",
+          "Report medicine stock receipt",
+          "Switch to authorized personnel"
+        ],
+        "recommended_action": {
+          "action_type": "ROLE_RESTRICTION",
+          "code": 4007,
+          "role": "PHC_OFFICER",
+          "required_roles": [
+            "NATIONAL_DIRECTOR",
+            "LOGISTICS_COORDINATOR",
+            "SURVEILLANCE_EPIDEMIOLOGIST"
+          ],
+          "reason": "Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+          "team_logo": "/team_logo.jpg"
+        },
+        "target_facility_id": null,
+        "target_facility_name": null,
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "RolePermissionGuardAgent",
+            "mcp_tool_called": "verify_role_authorization",
+            "action_summary": "RBAC Clearance Audit for role 'PHC_OFFICER': Status RESTRICTED (Code 4007). Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+            "duration_ms": 0.03,
+            "timestamp": "2026-09-21T07:49:25.655094Z",
+            "details": {
+              "is_permitted": false,
+              "status": "RESTRICTED",
+              "code": 4007,
+              "role": "PHC_OFFICER",
+              "required_roles": [
+                "NATIONAL_DIRECTOR",
+                "LOGISTICS_COORDINATOR",
+                "SURVEILLANCE_EPIDEMIOLOGIST"
+              ],
+              "reason": "Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+              "message_localized": "\u26d4 Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Under MoHFW sovereign grid protocol, this action requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+              "message_english": "Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance."
+            }
+          }
+        ],
+        "agents_invoked": [
+          "RolePermissionGuardAgent"
+        ],
+        "tools_executed": [
+          "verify_role_authorization"
+        ],
+        "vision_analysis": null,
+        "openfda_clinical_insights": null,
+        "clinical_protocol_card": null,
+        "timestamp": "2026-09-21T07:49:25.655196Z"
+      }
+    ],
+    "context": {},
+    "created_at": "2026-09-21T07:49:25.623629Z",
+    "updated_at": "2026-09-21T07:49:25.655173Z"
+  },
+  "SESS-991038B5": {
+    "session_id": "SESS-991038B5",
+    "facility_id": null,
+    "facility_name": null,
+    "language_code": "en",
+    "messages": [
+      {
+        "id": "MSG-1F71AF",
+        "role": "user",
+        "content": "Run national crisis simulation drill with 90% power blackout across all states",
+        "language_code": "en",
+        "timestamp": "2026-09-21T07:48:48.647443Z",
+        "has_image": false,
+        "image_base64": null,
+        "vision_result": null
+      },
+      {
+        "id": "MSG-93D0D8",
+        "role": "assistant",
+        "content": "\u26d4 Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Under MoHFW sovereign grid protocol, this action requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+        "content_english": "Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+        "status": "ROLE_RESTRICTED",
+        "intent": "ROLE_PERMISSION_DENIED",
+        "is_clarification_needed": false,
+        "missing_slots": [],
+        "quick_reply_options": [
+          "Check facility inventory buffer",
+          "View local cold-chain temperature",
+          "Report medicine stock receipt",
+          "Switch to authorized personnel"
+        ],
+        "recommended_action": {
+          "action_type": "ROLE_RESTRICTION",
+          "code": 4007,
+          "role": "PHC_OFFICER",
+          "required_roles": [
+            "NATIONAL_DIRECTOR",
+            "LOGISTICS_COORDINATOR",
+            "SURVEILLANCE_EPIDEMIOLOGIST"
+          ],
+          "reason": "Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+          "team_logo": "/team_logo.jpg"
+        },
+        "target_facility_id": null,
+        "target_facility_name": null,
+        "execution_trace": [
+          {
+            "step_number": 1,
+            "agent_name": "RolePermissionGuardAgent",
+            "mcp_tool_called": "verify_role_authorization",
+            "action_summary": "RBAC Clearance Audit for role 'PHC_OFFICER': Status RESTRICTED (Code 4007). Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+            "duration_ms": 0.03,
+            "timestamp": "2026-09-21T07:48:48.657133Z",
+            "details": {
+              "is_permitted": false,
+              "status": "RESTRICTED",
+              "code": 4007,
+              "role": "PHC_OFFICER",
+              "required_roles": [
+                "NATIONAL_DIRECTOR",
+                "LOGISTICS_COORDINATOR",
+                "SURVEILLANCE_EPIDEMIOLOGIST"
+              ],
+              "reason": "Initiating crisis simulation drills requires Logistics Coordinator, Epidemiologist, or National Director clearance.",
+              "message_localized": "\u26d4 Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Under MoHFW sovereign grid protocol, this action requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance.",
+              "message_english": "Security Restriction (Code 4007 \u2022 Role Permission Denied): Your assigned role 'PHC Medical Officer' is not authorized to execute this operation. Requires National Director or Logistics Coordinator or Surveillance Epidemiologist clearance."
+            }
+          }
+        ],
+        "agents_invoked": [
+          "RolePermissionGuardAgent"
+        ],
+        "tools_executed": [
+          "verify_role_authorization"
+        ],
+        "vision_analysis": null,
+        "openfda_clinical_insights": null,
+        "clinical_protocol_card": null,
+        "timestamp": "2026-09-21T07:48:48.657266Z"
+      }
+    ],
+    "context": {},
+    "created_at": "2026-09-21T07:48:48.626241Z",
+    "updated_at": "2026-09-21T07:48:48.657253Z"
+  },
   "SESS-MU7AJCNE": {
     "session_id": "SESS-MU7AJCNE",
     "facility_id": "DH-ADI-003",

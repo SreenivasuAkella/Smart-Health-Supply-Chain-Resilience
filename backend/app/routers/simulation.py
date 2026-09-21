@@ -12,10 +12,15 @@ from typing import Optional, List, Dict, Any
 from ..services.facility_data_service import get_active_public_facilities
 from ..services.medicine_data_service import get_active_essential_medicines, generate_public_modeled_inventory
 from ..services.reallocation import generate_reallocation_plan, calculate_haversine_km
+from fastapi import APIRouter, Query, Depends
 from ..utils.response_helper import success_response
 from ..config import GEMINI_API_KEY, GEMINI_MODEL
+from .auth import require_role
 
-router = APIRouter(tags=["Crisis Stress-Testing Sandbox"])
+router = APIRouter(
+    tags=["Crisis Stress-Testing Sandbox"],
+    dependencies=[Depends(require_role(["NATIONAL_DIRECTOR", "LOGISTICS_COORDINATOR", "SURVEILLANCE_EPIDEMIOLOGIST"]))]
+)
 
 
 class CrisisScenarioRequest(BaseModel):

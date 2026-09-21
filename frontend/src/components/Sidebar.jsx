@@ -18,8 +18,11 @@ import {
   Radio, 
   ShieldCheck, 
   Cpu, 
-  Layers
+  Layers,
+  Lock
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { hasTabAccess } from '../utils/rbac';
 
 export default function Sidebar({ 
   activeTab, 
@@ -30,6 +33,7 @@ export default function Sidebar({
   setMobileOpen,
   onOpenTechModal
 }) {
+  const { user } = useAuth();
   const navCategories = [
     {
       title: "Core Command",
@@ -134,6 +138,7 @@ export default function Sidebar({
               {category.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                const isAllowed = hasTabAccess(user?.role, item.id);
                 const targetPath = item.id === 'overview' ? '/' : `/${item.id}`;
                 return (
                   <Link
@@ -146,6 +151,7 @@ export default function Sidebar({
                     className={`
                       w-full flex items-center ${isCollapsed ? 'justify-center px-0 h-11' : 'gap-3 px-3 py-2.5'} rounded-xl text-xs font-semibold
                       transition-all duration-200 group relative
+                      ${!isAllowed ? 'opacity-70 hover:opacity-100' : ''}
                       ${isActive 
                         ? 'bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-500/10' 
                         : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 border border-transparent'}
@@ -154,13 +160,22 @@ export default function Sidebar({
                   >
                     <Icon 
                       size={18} 
-                      className={`min-w-[18px] transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} 
+                      className={`min-w-[18px] transition-transform duration-200 group-hover:scale-110 ${
+                        !isAllowed ? 'text-slate-500' : isActive ? 'text-cyan-400' : 'text-slate-400'
+                      }`} 
                     />
                     
                     {!isCollapsed ? (
                       <div className="flex items-center justify-between w-full truncate">
-                        <span className="truncate">{item.label}</span>
-                        {item.badge && (
+                        <span className={`truncate ${!isAllowed ? 'text-slate-400' : ''}`}>
+                          {item.label}
+                        </span>
+                        {!isAllowed ? (
+                          <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-mono font-medium bg-amber-500/10 text-amber-400/90 border border-amber-500/20">
+                            <Lock size={9} />
+                            <span>Locked</span>
+                          </span>
+                        ) : item.badge && (
                           <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-medium ${
                             isActive 
                               ? 'bg-cyan-400/20 text-cyan-200 border border-cyan-400/30' 
@@ -174,7 +189,12 @@ export default function Sidebar({
                       /* Floating Hover Tooltip in Collapsed Mode */
                       <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 text-slate-100 rounded-lg shadow-xl text-xs whitespace-nowrap hidden group-hover:flex items-center gap-2 z-50 pointer-events-none">
                         <span>{item.label}</span>
-                        {item.badge && (
+                        {!isAllowed ? (
+                          <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            <Lock size={9} />
+                            <span>Restricted</span>
+                          </span>
+                        ) : item.badge && (
                           <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                             {item.badge}
                           </span>

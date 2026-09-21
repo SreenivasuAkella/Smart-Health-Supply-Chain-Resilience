@@ -6,13 +6,18 @@ import {
   Clock, ShieldAlert, Cpu, Activity, Layers, ChevronDown, ChevronUp, ChevronRight,
   HelpCircle, Bot, User, RefreshCw, AlertTriangle, Building2,
   Maximize2, Minimize2, Minus, MessageSquare, Flame, Check, Camera,
-  AlertOctagon, Thermometer, FileText, Image as ImageIcon, ShieldCheck
+  AlertOctagon, Thermometer, FileText, Image as ImageIcon, ShieldCheck, Lock
 } from 'lucide-react';
 import { chatWithAshaCopilot, fetchFacilities, fetchCopilotSessionDetail } from '../services/api';
 import { mapBackendName, formatCopilotTime } from '../utils/formatters';
 import OpenFDAClinicalCard from './OpenFDAClinicalCard';
 
 const AGENT_CONFIG = {
+  RolePermissionGuardAgent: {
+    label: 'Role Permission Guard',
+    icon: '🛡️',
+    badgeClass: 'bg-rose-950/60 text-rose-300 border-rose-500/40'
+  },
   AshaVoiceCopilotAgent: {
     label: 'Frontline Copilot',
     icon: '🎙️',
@@ -1162,6 +1167,70 @@ export default function VoiceCopilotModal({
                             <p className="text-[11px] text-slate-300">
                               Technician {coldChain.assigned_technician} dispatched to {coldChain.facility_name}.
                             </p>
+                          </div>
+                        )}
+
+                        {/* Sovereign Role Permission Guard / Code 4007 Lock Card */}
+                        {!isUser && (msg.status === 'ROLE_RESTRICTED' || msg.error_code === 4007 || recAction?.error_code === 4007 || msg.intent === 'ROLE_PERMISSION_DENIED') && (
+                          <div className="bg-rose-950/40 border-2 border-rose-500/50 rounded-2xl p-3 space-y-2 text-xs backdrop-blur-md relative overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-rose-500/30 pb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg border border-rose-400/40 p-0.5 bg-rose-900/40 overflow-hidden shrink-0">
+                                  <img 
+                                    src="/team_logo.jpg" 
+                                    alt="Sanjeevani Team Logo" 
+                                    className="w-full h-full object-cover rounded"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] font-black text-rose-300 tracking-wide uppercase">
+                                      Role Guard Intercept
+                                    </span>
+                                    <span className="bg-rose-500/30 text-rose-200 font-mono text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-rose-500/60 animate-pulse">
+                                      CODE 4007
+                                    </span>
+                                  </div>
+                                  <span className="text-[9px] text-rose-200/80 font-medium block">
+                                    MoHFW Sovereign Clearance Lock
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="bg-rose-900/60 text-rose-200 border border-rose-500/50 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                                <ShieldAlert size={10} className="text-rose-400" /> RESTRICTED
+                              </span>
+                            </div>
+
+                            <div className="bg-slate-950/80 p-2 rounded-xl border border-rose-500/20 text-[10px] space-y-1">
+                              <div className="flex justify-between">
+                                <span className="text-slate-400">Authenticated Role:</span>
+                                <span className="font-mono font-bold text-amber-300">
+                                  {msg.guard_details?.user_role || recAction?.user_role || 'PHC_OFFICER'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-400">Required Level:</span>
+                                <span className="font-mono font-bold text-rose-300">
+                                  {(msg.guard_details?.required_roles || recAction?.required_roles || ['NATIONAL_DIRECTOR']).join(', ')}
+                                </span>
+                              </div>
+                              {msg.guard_details?.restricted_action && (
+                                <div className="pt-1 border-t border-slate-800 text-slate-300">
+                                  <span className="text-slate-400 block text-[9px] uppercase">Attempted Action:</span>
+                                  <span>{msg.guard_details.restricted_action}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] text-slate-300 bg-rose-950/20 px-2 py-1 rounded border border-rose-500/20">
+                              <span className="flex items-center gap-1 text-rose-300">
+                                <Lock size={10} /> Apex National Command clearance required
+                              </span>
+                              <span className="font-mono text-[9px] text-slate-400">
+                                RolePermissionGuardAgent
+                              </span>
+                            </div>
                           </div>
                         )}
                       </div>

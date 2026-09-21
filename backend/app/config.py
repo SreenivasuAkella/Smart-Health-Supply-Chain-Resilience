@@ -47,6 +47,14 @@ FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL", "https://sanjeevani-h
 FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "")
 FIREBASE_AUTH_DOMAIN = os.getenv("FIREBASE_AUTH_DOMAIN", f"{FIREBASE_PROJECT_ID}.firebaseapp.com")
 
+# Authentication, JWT & Admin Provisioning Configuration
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "sanjeevani-enterprise-jwt-signing-secret-key-2026-secure")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+# Default Base64 Secret Key for administrative email registration (encodes 'sanjeevani-national-health-secret-key-2026')
+ADMIN_SECRET_KEY_B64 = os.getenv("ADMIN_SECRET_KEY_B64", "c2FuamVldmFuaS1uYXRpb25hbC1oZWFsdGgtc2VjcmV0LWtleS0yMDI2")
+
 # Public Health, GIS & Meteorology APIs
 OPEN_METEO_API_URL = os.getenv("OPEN_METEO_API_URL", "https://api.open-meteo.com/v1/forecast")
 WHO_GHO_API_URL = os.getenv("WHO_GHO_API_URL", "https://ghoapi.azureedge.net/api/Dimension/COUNTRY/DimensionValues")
