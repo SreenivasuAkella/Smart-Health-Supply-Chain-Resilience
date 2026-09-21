@@ -293,23 +293,62 @@ export async function updateReallocationStatus(dispatchId, newStatus) {
   }
 }
 
-export async function analyzeMedicineImage(base64Image, mimeType = "image/jpeg", apiKey = "") {
+export async function analyzeMedicineImage(imageInput, mimeType = "image/jpeg", apiKey = "", userContextHint = "") {
   try {
+    let base64Data = "";
+    let effectiveMimeType = mimeType || "image/jpeg";
+    let effectiveApiKey = apiKey;
+    let effectiveHint = userContextHint;
+
+    // Detect if second argument was actually apiKey: e.g. analyzeMedicineImage(img, apiKey)
+    if (typeof mimeType === "string" && (!mimeType.includes("/") || mimeType.startsWith("AIza"))) {
+      effectiveApiKey = mimeType;
+      effectiveMimeType = "image/jpeg";
+    }
+
+    // Handle options object
+    if (typeof imageInput === "object" && imageInput !== null && !(imageInput instanceof Blob)) {
+      base64Data = imageInput.image_base64 || imageInput.imageBase64 || imageInput.data || "";
+      if (imageInput.mime_type || imageInput.mimeType) effectiveMimeType = imageInput.mime_type || imageInput.mimeType;
+      if (imageInput.apiKey || imageInput.custom_api_key) effectiveApiKey = imageInput.apiKey || imageInput.custom_api_key;
+      if (imageInput.hint || imageInput.user_context_hint || imageInput.prompt) {
+        effectiveHint = imageInput.hint || imageInput.user_context_hint || imageInput.prompt;
+      }
+    } else if (imageInput instanceof Blob) {
+      if (imageInput.type) effectiveMimeType = imageInput.type;
+      base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageInput);
+      });
+    } else if (typeof imageInput === "string") {
+      base64Data = imageInput;
+    }
+
+    if (!base64Data) {
+      throw new Error("No image data provided for vision analysis");
+    }
+
     const res = await fetch(`${API_BASE_URL}/ai/vision-scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        image_base64: base64Image,
-        mime_type: mimeType,
-        custom_api_key: apiKey
+        image_base64: base64Data,
+        mime_type: effectiveMimeType,
+        custom_api_key: effectiveApiKey,
+        user_context_hint: effectiveHint
       })
     });
-    if (!res.ok) throw new Error("Vision API failed");
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Vision API error (${res.status}): ${errText || res.statusText}`);
+    }
     const json = await res.json();
     return json.data || json;
   } catch (err) {
     console.error("analyzeMedicineImage error:", err);
-    return null;
+    throw err;
   }
 }
 
