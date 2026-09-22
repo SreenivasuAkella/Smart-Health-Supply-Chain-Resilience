@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Menu, 
   RefreshCw, 
@@ -50,6 +51,7 @@ export default function TopHeader({
   sseConnected = true,
   onOpenLoginModal
 }) {
+  const router = useRouter();
   const { user, isAuthenticated, logout, openLoginModal } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
@@ -184,19 +186,28 @@ export default function TopHeader({
           {/* User Profile Badge / Sign In Button */}
           {isAuthenticated && user ? (
             <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/70 rounded-xl px-2.5 py-1.5 shadow-sm">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-400 to-indigo-500 flex items-center justify-center text-slate-950 font-bold text-xs shadow-inner">
-                {user.full_name ? user.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : 'U'}
-              </div>
-              <div className="hidden md:flex flex-col text-left">
-                <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[130px]">
-                  {user.full_name || user.email}
-                </span>
-                <span className="text-[9px] font-mono text-cyan-300 truncate max-w-[130px]">
-                  {getRoleTitle(user.role)}
-                </span>
-              </div>
               <button
-                onClick={logout}
+                onClick={() => router.push('/auth')}
+                className="flex items-center gap-2 text-left hover:opacity-90 transition-opacity"
+                title="Manage Credentials & Roles"
+              >
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-400 to-indigo-500 flex items-center justify-center text-slate-950 font-bold text-xs shadow-inner shrink-0">
+                  {user.full_name ? user.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : 'U'}
+                </div>
+                <div className="hidden md:flex flex-col text-left">
+                  <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[130px]">
+                    {user.full_name || user.email}
+                  </span>
+                  <span className="text-[9px] font-mono text-cyan-300 truncate max-w-[130px]">
+                    {getRoleTitle(user.role)}
+                  </span>
+                </div>
+              </button>
+              <button
+                onClick={async () => {
+                  await logout();
+                  router.push('/auth');
+                }}
                 title="Sign Out"
                 className="p-1 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors ml-1"
               >
@@ -205,7 +216,7 @@ export default function TopHeader({
             </div>
           ) : (
             <button
-              onClick={onOpenLoginModal || openLoginModal}
+              onClick={() => router.push('/auth')}
               className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-md shadow-cyan-500/20"
               title="Official Healthcare Personnel Access"
             >

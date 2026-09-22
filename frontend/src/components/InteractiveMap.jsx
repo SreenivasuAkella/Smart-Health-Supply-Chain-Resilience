@@ -5,7 +5,7 @@ import {
   MapPin, Navigation, Truck, RefreshCw, Layers, ShieldCheck, 
   AlertCircle, Building2, Phone, Sparkles, ShieldAlert, AlertTriangle, 
   CheckCircle2, Bot, History, X, Clock, ArrowRight, Gauge, Thermometer,
-  RotateCcw
+  RotateCcw, Maximize2, Minimize2
 } from 'lucide-react';
 import { 
   optimizeReallocationPlan, 
@@ -36,6 +36,36 @@ const Polyline = dynamic(
   { ssr: false }
 );
 
+// Dynamic import of Leaflet resizer controller
+const MapResizer = dynamic(
+  () => import('react-leaflet').then((mod) => {
+    const { useMap } = mod;
+    return function MapResizerComponent({ isFullscreen }) {
+      const map = useMap();
+      useEffect(() => {
+        const resize = () => {
+          try {
+            map.invalidateSize();
+          } catch (e) {}
+        };
+        resize();
+        const t1 = setTimeout(resize, 80);
+        const t2 = setTimeout(resize, 250);
+        const t3 = setTimeout(resize, 600);
+        window.addEventListener('resize', resize);
+        return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+          clearTimeout(t3);
+          window.removeEventListener('resize', resize);
+        };
+      }, [isFullscreen, map]);
+      return null;
+    };
+  }),
+  { ssr: false }
+);
+
 export default function InteractiveMap({ isLoading = false, facilities = [], activeReallocation, onSelectFacility }) {
   const [isClient, setIsClient] = useState(false);
   const [selectedState, setSelectedState] = useState('All');
@@ -53,6 +83,73 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   const [historyRecords, setHistoryRecords] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
+
+  // Fullscreen Expansion State
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mapInstance, setMapInstance] = useState(null);
+
+  const toggleFullscreen = async () => {
+    if (!isFullscreen) {
+      setIsFullscreen(true);
+      try {
+        if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (err) {
+        console.debug('Native fullscreen request ignored, using fixed overlay:', err);
+      }
+    } else {
+      setIsFullscreen(false);
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      } catch (err) {
+        console.debug('Exit fullscreen exception:', err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    const triggerInvalidate = () => {
+      try {
+        mapInstance.invalidateSize();
+      } catch (e) {}
+    };
+    triggerInvalidate();
+    const t1 = setTimeout(triggerInvalidate, 80);
+    const t2 = setTimeout(triggerInvalidate, 250);
+    const t3 = setTimeout(triggerInvalidate, 600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isFullscreen, mapInstance]);
 
   // Sync external activeReallocation prop whenever updated (e.g. from SSE stream)
   useEffect(() => {
@@ -324,16 +421,75 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   }
 
   return (
-    <div className="space-y-4">
+    <div className={
+      isFullscreen
+        ? "fixed inset-0 z-[50000] bg-slate-950/98 backdrop-blur-2xl flex flex-col p-3 sm:p-4 w-screen h-screen overflow-hidden animate-fade-in"
+        : "space-y-4"
+    }>
       {/* Compact Map Control Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-2.5 transition-all ${
+        isFullscreen
+          ? 'bg-slate-900/90 border border-slate-800/90 shadow-2xl shrink-0 backdrop-blur-md mb-2'
+          : 'bg-slate-900/60 border border-slate-800/80'
+      }`}>
+        <div className="flex items-center gap-2.5 flex-wrap">
           <span className="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
-            <Navigation size={13} className="text-cyan-400" /> 4-Agent Sentinel Routing
+            <Navigation size={13} className="text-cyan-400" /> 
+            {isFullscreen ? "Pan-India Sentinel Healthcare Grid" : "4-Agent Sentinel Routing"}
           </span>
           <span className="text-xs text-slate-400 hidden sm:inline">
             {facilities.length} Healthcare Nodes &bull; Flood Risk Corridors
           </span>
+
+          {/* Fullscreen Quick-Filter Metric Pills */}
+          {isFullscreen && (
+            <div className="hidden xl:flex items-center gap-1.5 ml-2 border-l border-slate-800 pl-3">
+              <button
+                onClick={() => setStatusFilter(statusFilter === 'Critical Deficit' ? 'All' : 'Critical Deficit')}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all flex items-center gap-1.5 ${
+                  statusFilter === 'Critical Deficit'
+                    ? 'bg-rose-500/25 text-rose-300 border-rose-500 ring-1 ring-rose-500/40'
+                    : 'bg-slate-900 text-rose-400 border-rose-500/30 hover:bg-slate-800'
+                }`}
+                title="Filter Critical Deficits"
+              >
+                <ShieldAlert size={11} /> Emergency: {criticalCount}
+              </button>
+              <button
+                onClick={() => setStatusFilter(statusFilter === 'Warning' ? 'All' : 'Warning')}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all flex items-center gap-1.5 ${
+                  statusFilter === 'Warning'
+                    ? 'bg-amber-500/25 text-amber-300 border-amber-500 ring-1 ring-amber-500/40'
+                    : 'bg-slate-900 text-amber-400 border-amber-500/30 hover:bg-slate-800'
+                }`}
+                title="Filter Warning Buffers"
+              >
+                <AlertTriangle size={11} /> Warning: {warningCount}
+              </button>
+              <button
+                onClick={() => setStatusFilter(statusFilter === 'Regional Depot' ? 'All' : 'Regional Depot')}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all flex items-center gap-1.5 ${
+                  statusFilter === 'Regional Depot'
+                    ? 'bg-cyan-500/25 text-cyan-300 border-cyan-500 ring-1 ring-cyan-500/40'
+                    : 'bg-slate-900 text-cyan-400 border-cyan-500/30 hover:bg-slate-800'
+                }`}
+                title="Filter Regional Surplus Depots"
+              >
+                <Building2 size={11} /> Surplus: {depotCount}
+              </button>
+              <button
+                onClick={() => setStatusFilter(statusFilter === 'Optimal' ? 'All' : 'Optimal')}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all flex items-center gap-1.5 ${
+                  statusFilter === 'Optimal'
+                    ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500 ring-1 ring-emerald-500/40'
+                    : 'bg-slate-900 text-emerald-400 border-emerald-500/30 hover:bg-slate-800'
+                }`}
+                title="Filter Optimal Centers"
+              >
+                <ShieldCheck size={11} /> Optimal: {optimalCount}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -401,82 +557,138 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
             <History size={13} className="text-cyan-400" />
             <span>DB Records</span>
           </button>
+
+          {/* Fullscreen Expand Toggle Button */}
+          <button
+            onClick={toggleFullscreen}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm group hover:scale-[1.02] border ${
+              isFullscreen
+                ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/50 shadow-rose-500/10'
+                : 'bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-cyan-500/50 text-slate-200 hover:text-white'
+            }`}
+            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand Map to Fullscreen"}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 size={13} className="text-rose-400 group-hover:scale-110 transition-transform" />
+                <span>Exit Fullscreen</span>
+                <kbd className="hidden sm:inline bg-rose-950/60 border border-rose-800/60 text-[9px] text-rose-300/90 px-1 py-0.5 rounded font-mono ml-0.5">Esc</kbd>
+              </>
+            ) : (
+              <>
+                <Maximize2 size={13} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                <span>Fullscreen</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Live Status Metric Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <button
-          onClick={() => setStatusFilter(statusFilter === 'Critical Deficit' ? 'All' : 'Critical Deficit')}
-          className={`glass-panel p-3 text-left transition-all border ${
-            statusFilter === 'Critical Deficit' ? 'border-rose-500 bg-rose-500/15 ring-2 ring-rose-500/30' : 'border-rose-500/30 hover:bg-slate-900'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-rose-400 flex items-center gap-1">
-              <ShieldAlert size={13} /> Critical Stockout Emergency
-            </span>
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-          </div>
-          <p className="text-xl font-black text-white mt-1">{criticalCount}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Deficit &le; 3 days &bull; Auto-relocate targets</p>
-        </button>
+      {/* Live Status Metric Bar (Shown in Standard View) */}
+      {!isFullscreen && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'Critical Deficit' ? 'All' : 'Critical Deficit')}
+            className={`glass-panel p-3 text-left transition-all border ${
+              statusFilter === 'Critical Deficit' ? 'border-rose-500 bg-rose-500/15 ring-2 ring-rose-500/30' : 'border-rose-500/30 hover:bg-slate-900'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-rose-400 flex items-center gap-1">
+                <ShieldAlert size={13} /> Critical Stockout Emergency
+              </span>
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+            </div>
+            <p className="text-xl font-black text-white mt-1">{criticalCount}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Deficit &le; 3 days &bull; Auto-relocate targets</p>
+          </button>
 
-        <button
-          onClick={() => setStatusFilter(statusFilter === 'Warning' ? 'All' : 'Warning')}
-          className={`glass-panel p-3 text-left transition-all border ${
-            statusFilter === 'Warning' ? 'border-amber-500 bg-amber-500/15 ring-2 ring-amber-500/30' : 'border-amber-500/30 hover:bg-slate-900'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
-              <AlertTriangle size={13} /> Depleting Buffer Warning
-            </span>
-          </div>
-          <p className="text-xl font-black text-white mt-1">{warningCount}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Supply 4&ndash;7 days remaining</p>
-        </button>
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'Warning' ? 'All' : 'Warning')}
+            className={`glass-panel p-3 text-left transition-all border ${
+              statusFilter === 'Warning' ? 'border-amber-500 bg-amber-500/15 ring-2 ring-amber-500/30' : 'border-amber-500/30 hover:bg-slate-900'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                <AlertTriangle size={13} /> Depleting Buffer Warning
+              </span>
+            </div>
+            <p className="text-xl font-black text-white mt-1">{warningCount}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Supply 4&ndash;7 days remaining</p>
+          </button>
 
-        <button
-          onClick={() => setStatusFilter(statusFilter === 'Regional Depot' ? 'All' : 'Regional Depot')}
-          className={`glass-panel p-3 text-left transition-all border ${
-            statusFilter === 'Regional Depot' ? 'border-cyan-500 bg-cyan-500/15 ring-2 ring-cyan-500/30' : 'border-cyan-500/30 hover:bg-slate-900'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-1">
-              <Building2 size={13} /> Regional Surplus Depots
-            </span>
-          </div>
-          <p className="text-xl font-black text-white mt-1">{depotCount}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Equipped with Cold ILR Vans</p>
-        </button>
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'Regional Depot' ? 'All' : 'Regional Depot')}
+            className={`glass-panel p-3 text-left transition-all border ${
+              statusFilter === 'Regional Depot' ? 'border-cyan-500 bg-cyan-500/15 ring-2 ring-cyan-500/30' : 'border-cyan-500/30 hover:bg-slate-900'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-1">
+                <Building2 size={13} /> Regional Surplus Depots
+              </span>
+            </div>
+            <p className="text-xl font-black text-white mt-1">{depotCount}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Equipped with Cold ILR Vans</p>
+          </button>
 
-        <button
-          onClick={() => setStatusFilter(statusFilter === 'Optimal' ? 'All' : 'Optimal')}
-          className={`glass-panel p-3 text-left transition-all border ${
-            statusFilter === 'Optimal' ? 'border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/30' : 'border-emerald-500/30 hover:bg-slate-900'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-              <ShieldCheck size={13} /> Optimal Buffer Centers
-            </span>
-          </div>
-          <p className="text-xl font-black text-white mt-1">{optimalCount}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">&gt; 14 days stock resilience</p>
-        </button>
-      </div>
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'Optimal' ? 'All' : 'Optimal')}
+            className={`glass-panel p-3 text-left transition-all border ${
+              statusFilter === 'Optimal' ? 'border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/30' : 'border-emerald-500/30 hover:bg-slate-900'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                <ShieldCheck size={13} /> Optimal Buffer Centers
+              </span>
+            </div>
+            <p className="text-xl font-black text-white mt-1">{optimalCount}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">&gt; 14 days stock resilience</p>
+          </button>
+        </div>
+      )}
 
       {/* Main Map Canvas Area */}
-      <div className="glass-panel p-2 h-[600px] rounded-2xl border border-slate-800 relative overflow-hidden shadow-2xl">
+      <div className={`glass-panel p-2 rounded-2xl border border-slate-800 relative overflow-hidden shadow-2xl transition-all ${
+        isFullscreen ? 'flex-1 w-full min-h-0' : 'h-[600px]'
+      }`}>
+        {/* Floating Quick Fullscreen / Exit Button on Map Top-Right */}
+        <div className="absolute top-3 right-3 z-[1000]">
+          <button
+            onClick={toggleFullscreen}
+            className={`border px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl backdrop-blur-md shadow-2xl transition-all flex items-center gap-2 group hover:scale-105 active:scale-95 cursor-pointer ${
+              isFullscreen
+                ? 'bg-slate-900/90 hover:bg-slate-800/95 text-rose-300 border-rose-500/60 hover:border-rose-400'
+                : 'bg-slate-900/90 hover:bg-slate-800/95 text-slate-200 hover:text-white border-slate-700/80 hover:border-cyan-500/70'
+            }`}
+            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand Map to Fullscreen"}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 size={15} className="text-rose-400 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-bold text-rose-300 hidden sm:inline">Exit Fullscreen</span>
+                <kbd className="hidden sm:inline bg-rose-950/80 border border-rose-800 text-[9px] text-rose-300 px-1 py-0.5 rounded font-mono">Esc</kbd>
+              </>
+            ) : (
+              <>
+                <Maximize2 size={15} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-bold hidden sm:inline">Expand Map</span>
+              </>
+            )}
+          </button>
+        </div>
+
         {isClient ? (
           <MapContainer
+            ref={setMapInstance}
             center={[22.5937, 78.9629]}
             zoom={5}
             className="w-full h-full rounded-xl"
             zoomControl={true}
           >
+            <MapResizer isFullscreen={isFullscreen} />
             <TileLayer
               url={tileUrls[mapLayer].url}
               attribution={tileUrls[mapLayer].attribution}

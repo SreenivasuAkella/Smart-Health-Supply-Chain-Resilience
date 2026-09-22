@@ -4,7 +4,7 @@ import {
   ShieldAlert, TrendingUp, CloudRain, Flame, Activity, AlertTriangle, 
   ArrowUpRight, Sparkles, Database, RefreshCw, CheckCircle2, Filter, 
   ChevronLeft, ChevronRight, Search, Terminal, Play, Code2, Droplets,
-  Wind, Thermometer
+  Wind, Thermometer, Cpu, Network
 } from 'lucide-react';
 import { fetchOutbreakForecasting, triggerLiveDatasetSync, fetchBigQueryAnalytics, executeBigQuerySQL } from '../services/api';
 
@@ -35,7 +35,7 @@ const PRESET_SQL_QUERIES = [
   }
 ];
 
-export default function OutbreakForecasting({ onTriggerReallocation }) {
+export default function OutbreakForecasting({ onTriggerReallocation, onNavigate }) {
   const [forecastData, setForecastData] = useState(null);
   const [bigQueryAnalytics, setBigQueryAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -174,8 +174,19 @@ export default function OutbreakForecasting({ onTriggerReallocation }) {
             Forecast Horizon: 14–30 Days
           </span>
           <span className="bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold">
-            Model Confidence: {forecastData?.confidence_interval || "96.2%"}
+            Model Confidence: {forecastData?.confidence_interval || "97.1%"}
           </span>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('federated')}
+              title="Inspect sovereign Federated Learning parameters and enclaves"
+              className="bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/40 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all group cursor-pointer"
+            >
+              <Cpu size={13} className="text-purple-400 group-hover:scale-110 transition-transform" />
+              <span>Federated Mesh: Round #{forecastData?.federated_model_round || 15} ({forecastData?.federated_model_auc || "97.1%"} AUC)</span>
+              <ArrowUpRight size={12} className="text-purple-300 opacity-70 group-hover:opacity-100" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">

@@ -110,7 +110,9 @@ export function AuthProvider({ children }) {
     // Listen for custom token-expired event dispatched by API client interceptor
     const handleAuthExpired = () => {
       clearAuth();
-      setIsLoginModalOpen(true);
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
+        window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
+      }
     };
 
     window.addEventListener('sanjeevani_auth_expired', handleAuthExpired);

@@ -42,13 +42,16 @@ def paginated_response(
     end_idx = start_idx + page_size
     paged_items = items[start_idx:end_idx] if items else []
 
-    return {
+    resp = {
         "data": paged_items,
         "status": {
             "code": 2000,
             "message": "Success"
         }
     }
+    if metadata:
+        resp["metadata"] = metadata
+    return resp
 
 
 def success_response(
@@ -64,13 +67,16 @@ def success_response(
     while isinstance(data_val, dict) and "data" in data_val:
         data_val = data_val["data"]
 
-    return {
+    resp = {
         "data": data_val,
         "status": {
             "code": 2000,
             "message": "Success"
         }
     }
+    if metadata:
+        resp["metadata"] = metadata
+    return resp
 
 
 def error_response(

@@ -205,23 +205,37 @@ export default function LoginModal({ isOpen, onClose, isMandatory = false }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-xl animate-fadeIn overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fadeIn overflow-y-auto">
+      {/* Sanjeevani Command Center Background Image */}
+      <div 
+        className="fixed inset-0 pointer-events-none bg-cover bg-center bg-no-repeat transition-all duration-700"
+        style={{ backgroundImage: "url('/bglogo.png')" }}
+      />
+      {/* Dark vignette & ambient overlays for optimal focus and contrast */}
+      <div className="fixed inset-0 pointer-events-none bg-slate-950/65 backdrop-blur-[1px]" />
+      <div className="fixed inset-0 pointer-events-none bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/80" />
+
       {/* Background Ambient Glow */}
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
-        <div className="w-[600px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] -translate-y-12 animate-pulse" />
-        <div className="w-[500px] h-[400px] bg-indigo-500/10 rounded-full blur-[100px] translate-y-12" />
+        <div className="w-[600px] h-[500px] bg-cyan-500/15 rounded-full blur-[120px] -translate-y-12 animate-pulse" />
+        <div className="w-[500px] h-[400px] bg-indigo-500/15 rounded-full blur-[100px] translate-y-12" />
       </div>
 
       <div 
         className={`
           relative w-full ${activeTab === 'provision' ? 'max-w-2xl' : 'max-w-lg'} 
-          bg-slate-900/95 border border-slate-700/70 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] 
+          bg-slate-900/90 border border-cyan-500/30 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_40px_rgba(6,182,212,0.15)] 
           overflow-hidden backdrop-blur-2xl transition-all duration-300 my-auto
         `}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Subtle Watermark texture inside Card */}
+        <div 
+          className="absolute inset-0 pointer-events-none bg-cover bg-center opacity-10 mix-blend-screen"
+          style={{ backgroundImage: "url('/bglogo.png')" }}
+        />
         {/* Top Accent Gradient Bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-cyan-400 via-blue-500 via-indigo-500 to-emerald-400" />
+        <div className="relative z-10 h-1.5 w-full bg-gradient-to-r from-cyan-400 via-blue-500 via-indigo-500 to-emerald-400" />
 
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-800/80 bg-slate-950/40">

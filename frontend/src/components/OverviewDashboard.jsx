@@ -6,9 +6,9 @@ import {
   CheckCircle2, RefreshCw, Bed, Users, UserCheck, Stethoscope, 
   HeartPulse, Search, Filter, ChevronLeft, ChevronRight, CloudRain,
   Navigation, Radio, Zap, ChevronsLeft, ChevronsRight, Loader2,
-  Languages, Pill, Clock, Lock
+  Languages, Pill, Clock, Lock, Network, Globe, Cpu
 } from 'lucide-react';
-import { fetchFacilitiesPaginated } from '../services/api';
+import { fetchFacilitiesPaginated, fetchFederatedStatus } from '../services/api';
 import { hasTabAccess } from '../utils/rbac';
 
 export default function OverviewDashboard({ 
@@ -36,6 +36,18 @@ export default function OverviewDashboard({
     has_next: true,
     has_prev: false
   });
+
+  const [fedStatus, setFedStatus] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchFederatedStatus().then(res => {
+      if (isMounted && res) {
+        setFedStatus(res);
+      }
+    }).catch(err => console.error("Error fetching federated status for overview:", err));
+    return () => { isMounted = false; };
+  }, []);
 
   const [nationalAggregates, setNationalAggregates] = useState({
     total_facilities: 1188,
@@ -529,6 +541,78 @@ export default function OverviewDashboard({
         {/* Right 5 Cols: Strategic Intelligence Suite */}
         <div className="lg:col-span-5 space-y-5">
           
+          {/* Federated Sovereign AI Mesh Card */}
+          <div className="glass-panel p-5 space-y-4 border-purple-500/25 bg-gradient-to-br from-purple-950/20 via-slate-950/50 to-slate-900/60">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Network className="text-purple-400" size={18} />
+                <h3 className="font-bold text-sm sm:text-base text-white font-display">
+                  Federated Sovereign AI Mesh
+                </h3>
+              </div>
+              <span className="bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                {fedStatus?.active_protocol || "DP-FedAvg Consensus"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+                <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Model Round</div>
+                <div className="text-lg font-bold text-white font-mono mt-0.5">
+                  #{fedStatus?.global_round || 15}
+                </div>
+                <div className="text-[10px] text-purple-400 font-medium">Consensus Synchronized</div>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+                <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Global AUC</div>
+                <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">
+                  {fedStatus?.global_auc ? (fedStatus.global_auc * 100).toFixed(1) : "97.1"}%
+                </div>
+                <div className="text-[10px] text-emerald-400/80 font-medium">+1.4% Convergence</div>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
+                <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Enclaves</div>
+                <div className="text-lg font-bold text-cyan-400 font-mono mt-0.5">
+                  {fedStatus?.total_active_enclaves || 43}
+                </div>
+                <div className="text-[10px] text-cyan-400/80 font-medium">States & BRICS+</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/70 border border-purple-500/20 rounded-xl p-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <ShieldCheck size={13} className="text-emerald-400" />
+                  Zero-PII Leakage Guarantee
+                </span>
+                <span className="font-mono text-[11px] text-purple-300 font-bold">
+                  {fedStatus?.privacy_guarantee ? fedStatus.privacy_guarantee.split("•")[0]?.trim() : "ε = 1.25, δ = 10⁻⁵"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Powers Pan-India Outbreak Forecasting and Dynamic Reallocation by training on {fedStatus?.total_records_represented || "171.12M"} decentralized records without moving patient data.
+              </p>
+            </div>
+
+            <button
+              onClick={() => onNavigate('federated')}
+              className={`w-full text-xs justify-center py-2 font-semibold flex items-center gap-1.5 rounded-xl border transition-all ${
+                !hasTabAccess(user?.role, 'federated')
+                  ? 'bg-slate-900/60 text-slate-400 border-amber-500/30 hover:border-amber-500/60'
+                  : 'bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border-purple-500/40 hover:border-purple-400'
+              }`}
+            >
+              <Cpu size={13} className="text-purple-400" />
+              <span>Inspect Sovereign AI Mesh & Enclaves</span>
+              {!hasTabAccess(user?.role, 'federated') ? (
+                <Lock size={12} className="text-amber-400" />
+              ) : (
+                <ArrowUpRight size={13} className="text-purple-300" />
+              )}
+            </button>
+          </div>
+
           {/* Cold-Chain IoT Guard */}
           <div className="glass-panel p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
