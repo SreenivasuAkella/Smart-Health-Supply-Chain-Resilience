@@ -156,7 +156,7 @@ def analyze_openfda_with_gemini(
         }}
         """
 
-        candidate_models = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.8-flash", GEMINI_MODEL, "gemini-3.6-flash"]
+        candidate_models = [GEMINI_MODEL, "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash"]
         seen = set()
         models_to_try = [m for m in candidate_models if m and not (m in seen or seen.add(m))]
 
@@ -165,8 +165,18 @@ def analyze_openfda_with_gemini(
             client = genai.Client(api_key=active_key)
             for m in models_to_try:
                 try:
-                    res = client.models.generate_content(model=m, contents=prompt)
-                    raw_text = res.text.strip() if res and res.text else ""
+                    raw_text = ""
+                    try:
+                        if res and getattr(res, "text", None):
+                            raw_text = res.text.strip()
+                    except Exception:
+                        pass
+                    if not raw_text and res and hasattr(res, "candidates") and res.candidates:
+                        for cand in res.candidates:
+                            if hasattr(cand, "content") and hasattr(cand.content, "parts"):
+                                for part in cand.content.parts:
+                                    if hasattr(part, "text") and part.text:
+                                        raw_text += part.text
                     match = re.search(r'\{.*\}', raw_text, re.DOTALL)
                     if match:
                         parsed = json.loads(match.group(0))

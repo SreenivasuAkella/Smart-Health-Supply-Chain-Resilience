@@ -133,11 +133,10 @@ def analyze_multimodal_health_image(
         """
 
         candidate_models = [
-            "gemini-3.5-flash",
-            "gemini-3.5-flash-lite",
-            "gemini-3.8-flash",
             GEMINI_MODEL,
             "gemini-3.6-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
             "gemini-flash-latest"
         ]
         seen = set()
@@ -163,7 +162,18 @@ def analyze_multimodal_health_image(
                         model=m,
                         contents=parts
                     )
-                    raw_text = response.text.strip() if (response and response.text) else ""
+                    raw_text = ""
+                    try:
+                        if response and getattr(response, "text", None):
+                            raw_text = response.text.strip()
+                    except Exception:
+                        pass
+                    if not raw_text and response and hasattr(response, "candidates") and response.candidates:
+                        for cand in response.candidates:
+                            if hasattr(cand, "content") and hasattr(cand.content, "parts"):
+                                for part in cand.content.parts:
+                                    if hasattr(part, "text") and part.text:
+                                        raw_text += part.text
                     match = re.search(r'\{.*\}', raw_text, re.DOTALL)
                     if match:
                         parsed = json.loads(match.group(0))
