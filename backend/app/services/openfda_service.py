@@ -165,6 +165,10 @@ def analyze_openfda_with_gemini(
             client = genai.Client(api_key=active_key)
             for m in models_to_try:
                 try:
+                    res = client.models.generate_content(
+                        model=m,
+                        contents=prompt,
+                    )
                     raw_text = ""
                     try:
                         if res and getattr(res, "text", None):
@@ -173,10 +177,33 @@ def analyze_openfda_with_gemini(
                         pass
                     if not raw_text and res and hasattr(res, "candidates") and res.candidates:
                         for cand in res.candidates:
-                            if hasattr(cand, "content") and hasattr(cand.content, "parts"):
-                                for part in cand.content.parts:
+                            content = getattr(cand, "content", None)
+                            parts = getattr(content, "parts", None) if content else None
+                            if parts:
+                                for part in parts:
                                     if hasattr(part, "text") and part.text:
                                         raw_text += part.text
+                    match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+                    if match:
+                        parsed = json.loads(match.group(0))
+                        parsed["openfda_source_url"] = query_url
+                        parsed["ai_analyzer_engine"] = f"Google Gemini ({m} Clinical Reasoning)"
+                        parsed["verified_at"] = datetime.utcnow().isoformat() + "Z"
+                        return parsed
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        # Fallback to legacy google.generativeai if available
+        try:
+            import google.generativeai as genai_legacy
+            genai_legacy.configure(api_key=active_key)
+            for m in models_to_try:
+                try:
+                    legacy_model = genai_legacy.GenerativeModel(m)
+                    res_leg = legacy_model.generate_content(prompt)
+                    raw_text = res_leg.text.strip() if (res_leg and res_leg.text) else ""
                     match = re.search(r'\{.*\}', raw_text, re.DOTALL)
                     if match:
                         parsed = json.loads(match.group(0))
