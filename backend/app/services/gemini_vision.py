@@ -170,8 +170,10 @@ def analyze_multimodal_health_image(
                         pass
                     if not raw_text and response and hasattr(response, "candidates") and response.candidates:
                         for cand in response.candidates:
-                            if hasattr(cand, "content") and hasattr(cand.content, "parts"):
-                                for part in cand.content.parts:
+                            content = getattr(cand, "content", None)
+                            cand_parts = getattr(content, "parts", None) if content else None
+                            if cand_parts:
+                                for part in cand_parts:
                                     if hasattr(part, "text") and part.text:
                                         raw_text += part.text
                     match = re.search(r'\{.*\}', raw_text, re.DOTALL)

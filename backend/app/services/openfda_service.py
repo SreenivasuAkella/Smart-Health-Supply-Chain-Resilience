@@ -178,9 +178,9 @@ def analyze_openfda_with_gemini(
                     if not raw_text and res and hasattr(res, "candidates") and res.candidates:
                         for cand in res.candidates:
                             content = getattr(cand, "content", None)
-                            parts = getattr(content, "parts", None) if content else None
-                            if parts:
-                                for part in parts:
+                            cand_parts = getattr(content, "parts", None) if content else None
+                            if cand_parts:
+                                for part in cand_parts:
                                     if hasattr(part, "text") and part.text:
                                         raw_text += part.text
                     match = re.search(r'\{.*\}', raw_text, re.DOTALL)
