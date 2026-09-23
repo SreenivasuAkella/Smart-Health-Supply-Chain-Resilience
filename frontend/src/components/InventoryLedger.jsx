@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { updateStockLedger, fetchMedicinesPaginated, fetchFacilities } from '../services/api';
 
-// Deterministic mock stock generator for newly mapped OSM facilities
+// Deterministic stock estimator for OSM-mapped facilities without backend inventory records
 function getDeterministicStock(facilityId, facilityType, med) {
   if (med.inventoryByFacility?.[facilityId] !== undefined) {
     return med.inventoryByFacility[facilityId];

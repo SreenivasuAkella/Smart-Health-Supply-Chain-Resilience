@@ -26,7 +26,7 @@ async def _get_facilities() -> list:
     global _facilities_cache, _facilities_ts
     now = time.monotonic()
     if now - _facilities_ts > _CACHE_TTL:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             facs = await loop.run_in_executor(None, get_active_public_facilities)
             if facs:
@@ -87,7 +87,7 @@ async def event_generator(request: Request):
     ALERT_COOLDOWN_SECONDS = 90.0
     REALLOCATION_COOLDOWN_SECONDS = 300.0
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     _realloc_task: Optional[asyncio.Future] = None  # track background reallocation
 
     while True:

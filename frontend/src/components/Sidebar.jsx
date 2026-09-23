@@ -116,7 +116,7 @@ export default function Sidebar({
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-400 truncate">
-                  National Health Resilience Mesh
+                  BRICS Health Resilience Mesh
                 </p>
               </div>
             )}

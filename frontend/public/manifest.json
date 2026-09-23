@@ -1,0 +1,21 @@
+{
+  "name": "Sanjeevani AI",
+  "short_name": "Sanjeevani",
+  "description": "BRICS Health & Supply Chain Resilience Platform — Federated AI for national-scale health resource management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#06b6d4",
+  "icons": [
+    {
+      "src": "/team_logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    }
+  ]
+}

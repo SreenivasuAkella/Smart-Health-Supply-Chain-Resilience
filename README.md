@@ -1,6 +1,6 @@
-# 🏥 Sanjeevani AI — Federated Health Resource & Supply Chain Resilience Platform
+# 🏥 Sanjeevani AI — Federated Health Resource & Supply Chain Resilience Platform for BRICS Nations
 
-> **Code for Communities 2 Hackathon (Hack2Skill / Google AI)**  
+> **BRICS Theme: Resilience — Code for Communities 2 Hackathon (Hack2Skill / Google AI)**  
 > **Track 3**: Smart Health & Supply Chain Resilience  
 > **Backend**: Python (FastAPI + Google Gen AI SDK + Vertex AI + Federated FedAvg + BigQuery)  
 > **Frontend**: React + Next.js 14 + Tailwind CSS + Lucide Icons + Google Maps  
@@ -10,15 +10,16 @@
 ## 🌟 The Challenge Statement & Solution Alignment
 
 ### The Problem
-Public healthcare systems across India face persistent supply chain vulnerabilities. The inability to track medicines, patient footfall, and resource utilisation in real time across vast networks of Primary Health Centres leads to stock-outs and limits the country's capacity to respond when it matters most.
+Public healthcare systems across developing nations face persistent supply chain vulnerabilities. The inability to track medicines, patient footfall, and resource utilisation in real time across vast networks of Primary Health Centres leads to stock-outs and limits a nation's capacity to respond when it matters most.
 
 ### The Solution: Sanjeevani AI
-A national-scale **Federated AI Platform** for health resource and supply chain resilience providing:
-1. **Real-time Visibility**: Live tracking of medicine stocks (e-Aushadhi), bed availability (Total, Occupied, Oxygen, ICU), and medical personnel/ASHA attendance across India's PHC network.
+A **Federated AI Platform** for national-scale health resource and supply chain resilience across BRICS nations, providing:
+1. **Real-time Visibility**: Live tracking of medicine stocks (e-Aushadhi), bed availability (Total, Occupied, Oxygen, ICU), and medical personnel/ASHA attendance across India's PHC network — extensible to all BRICS partner health systems.
 2. **Patient Footfall Analytics**: Daily OPD footfall monitoring against surge thresholds.
 3. **Emergency Early Warnings & Demand Forecasting**: Vertex AI time-series models predicting 14–30 day stockouts during Dengue, Malaria, and Monsoon flood emergencies.
 4. **Automated Cross-District Redistribution**: Autonomous routing engine using Google Maps Platform to rebalance supplies from surplus District Hospitals to deficit rural clinics.
-5. **Federated Multi-State Shared Predictive Modelling**: Privacy-preserving federated model training (FedAvg + Differential Privacy $\epsilon < 0.85$) across state health agencies (UP, Bihar, Assam, Maharashtra, Kerala) without exposing raw patient PII.
+5. **Federated Multi-Nation BRICS Shared Predictive Modelling**: Privacy-preserving federated model training (FedAvg + Differential Privacy $\epsilon < 0.85$) across BRICS sovereign health agencies (India, Brazil, Russia, China, South Africa, Egypt, UAE, Ethiopia) without exposing raw patient PII — enabling shared pandemic surge intelligence while respecting data sovereignty.
+
 
 ---
 

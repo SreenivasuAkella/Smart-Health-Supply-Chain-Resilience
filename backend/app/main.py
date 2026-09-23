@@ -125,8 +125,8 @@ app.include_router(logs.router)
 @app.get("/")
 def root():
     return {
-        "platform": "Sanjeevani AI (Smart Health & Supply Chain Resilience)",
-        "track": "Track 3 — Code for Communities 2",
+        "platform": "Sanjeevani AI — BRICS Health & Supply Chain Resilience Platform",
+        "track": "BRICS Theme: Resilience — Code for Communities 2",
         "status": "ONLINE",
         "google_ai_services": {
             "generative_ai": "Google Gemini 1.5/2.0 Flash (Multimodal OCR & Multilingual NLU)",
@@ -144,7 +144,7 @@ def root():
 def health_check():
     return {
         "data": {
-            "service": "Sanjeevani AI Engine",
+            "service": "Sanjeevani AI Engine (BRICS Resilience)",
             "status": "HEALTHY",
             "version": "1.0.0"
         },

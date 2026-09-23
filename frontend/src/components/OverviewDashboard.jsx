@@ -332,6 +332,75 @@ export default function OverviewDashboard({
         })}
       </div>
 
+      {/* BRICS Federated Resilience Mesh Banner */}
+      {fedStatus && (
+        <div className="glass-panel p-4 sm:p-5 border border-amber-500/30 bg-gradient-to-r from-amber-950/30 via-slate-950/80 to-indigo-950/30 rounded-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm">
+                <Globe size={18} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm sm:text-base text-white font-display flex items-center gap-2">
+                  BRICS Federated Resilience Mesh
+                  <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] px-2 py-0.5 rounded-full font-mono font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    LIVE
+                  </span>
+                </h3>
+                <p className="text-[10px] text-slate-400">Sovereign federated learning across BRICS nations • Differential Privacy ε &lt; 0.85</p>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate('federated')}
+              className={`text-xs font-semibold flex items-center gap-1.5 rounded-xl px-3 py-2 border transition-all ${
+                !hasTabAccess(user?.role, 'federated')
+                  ? 'bg-slate-900/60 text-slate-400 border-amber-500/30'
+                  : 'btn-secondary'
+              }`}
+            >
+              <Network size={13} />
+              <span>Open Federation Hub</span>
+              {!hasTabAccess(user?.role, 'federated') ? (
+                <Lock size={11} className="text-amber-400" />
+              ) : (
+                <ArrowUpRight size={12} className="text-cyan-400" />
+              )}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+            {[
+              { flag: '🇮🇳', name: 'India', role: 'Lead Coordinator', color: 'border-cyan-500/40 bg-cyan-500/10' },
+              { flag: '🇧🇷', name: 'Brazil', role: 'SUS Network', color: 'border-emerald-500/40 bg-emerald-500/10' },
+              { flag: '🇷🇺', name: 'Russia', role: 'Minzdrav RF', color: 'border-blue-500/40 bg-blue-500/10' },
+              { flag: '🇨🇳', name: 'China', role: 'NHC Township', color: 'border-rose-500/40 bg-rose-500/10' },
+              { flag: '🇿🇦', name: 'South Africa', role: 'PHC Network', color: 'border-amber-500/40 bg-amber-500/10' },
+              { flag: '🇪🇬', name: 'Egypt', role: 'MoHP Hub', color: 'border-violet-500/40 bg-violet-500/10' },
+              { flag: '🇦🇪', name: 'UAE', role: 'MoHAP Node', color: 'border-teal-500/40 bg-teal-500/10' },
+              { flag: '🇪🇹', name: 'Ethiopia', role: 'FMoH Node', color: 'border-orange-500/40 bg-orange-500/10' }
+            ].map((nation) => (
+              <div key={nation.name} className={`rounded-xl border ${nation.color} p-2.5 text-center transition-all hover:scale-[1.03]`}>
+                <div className="text-xl mb-0.5">{nation.flag}</div>
+                <div className="text-[11px] font-bold text-white truncate">{nation.name}</div>
+                <div className="text-[9px] text-slate-400 truncate">{nation.role}</div>
+                <div className="flex items-center justify-center gap-1 mt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[8px] text-emerald-400 font-mono font-bold">SYNCED</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-slate-800/60 text-[10px] text-slate-400 font-mono">
+            <span className="flex items-center gap-1"><Cpu size={11} className="text-indigo-400" /> FedAvg + DP-SGD</span>
+            <span className="flex items-center gap-1"><Network size={11} className="text-amber-400" /> {fedStatus?.total_state_nodes || '35+' } State Enclaves</span>
+            <span className="flex items-center gap-1"><Globe size={11} className="text-cyan-400" /> {fedStatus?.brics_partner_count || 8} BRICS Partners</span>
+            <span className="flex items-center gap-1"><ShieldCheck size={11} className="text-emerald-400" /> WHO GHO Telemetry Active</span>
+          </div>
+        </div>
+      )}
+
       {/* Main Split: Interactive Alert Feed & Intelligence Suite */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         

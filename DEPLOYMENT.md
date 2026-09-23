@@ -25,7 +25,7 @@ This guide shows how to deploy both the **Frontend (Next.js)** and **Backend (Fa
    - **Instance Type**: `Free`
 6. Add **Environment Variables** under the Environment tab:
    - `GEMINI_API_KEY`: *(Your Google AI Studio API Key)*
-   - `GEMINI_MODEL`: `gemini-1.5-flash`
+   - `GEMINI_MODEL`: `gemini-2.0-flash`
 7. Click **"Deploy Web Service"**.
 8. Copy your live backend URL (e.g., `https://sanjeevani-backend.onrender.com`).
 
@@ -64,7 +64,7 @@ gcloud run deploy sanjeevani-backend \
   --source . \
   --region asia-south1 \
   --allow-unauthenticated \
-  --set-env-vars="GEMINI_MODEL=gemini-1.5-flash"
+  --set-env-vars="GEMINI_MODEL=gemini-2.0-flash"
 ```
 
 Once deployed, copy the Cloud Run URL and set it as `NEXT_PUBLIC_API_BASE_URL` in Vercel.

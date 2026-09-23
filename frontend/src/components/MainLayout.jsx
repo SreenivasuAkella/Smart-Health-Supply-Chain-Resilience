@@ -387,7 +387,7 @@ export default function MainLayout({ initialTab }) {
               )}
 
               {activeTab === 'coldchain' && (
-                <ColdChainDigitalTwin />
+                <ColdChainDigitalTwin telemetry={telemetry} />
               )}
 
               {activeTab === 'forecasting' && (
