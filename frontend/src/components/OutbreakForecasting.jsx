@@ -45,7 +45,7 @@ export default function OutbreakForecasting({ onTriggerReallocation, onNavigate 
   // Forecast Table State
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [forecastPage, setForecastPage] = useState(1);
-  const forecastPageSize = 10;
+  const [forecastPageSize, setForecastPageSize] = useState(25);
 
   // BigQuery Explorer State
   const [bqMode, setBqMode] = useState('search');
@@ -58,10 +58,10 @@ export default function OutbreakForecasting({ onTriggerReallocation, onNavigate 
 
   const bqMountedRef = React.useRef(false);
 
-  async function loadData(dist = selectedDistrict, page = forecastPage) {
+  async function loadData(dist = selectedDistrict, page = forecastPage, size = forecastPageSize) {
     setLoading(true);
     const [forecast, bq] = await Promise.all([
-      fetchOutbreakForecasting(dist, page, forecastPageSize),
+      fetchOutbreakForecasting(dist, page, size),
       fetchBigQueryAnalytics({ district: dist || undefined, page: bqPage, pageSize: bqPageSize })
     ]);
     setForecastData(forecast);
@@ -70,8 +70,8 @@ export default function OutbreakForecasting({ onTriggerReallocation, onNavigate 
   }
 
   useEffect(() => {
-    loadData(selectedDistrict, forecastPage);
-  }, [selectedDistrict, forecastPage]);
+    loadData(selectedDistrict, forecastPage, forecastPageSize);
+  }, [selectedDistrict, forecastPage, forecastPageSize]);
 
   useEffect(() => {
     if (!bqMountedRef.current) {
@@ -281,78 +281,88 @@ export default function OutbreakForecasting({ onTriggerReallocation, onNavigate 
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto rounded-xl border border-slate-800/80">
+          <table className="w-full text-left text-xs border-collapse min-w-[960px]">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase text-[10px]">
-                <th className="py-3 px-3">Health Facility</th>
-                <th className="py-3 px-3">Location</th>
-                <th className="py-3 px-3">Dengue Surge</th>
-                <th className="py-3 px-3">Malaria Surge</th>
-                <th className="py-3 px-3">Flood Risk</th>
-                <th className="py-3 px-3">Vulnerability</th>
-                <th className="py-3 px-3">AI Clinical Rationale</th>
-                <th className="py-3 px-3 text-right">Action</th>
+              <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase text-[10px] bg-slate-950/60 tracking-wider">
+                <th className="py-3 px-4 min-w-[240px]">Health Facility</th>
+                <th className="py-3 px-3 min-w-[140px] whitespace-nowrap">Facility Tier</th>
+                <th className="py-3 px-3 min-w-[150px]">Location</th>
+                <th className="py-3 px-3 min-w-[130px]">Dengue Surge</th>
+                <th className="py-3 px-3 min-w-[130px]">Malaria Surge</th>
+                <th className="py-3 px-3 min-w-[120px]">Flood / Monsoon</th>
+                <th className="py-3 px-3 min-w-[140px]">Vulnerability Score</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
               {forecastData?.facility_forecasts?.map((f) => (
-                <tr key={f.facility_id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-3 font-semibold text-white max-w-[190px]">
-                    <div className="truncate">{f.facility_name}</div>
-                    <span className="text-[10px] text-slate-500 font-mono">{f.facility_id}</span>
+                <tr key={f.facility_id} className="hover:bg-slate-800/40 transition-colors group">
+                  <td className="py-3 px-4 min-w-[240px] font-sans">
+                    <div className="font-semibold text-white text-xs group-hover:text-cyan-300 transition-colors">
+                      {f.facility_name}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[10px] text-slate-500">
+                      <span>{f.facility_id}</span>
+                    </div>
                   </td>
-                  <td className="py-3 px-3 text-slate-300 whitespace-nowrap">
-                    {f.district}, {f.state}
+                  <td className="py-3 px-3 min-w-[140px] whitespace-nowrap">
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wider bg-slate-800/90 text-slate-300 border border-slate-700/80 whitespace-nowrap inline-block">
+                      {f.type || (f.facility_name?.toLowerCase().includes('district') ? 'District Hospital' : f.facility_name?.toLowerCase().includes('community') || f.facility_name?.toLowerCase().includes('chc') ? 'CHC' : 'PHC')}
+                    </span>
                   </td>
-                  <td className="py-3 px-3">
+                  <td className="py-3 px-3 min-w-[150px] text-slate-300 font-sans whitespace-nowrap">
+                    <span className="text-xs text-slate-200">{f.district}</span>
+                    <span className="text-[11px] text-slate-500 block">{f.state}</span>
+                  </td>
+                  <td className="py-3 px-3 min-w-[130px]">
                     <div className="flex items-center gap-2">
-                      <div className="w-12 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                      <div className="w-14 bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
                         <div 
-                          className={`h-1.5 rounded-full ${f.dengue_surge_risk_pct > 75 ? 'bg-rose-500' : 'bg-amber-500'}`}
-                          style={{ width: `${Math.min(100, f.dengue_surge_risk_pct)}%` }}
+                          className={`h-full rounded-full transition-all ${f.dengue_surge_risk_pct > 75 ? 'bg-rose-500' : f.dengue_surge_risk_pct > 50 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                          style={{ width: `${Math.min(100, Math.max(5, f.dengue_surge_risk_pct))}%` }}
                         />
                       </div>
-                      <span className={`font-mono font-bold ${f.dengue_surge_risk_pct > 75 ? 'text-rose-400' : 'text-slate-300'}`}>
+                      <span className={`font-mono font-bold text-xs ${f.dengue_surge_risk_pct > 75 ? 'text-rose-400' : f.dengue_surge_risk_pct > 50 ? 'text-amber-300' : 'text-emerald-400'}`}>
                         {f.dengue_surge_risk_pct}%
                       </span>
                     </div>
                   </td>
-                  <td className="py-3 px-3">
+                  <td className="py-3 px-3 min-w-[130px]">
                     <div className="flex items-center gap-2">
-                      <div className="w-12 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                      <div className="w-14 bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
                         <div 
-                          className={`h-1.5 rounded-full ${f.malaria_surge_risk_pct > 70 ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                          style={{ width: `${Math.min(100, f.malaria_surge_risk_pct)}%` }}
+                          className={`h-full rounded-full transition-all ${f.malaria_surge_risk_pct > 70 ? 'bg-rose-500' : f.malaria_surge_risk_pct > 40 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                          style={{ width: `${Math.min(100, Math.max(5, f.malaria_surge_risk_pct))}%` }}
                         />
                       </div>
-                      <span className={`font-mono font-bold ${f.malaria_surge_risk_pct > 70 ? 'text-rose-400' : 'text-slate-300'}`}>
+                      <span className={`font-mono font-bold text-xs ${f.malaria_surge_risk_pct > 70 ? 'text-rose-400' : f.malaria_surge_risk_pct > 40 ? 'text-amber-300' : 'text-emerald-400'}`}>
                         {f.malaria_surge_risk_pct}%
                       </span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 whitespace-nowrap">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                      f.flood_monsoon_risk_pct > 60 ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' : 'bg-slate-900 text-slate-400 border-slate-800'
+                  <td className="py-3 px-3 min-w-[120px] whitespace-nowrap">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border inline-flex items-center gap-1 ${
+                      f.flood_monsoon_risk_pct > 60 
+                        ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
+                        : f.flood_monsoon_risk_pct > 25
+                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                        : 'bg-slate-900 text-slate-400 border-slate-800'
                     }`}>
-                      {f.flood_monsoon_risk_pct}% Monsoon
+                      <Droplets size={10} className={f.flood_monsoon_risk_pct > 60 ? 'text-rose-400' : 'text-cyan-400'} />
+                      <span>{f.flood_monsoon_risk_pct}% Risk</span>
                     </span>
                   </td>
-                  <td className="py-3 px-3 font-mono">
-                    <span className={`font-bold ${f.overall_vulnerability_score > 70 ? 'text-rose-400' : f.overall_vulnerability_score > 50 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                      {f.overall_vulnerability_score} <span className="text-[10px] text-slate-500 font-normal">/ 100</span>
+                  <td className="py-3 px-3 min-w-[140px]">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border text-xs font-bold ${
+                      f.overall_vulnerability_score > 70 
+                        ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
+                        : f.overall_vulnerability_score > 50 
+                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' 
+                        : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    }`}>
+                      <span>{f.overall_vulnerability_score}</span>
+                      <span className="text-[10px] opacity-70 font-normal">/ 100</span>
                     </span>
-                  </td>
-                  <td className="py-3 px-3 text-[11px] text-slate-300 max-w-xs leading-snug">
-                    {f.ai_rationale || "Real-time IMD vector index analysis."}
-                  </td>
-                  <td className="py-3 px-3 text-right whitespace-nowrap">
-                    <button
-                      onClick={() => onTriggerReallocation && onTriggerReallocation(f.facility_id, "PUB-MED-001")}
-                      className="btn-secondary text-xs px-3 py-1 font-semibold"
-                    >
-                      Pre-Position
-                    </button>
                   </td>
                 </tr>
               ))}
@@ -361,11 +371,38 @@ export default function OutbreakForecasting({ onTriggerReallocation, onNavigate 
         </div>
 
         {/* Pagination Bar */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs text-slate-400">
-          <div>
-            Page <strong className="text-white">{forecastPage}</strong> of <strong className="text-white">{forecastPagination.total_pages || 1}</strong>
+        <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs text-slate-400 flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <span>
+              Page <strong className="text-white">{forecastPage}</strong> of <strong className="text-white">{forecastPagination.total_pages || 1}</strong>
+              {' '}(<strong className="text-cyan-400">{forecastPagination.total_records || 1200}</strong> total facilities)
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-slate-500 uppercase font-mono">Show:</span>
+              <select
+                value={forecastPageSize}
+                onChange={(e) => {
+                  setForecastPageSize(Number(e.target.value));
+                  setForecastPage(1);
+                }}
+                className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-slate-300 font-mono cursor-pointer"
+              >
+                <option value={10}>10 / page</option>
+                <option value={25}>25 / page</option>
+                <option value={50}>50 / page</option>
+                <option value={100}>100 / page</option>
+              </select>
+            </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setForecastPage(1)}
+              disabled={forecastPage <= 1}
+              className="btn-secondary text-xs px-2.5 py-1 disabled:opacity-30 disabled:cursor-not-allowed font-semibold"
+              title="First Page"
+            >
+              First
+            </button>
             <button
               onClick={() => setForecastPage(p => Math.max(1, p - 1))}
               disabled={forecastPage <= 1}
@@ -375,7 +412,7 @@ export default function OutbreakForecasting({ onTriggerReallocation, onNavigate 
               <span>Previous</span>
             </button>
             <span className="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 font-mono font-bold border border-cyan-500/30">
-              {forecastPage}
+              {forecastPage} / {forecastPagination.total_pages || 1}
             </span>
             <button
               onClick={() => setForecastPage(p => Math.min(forecastPagination.total_pages || 1, p + 1))}
@@ -384,6 +421,14 @@ export default function OutbreakForecasting({ onTriggerReallocation, onNavigate 
             >
               <span>Next</span>
               <ChevronRight size={14} />
+            </button>
+            <button
+              onClick={() => setForecastPage(forecastPagination.total_pages || 1)}
+              disabled={forecastPage >= (forecastPagination.total_pages || 1)}
+              className="btn-secondary text-xs px-2.5 py-1 disabled:opacity-30 disabled:cursor-not-allowed font-semibold"
+              title="Last Page"
+            >
+              Last
             </button>
           </div>
         </div>

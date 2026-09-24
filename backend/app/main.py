@@ -225,6 +225,11 @@ def apply_standard_envelope_to_all_routes(fastapi_app: FastAPI):
                                                 "data": data_val,
                                                 "status": st
                                             }
+                                            if isinstance(payload, dict):
+                                                if "pagination" in payload:
+                                                    envelope["pagination"] = payload["pagination"]
+                                                if "metadata" in payload:
+                                                    envelope["metadata"] = payload["metadata"]
                                             raw = json.dumps(envelope).encode("utf-8")
                                         else:
                                             if 200 <= status_code < 300:
@@ -264,6 +269,11 @@ def apply_standard_envelope_to_all_routes(fastapi_app: FastAPI):
                                                         "message": "Success"
                                                     }
                                                 }
+                                                if isinstance(payload, dict):
+                                                    if "pagination" in payload:
+                                                        envelope["pagination"] = payload["pagination"]
+                                                    if "metadata" in payload:
+                                                        envelope["metadata"] = payload["metadata"]
                                             else:
                                                 try:
                                                     phrase = http.HTTPStatus(status_code).phrase

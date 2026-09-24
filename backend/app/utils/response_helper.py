@@ -37,6 +37,7 @@ def paginated_response(
     total_records = len(items) if items else 0
     page = max(1, page)
     page_size = max(1, min(page_size, 5000))
+    total_pages = math.ceil(total_records / page_size) if page_size > 0 else 1
     
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
@@ -44,6 +45,14 @@ def paginated_response(
 
     resp = {
         "data": paged_items,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total_records": total_records,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        },
         "status": {
             "code": 2000,
             "message": "Success"

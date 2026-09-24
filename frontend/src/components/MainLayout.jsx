@@ -4,6 +4,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
 import OverviewDashboard from './OverviewDashboard';
+import ClinicalHospitalOps from './ClinicalHospitalOps';
+import BigQueryFirebaseHub from './BigQueryFirebaseHub';
 import InteractiveMap from './InteractiveMap';
 import FederatedLearningHub from './FederatedLearningHub';
 import MultimodalVisionScanner from './MultimodalVisionScanner';
@@ -13,7 +15,9 @@ import ColdChainDigitalTwin from './ColdChainDigitalTwin';
 import OutbreakForecasting from './OutbreakForecasting';
 import CrisisSandbox from './CrisisSandbox';
 import InventoryLedger from './InventoryLedger';
+import SettingsView from './SettingsView';
 import GoogleTechArchitectureModal from './GoogleTechArchitectureModal';
+import PlatformGuideModal from './PlatformGuideModal';
 import ApiKeyModal from './ApiKeyModal';
 import RoleRestrictedGuard from './RoleRestrictedGuard';
 import { useAuth } from '../context/AuthContext';
@@ -27,26 +31,32 @@ import {
 
 const VALID_TABS = [
   'overview', 
+  'clinical',
   'map', 
   'inventory', 
   'forecasting', 
   'coldchain', 
+  'cloud-data',
   'federated', 
   'simulation', 
   'vision', 
-  'voice'
+  'voice',
+  'settings'
 ];
 
 const TAB_TITLES = {
   overview: "National Command Center",
+  clinical: "PHC Capacity & Personnel Attendance Command",
   map: "Geospatial Rebalancer",
   inventory: "e-Aushadhi National Ledger",
   forecasting: "Epidemic Outbreak Forecasting",
   coldchain: "Cold-Chain IoT Digital Twin",
+  'cloud-data': "Google BigQuery & Firebase Cloud Hub",
   federated: "Federated Multi-State AI",
   simulation: "Crisis Sandbox Drills",
   vision: "Gemini Vision Scanner",
-  voice: "ASHA Voice Copilot"
+  voice: "ASHA Voice Copilot",
+  settings: "System Settings & Cloud Integrations"
 };
 
 function getTabFromPath(path) {
@@ -78,10 +88,23 @@ export default function MainLayout({ initialTab }) {
   const [activeReallocation, setActiveReallocation] = useState(null);
   
   const [isTechModalOpen, setIsTechModalOpen] = useState(false);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [sseConnected, setSseConnected] = useState(false);
+
+  // Global keybinding: press '?' to trigger interactive guide
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) {
+        e.preventDefault();
+        setIsGuideModalOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Stockout early-warning toast with throttling & deduplication
   const [stockoutToast, setStockoutToast] = useState(null);
@@ -309,6 +332,7 @@ export default function MainLayout({ initialTab }) {
         mobileOpen={isMobileOpen}
         setMobileOpen={setIsMobileOpen}
         onOpenTechModal={() => setIsTechModalOpen(true)}
+        onOpenGuideModal={() => setIsGuideModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -322,13 +346,8 @@ export default function MainLayout({ initialTab }) {
         <TopHeader
           activeTab={activeTab}
           onOpenMobileMenu={() => setIsMobileOpen(true)}
+          onOpenGuideModal={() => setIsGuideModalOpen(true)}
           onOpenTechModal={() => setIsTechModalOpen(true)}
-          onOpenKeyModal={() => setIsKeyModalOpen(true)}
-          onOpenCopilot={handleOpenCopilot}
-          isKeyConfigured={Boolean(geminiApiKey)}
-          onDataRefresh={handleRefresh}
-          sseConnected={sseConnected}
-          onOpenLoginModal={openLoginModal}
         />
 
         {/* Tab Viewport */}
@@ -351,7 +370,18 @@ export default function MainLayout({ initialTab }) {
                   onNavigate={navigateToTab}
                   onTriggerReallocation={handleTriggerReallocation}
                   onOpenCopilot={handleOpenCopilot}
+                  onOpenGuideModal={() => setIsGuideModalOpen(true)}
                 />
+              )}
+
+              {activeTab === 'clinical' && (
+                <ClinicalHospitalOps
+                  onNavigate={navigateToTab}
+                />
+              )}
+
+              {activeTab === 'cloud-data' && (
+                <BigQueryFirebaseHub />
               )}
 
               {activeTab === 'map' && (
@@ -410,6 +440,15 @@ export default function MainLayout({ initialTab }) {
                   onRefresh={handleRefresh}
                 />
               )}
+
+              {activeTab === 'settings' && (
+                <SettingsView
+                  geminiApiKey={geminiApiKey}
+                  onSaveApiKey={handleSaveApiKey}
+                  onDataRefresh={handleRefresh}
+                  sseConnected={sseConnected}
+                />
+              )}
             </>
           )}
         </main>
@@ -434,6 +473,12 @@ export default function MainLayout({ initialTab }) {
         apiKey={geminiApiKey}
         facilities={facilities}
         onTriggerReallocation={handleTriggerReallocation}
+      />
+
+      <PlatformGuideModal
+        isOpen={isGuideModalOpen}
+        onClose={() => setIsGuideModalOpen(false)}
+        onNavigate={navigateToTab}
       />
 
       <GoogleTechArchitectureModal

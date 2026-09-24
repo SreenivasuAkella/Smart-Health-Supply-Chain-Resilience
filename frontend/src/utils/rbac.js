@@ -16,10 +16,12 @@ export const ROLE_CONFIG = {
     level: 'Level 4 - Pan-India Apex',
     allowedTabs: [
       'overview', 
+      'clinical',
       'map', 
       'inventory', 
       'forecasting', 
       'coldchain', 
+      'cloud-data',
       'federated', 
       'simulation', 
       'vision', 
@@ -33,14 +35,16 @@ export const ROLE_CONFIG = {
     level: 'Level 2 - District PHC Ops',
     allowedTabs: [
       'overview', 
+      'clinical',
       'map', 
       'inventory', 
       'coldchain', 
+      'cloud-data',
       'vision', 
       'voice'
     ],
     restrictedTabs: ['federated', 'simulation'],
-    description: 'Authorized for local clinical drug stocks, cold chain, visual diagnostics, and clinical copilot.'
+    description: 'Authorized for local clinical drug stocks, cold chain, visual diagnostics, hospital capacity, and clinical copilot.'
   },
   LOGISTICS_COORDINATOR: {
     title: 'Logistics Coordinator',
@@ -48,14 +52,16 @@ export const ROLE_CONFIG = {
     level: 'Level 2 - Supply & Transit Ops',
     allowedTabs: [
       'overview', 
+      'clinical',
       'map', 
       'inventory', 
       'coldchain', 
+      'cloud-data',
       'simulation', 
       'voice'
     ],
     restrictedTabs: ['vision', 'federated'],
-    description: 'Authorized for supply reallocation, crisis simulation drills, cold-chain telemetry, and field inventory.'
+    description: 'Authorized for supply reallocation, crisis simulation drills, cold-chain telemetry, cloud data, and field inventory.'
   },
   SURVEILLANCE_EPIDEMIOLOGIST: {
     title: 'Surveillance Epidemiologist',
@@ -63,8 +69,10 @@ export const ROLE_CONFIG = {
     level: 'Level 3 - Outbreak Intel Ops',
     allowedTabs: [
       'overview', 
+      'clinical',
       'map', 
       'forecasting', 
+      'cloud-data',
       'federated', 
       'voice'
     ],
@@ -78,6 +86,7 @@ export const ROLE_CONFIG = {
  * Default role if none provided is NATIONAL_DIRECTOR.
  */
 export function hasTabAccess(role, tabId) {
+  if (tabId === 'settings') return true;
   if (!role) return true;
   const config = ROLE_CONFIG[role];
   if (!config) return true;

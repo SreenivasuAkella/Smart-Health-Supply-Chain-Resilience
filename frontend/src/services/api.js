@@ -269,13 +269,24 @@ export async function fetchColdChainTelemetry() {
   }
 }
 
-export async function fetchForecasting(facilityId = "", page = 1, pageSize = 50) {
+export async function fetchForecasting(filterOrDistrict = "", page = 1, pageSize = 50) {
   try {
     const params = new URLSearchParams({
       page: String(page),
       page_size: String(pageSize),
-      ...(facilityId ? { facility_id: facilityId } : {})
     });
+    if (typeof filterOrDistrict === 'object' && filterOrDistrict !== null) {
+      if (filterOrDistrict.district) params.append("district", filterOrDistrict.district);
+      if (filterOrDistrict.facility_id) params.append("facility_id", filterOrDistrict.facility_id);
+      if (filterOrDistrict.state) params.append("state", filterOrDistrict.state);
+    } else if (typeof filterOrDistrict === 'string' && filterOrDistrict.trim()) {
+      const val = filterOrDistrict.trim();
+      if (val.startsWith("DH-") || val.startsWith("PHC-") || val.startsWith("CHC-") || val.startsWith("FAC-")) {
+        params.append("facility_id", val);
+      } else {
+        params.append("district", val);
+      }
+    }
     const res = await dedupedFetch(`${API_BASE_URL}/forecasting/outbreak-risk?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch forecast");
     const json = await res.json();
@@ -980,17 +991,18 @@ export async function executeBigQuerySQL(sqlQuery, page = 1, pageSize = 25) {
   try {
     const res = await fetch(`${API_BASE_URL}/analytics/bigquery-sql?page=${page}&page_size=${pageSize}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ sql: sqlQuery })
     });
     const json = await res.json();
     if (!res.ok || (json.status && json.status.code && json.status.code >= 400)) {
       const errMsg = typeof json.data === 'string' ? json.data : (json.status?.message || "BigQuery SQL execution failed");
-      return { status: "error", message: errMsg, data: [] };
+      return { status: "error", message: errMsg, data: [], items: [] };
     }
     const rows = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
     return {
       data: rows,
+      items: rows,
       status: "success",
       pagination: json.pagination || {
         page,
@@ -1002,7 +1014,7 @@ export async function executeBigQuerySQL(sqlQuery, page = 1, pageSize = 25) {
     };
   } catch (err) {
     console.error("executeBigQuerySQL error:", err);
-    return { status: "error", message: err.message, data: [] };
+    return { status: "error", message: err.message, data: [], items: [] };
   }
 }
 
@@ -1010,7 +1022,7 @@ export async function triggerLiveDatasetSync() {
   try {
     const res = await fetch(`${API_BASE_URL}/analytics/sync-live-data`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: getAuthHeaders()
     });
     if (!res.ok) throw new Error("Dataset sync failed");
     const json = await res.json();
@@ -1020,6 +1032,8 @@ export async function triggerLiveDatasetSync() {
     return { status: "ERROR", detail: err.message };
   }
 }
+
+export const triggerLiveSyncApi = triggerLiveDatasetSync;
 
 /**
  * Unified High-Speed Bootstrap endpoint for instant (< 30ms) initial load.
@@ -1048,7 +1062,21 @@ export async function fetchDashboardBootstrap() {
   }
 }
 
-export async function fetchAttendanceSummary(state = "", page = 1, pageSize = 50) {
+export async function fetchAttendanceSummary(arg1 = 1, arg2 = 50, arg3 = "") {
+  let page = 1;
+  let pageSize = 50;
+  let state = "";
+
+  if (typeof arg1 === 'number') {
+    page = arg1;
+    pageSize = typeof arg2 === 'number' ? arg2 : 50;
+    state = typeof arg3 === 'string' ? arg3 : "";
+  } else if (typeof arg1 === 'string') {
+    state = arg1;
+    page = typeof arg2 === 'number' ? arg2 : 1;
+    pageSize = typeof arg3 === 'number' ? arg3 : 50;
+  }
+
   try {
     const params = new URLSearchParams({
       page: String(page),
@@ -1058,12 +1086,19 @@ export async function fetchAttendanceSummary(state = "", page = 1, pageSize = 50
     const res = await dedupedFetch(`${API_BASE_URL}/attendance/summary?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch attendance summary");
     const json = await res.json();
-    return Array.isArray(json.data) ? json.data : (json.data || json);
+    const items = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+    return {
+      items,
+      data: items,
+      pagination: json.pagination || { page, page_size: pageSize, total_records: items.length, total_pages: 1 },
+      metadata: json.metadata || {}
+    };
   } catch (err) {
     console.error("fetchAttendanceSummary error:", err);
-    return [];
+    return { items: [], data: [], pagination: { page, page_size: pageSize, total_records: 0, total_pages: 1 }, metadata: {} };
   }
 }
+
 
 export async function fetchActiveAlerts(state = "") {
   try {
@@ -1356,3 +1391,64 @@ export async function fetchGeographyApi() {
     return { states: [], districts_by_state: {} };
   }
 }
+
+export async function fetchFacilityAttendance(facilityId) {
+  try {
+    const res = await dedupedFetch(`${API_BASE_URL}/attendance/facility/${facilityId}`);
+    if (!res.ok) throw new Error("Failed to fetch facility attendance");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("fetchFacilityAttendance error:", err);
+    return null;
+  }
+}
+
+export async function checkInStaffApi(payload) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/attendance/check-in`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  } catch (err) {
+    console.error("checkInStaffApi error:", err);
+    return { status: { code: 5000, message: "Check-in failed" } };
+  }
+}
+
+export async function fetchBigQueryMorbidity(district = "", search = "", page = 1, pageSize = 25) {
+  try {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+      ...(district && district !== 'ALL' ? { district } : {}),
+      ...(search ? { search } : {})
+    });
+    const res = await dedupedFetch(`${API_BASE_URL}/analytics/bigquery-morbidity?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch BigQuery morbidity data");
+    const json = await res.json();
+    return {
+      items: json.data || [],
+      pagination: json.pagination || { page, page_size: pageSize, total_records: json.data?.length || 0, total_pages: 1 },
+      metadata: json.metadata || {}
+    };
+  } catch (err) {
+    console.error("fetchBigQueryMorbidity error:", err);
+    return { items: [], pagination: { page, page_size: pageSize, total_records: 0, total_pages: 1 }, metadata: {} };
+  }
+}
+
+export async function fetchFirebaseStatus() {
+  try {
+    const res = await dedupedFetch(`${API_BASE_URL}/analytics/firebase-status`);
+    if (!res.ok) throw new Error("Failed to fetch Firebase status");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("fetchFirebaseStatus error:", err);
+    return { status: "DISCONNECTED", error: err.message };
+  }
+}
+
