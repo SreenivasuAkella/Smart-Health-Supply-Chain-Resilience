@@ -412,6 +412,55 @@ export async function updateReallocationStatus(dispatchId, newStatus) {
   }
 }
 
+export async function fetchSimulationClockStatus() {
+  try {
+    const res = await dedupedFetch(`${API_BASE_URL}/simulation/clock/status`);
+    if (!res.ok) throw new Error("Failed to fetch simulation clock status");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.warn("fetchSimulationClockStatus notice:", err);
+    return null;
+  }
+}
+
+export async function triggerSimulationClockTick() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/simulation/clock/tick`, { method: 'POST' });
+    if (!res.ok) throw new Error("Failed to trigger simulation clock tick");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.error("triggerSimulationClockTick error:", err);
+    return null;
+  }
+}
+
+export async function startSimulationClock(intervalSeconds = 60.0) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/simulation/clock/start?interval_seconds=${intervalSeconds}`, { method: 'POST' });
+    if (!res.ok) throw new Error("Failed to start simulation clock");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.error("startSimulationClock error:", err);
+    return null;
+  }
+}
+
+export async function stopSimulationClock() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/simulation/clock/stop`, { method: 'POST' });
+    if (!res.ok) throw new Error("Failed to stop simulation clock");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.error("stopSimulationClock error:", err);
+    return null;
+  }
+}
+
+
 export async function analyzeMedicineImage(imageInput, mimeType = "image/jpeg", apiKey = "", userContextHint = "") {
   try {
     let base64Data = "";

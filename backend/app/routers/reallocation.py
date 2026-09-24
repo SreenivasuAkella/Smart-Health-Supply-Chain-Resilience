@@ -174,6 +174,47 @@ def update_status(dispatch_id: str, req: StatusUpdateRequest):
     except Exception as fb_err:
         print(f"[Firebase Status Sync Notice]: {fb_err}")
 
+    # On DELIVERED status transition, complete the two-node delivery handshake:
+    # Increment target facility stock for the exact medicine and flip target status from Critical Deficit to Optimal
+    target_update = None
+    if req.status.upper() == "DELIVERED" and record:
+        try:
+            target_fac_id = record.get("target_facility_id")
+            med_id = record.get("medicine_id")
+            qty = int(record.get("quantity") or 25)
+
+            if target_fac_id and med_id:
+                # 1. Increment target facility stock for exact medicine
+                fb_meds = firebase_service.read_data("inventory/medicines")
+                if fb_meds and isinstance(fb_meds, list):
+                    for m in fb_meds:
+                        if m.get("id") == med_id:
+                            inv = m.setdefault("inventoryByFacility", {})
+                            inv[target_fac_id] = inv.get(target_fac_id, 0) + qty
+                            m["currentTotal"] = sum(inv.values())
+                            break
+                    firebase_service.write_data("inventory/medicines", fb_meds)
+
+                # 2. Recalculate target facility Days of Supply and flip status to Optimal
+                from ..services.inventory_math import compute_facility_days_of_supply
+                from ..services.facility_data_service import get_active_public_facilities
+                fb_facs = firebase_service.read_data("inventory/facilities")
+                all_facs = fb_facs if (fb_facs and isinstance(fb_facs, list)) else get_active_public_facilities()
+                
+                target_fac = next((f for f in all_facs if f.get("id") == target_fac_id), None)
+                if target_fac:
+                    health = compute_facility_days_of_supply(target_fac, fb_meds or [])
+                    target_fac["status"] = health["status"]
+                    target_fac["medicine_days_of_supply"] = health["medicine_days_of_supply"]
+                    target_update = {
+                        "facility_id": target_fac_id,
+                        "status": health["status"],
+                        "medicine_days_of_supply": health["medicine_days_of_supply"]
+                    }
+                    firebase_service.write_data("inventory/facilities", all_facs)
+        except Exception as delivery_err:
+            print(f"[Delivery Stock Inflow Handshake Notice]: {delivery_err}")
+
     # Stream transition event to BigQuery
     try:
         if record:
@@ -181,4 +222,11 @@ def update_status(dispatch_id: str, req: StatusUpdateRequest):
     except Exception as bq_err:
         print(f"[BigQuery Status Log Notice]: {bq_err}")
 
-    return success_response(data=record, message=f"Dispatch {dispatch_id} status updated to {req.status}")
+    return success_response(
+        data={
+            "dispatch": record,
+            "target_facility_update": target_update
+        },
+        message=f"Dispatch {dispatch_id} marked as DELIVERED. Target facility inventory replenished and status restored."
+    )
+

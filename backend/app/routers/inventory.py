@@ -237,12 +237,24 @@ def update_stock(req: StockUpdateRequest):
         print(f"[Firebase Medicine Save Notice]: {fb_err}")
 
     # Persist locally to public medicines catalog file
+    # Recalculate facility Days of Supply and Status dynamically
+    facility_health_update = None
     try:
-        os.makedirs(os.path.dirname(PUBLIC_CATALOG_FILE), exist_ok=True)
-        with open(PUBLIC_CATALOG_FILE, "w") as f:
-            json.dump(medicines, f, indent=2)
-    except Exception as disk_err:
-        print(f"[Disk Medicine Save Notice]: {disk_err}")
+        from ..services.inventory_math import compute_facility_days_of_supply
+        fb_facs = firebase_service.read_data("inventory/facilities")
+        all_facs = fb_facs if (fb_facs and isinstance(fb_facs, list)) else get_active_public_facilities()
+        
+        target_fac = next((f for f in all_facs if f.get("id") == req.facility_id), None)
+        if target_fac:
+            health_calc = compute_facility_days_of_supply(target_fac, medicines)
+            target_fac["status"] = health_calc["status"]
+            target_fac["medicine_days_of_supply"] = health_calc["medicine_days_of_supply"]
+            target_fac["bottleneck_drug_id"] = health_calc.get("bottleneck_drug_id")
+            target_fac["bottleneck_drug_name"] = health_calc.get("bottleneck_drug_name")
+            facility_health_update = health_calc
+            firebase_service.write_data("inventory/facilities", all_facs)
+    except Exception as fac_err:
+        print(f"[Facility Health Recalculation Notice]: {fac_err}")
 
     if updated_med is None:
         from fastapi import HTTPException
@@ -258,7 +270,9 @@ def update_stock(req: StockUpdateRequest):
             "medicine_name": updated_med.get("name"),
             "new_stock": new_val,
             "reason": req.reason,
-            "medicine": updated_med
+            "medicine": updated_med,
+            "facility_health": facility_health_update
         },
-        message="Stock level updated and drug registered in national inventory database"
+        message="Stock level updated and facility days of supply recalculated."
     )
+

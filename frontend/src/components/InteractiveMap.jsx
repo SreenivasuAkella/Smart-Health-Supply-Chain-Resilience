@@ -67,6 +67,14 @@ const MapResizer = dynamic(
 );
 
 export default function InteractiveMap({ isLoading = false, facilities = [], activeReallocation, onSelectFacility }) {
+  const [localFacilities, setLocalFacilities] = useState(facilities || []);
+
+  useEffect(() => {
+    if (facilities && facilities.length > 0) {
+      setLocalFacilities(facilities);
+    }
+  }, [facilities]);
+
   const [isClient, setIsClient] = useState(false);
   const [selectedState, setSelectedState] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -77,6 +85,8 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   const [customIcons, setCustomIcons] = useState(null);
   const [vehicleIcon, setVehicleIcon] = useState(null);
   const [vehicleIndex, setVehicleIndex] = useState(0);
+  const lastActiveDispatchIdRef = useRef(null);
+  const deliveredDispatchesRef = useRef(new Set());
   
   // History Drawer State
   const [showHistory, setShowHistory] = useState(false);
@@ -154,8 +164,12 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   // Sync external activeReallocation prop whenever updated (e.g. from SSE stream)
   useEffect(() => {
     if (activeReallocation) {
+      const isNewDispatch = activeReallocation.dispatch_id && activeReallocation.dispatch_id !== lastActiveDispatchIdRef.current;
       setReallocationPlan(activeReallocation);
-      setVehicleIndex(0);
+      if (isNewDispatch) {
+        lastActiveDispatchIdRef.current = activeReallocation.dispatch_id;
+        setVehicleIndex(0);
+      }
     }
   }, [activeReallocation]);
 
@@ -189,12 +203,17 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
 
-      const createCustomIcon = (color, pulseColor) => {
+      const createCustomIcon = (color, pulseColor, hasPredictiveHalo = false) => {
         return L.divIcon({
           className: 'custom-pin',
-          html: `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ffffff; box-shadow: 0 0 12px ${pulseColor || color};"></div>`,
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
+          html: hasPredictiveHalo ? `
+            <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px;">
+              <div style="position: absolute; width: 22px; height: 22px; border-radius: 50%; background: rgba(245, 158, 11, 0.45); animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+              <div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ffffff; box-shadow: 0 0 10px ${pulseColor || color};"></div>
+            </div>
+          ` : `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ffffff; box-shadow: 0 0 12px ${pulseColor || color};"></div>`,
+          iconSize: [hasPredictiveHalo ? 22 : 14, hasPredictiveHalo ? 22 : 14],
+          iconAnchor: [hasPredictiveHalo ? 11 : 7, hasPredictiveHalo ? 11 : 7]
         });
       };
 
@@ -224,6 +243,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
       setCustomIcons({
         critical: createCustomIcon('#f43f5e', '#fb7185'),
         optimal: createCustomIcon('#10b981', '#34d399'),
+        predictiveAlert: createCustomIcon('#10b981', '#f59e0b', true),
         warning: createCustomIcon('#f59e0b', '#fbbf24'),
         warehouse: createCustomIcon('#38bdf8', '#0284c7'),
         donorActive: createCustomIcon('#10b981', '#34d399')
@@ -243,6 +263,14 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
       return;
     }
     const count = reallocationPlan.route_coordinates.length;
+    const dispId = reallocationPlan?.dispatch_id;
+
+    // If already arrived/delivered, stay at destination instead of looping back to start
+    if (dispId && (deliveredDispatchesRef.current.has(dispId) || reallocationPlan.status === 'DELIVERED')) {
+      setVehicleIndex(count - 1);
+      return;
+    }
+
     setVehicleIndex(0);
 
     // Dynamic pacing derived from AI Fleet Routing assessment
@@ -253,7 +281,15 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     const interval = setInterval(() => {
       setVehicleIndex(prev => {
         if (prev < count - 1) {
-          return prev + 1;
+          const nextIdx = prev + 1;
+          // When vehicle arrives at destination, automatically complete delivery handshake!
+          if (nextIdx >= count - 1) {
+            if (dispId && !deliveredDispatchesRef.current.has(dispId)) {
+              deliveredDispatchesRef.current.add(dispId);
+              handleMarkDelivered(dispId);
+            }
+          }
+          return nextIdx;
         }
         clearInterval(interval);
         return count - 1; // Terminates at destination PHC without looping back
@@ -261,7 +297,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     }, aiStepDelay);
 
     return () => clearInterval(interval);
-  }, [reallocationPlan]);
+  }, [reallocationPlan?.dispatch_id]);
 
   const handleReplayTransit = () => {
     if (!reallocationPlan?.route_coordinates || reallocationPlan.route_coordinates.length < 2) return;
@@ -322,14 +358,40 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     const res = await updateReallocationStatus(dispatchId, "DELIVERED");
     if (res) {
       setReallocationPlan(prev => prev ? { ...prev, status: "DELIVERED" } : null);
+
+      // Complete two-node delivery handshake: flip target facility pin from Red to Green!
+      const targetId = reallocationPlan?.target_facility?.id || reallocationPlan?.target_facility_id;
+      const donorId = reallocationPlan?.selected_donor?.facility_id || reallocationPlan?.donor_facility_id;
+      const qty = Number(reallocationPlan?.quantity || reallocationPlan?.target_facility?.requested_quantity || 25);
+
+      setLocalFacilities(prevList => prevList.map(fac => {
+        if (fac.id === targetId) {
+          const currentDos = Number(fac.medicine_days_of_supply || 1.5);
+          const restoredDos = Math.round((currentDos + (qty / 2.0)) * 10) / 10;
+          return {
+            ...fac,
+            status: "Optimal",
+            medicine_days_of_supply: Math.max(14.0, restoredDos),
+            _justDelivered: true
+          };
+        }
+        if (fac.id === donorId) {
+          const currentDos = Number(fac.medicine_days_of_supply || 18.5);
+          return {
+            ...fac,
+            medicine_days_of_supply: Math.max(12.0, Math.round((currentDos - (qty / 4.0)) * 10) / 10)
+          };
+        }
+        return fac;
+      }));
     }
   };
 
   // Dynamically extract all states across India
-  const availableStates = ['All', ...Array.from(new Set(facilities.map(f => f.state).filter(Boolean))).sort()];
+  const availableStates = ['All', ...Array.from(new Set(localFacilities.map(f => f.state).filter(Boolean))).sort()];
 
   // Filter facilities by state and status
-  const filteredFacilities = facilities.filter(f => {
+  const filteredFacilities = localFacilities.filter(f => {
     const matchState = selectedState === 'All' || f.state === selectedState;
     const matchStatus = statusFilter === 'All' || 
       (statusFilter === 'Critical Deficit' && f.status === 'Critical Deficit') ||
@@ -339,14 +401,17 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     return matchState && matchStatus;
   });
 
-  const criticalCount = facilities.filter(f => f.status === 'Critical Deficit').length;
-  const warningCount = facilities.filter(f => f.status === 'Warning').length;
-  const depotCount = facilities.filter(f => f.status === 'Regional Depot' || f.type === 'District Hospital').length;
-  const optimalCount = facilities.filter(f => f.status === 'Optimal').length;
+  const criticalCount = localFacilities.filter(f => f.status === 'Critical Deficit').length;
+  const warningCount = localFacilities.filter(f => f.status === 'Warning').length;
+  const depotCount = localFacilities.filter(f => f.status === 'Regional Depot' || f.type === 'District Hospital').length;
+  const optimalCount = localFacilities.filter(f => f.status === 'Optimal').length;
 
   const getMarkerIcon = (facility) => {
     if (!customIcons) return undefined;
     if (facility.status === 'Critical Deficit') return customIcons.critical;
+    if (facility.predictive_vulnerability_score > 70 || facility.dengue_surge_risk_pct > 70) {
+      return customIcons.predictiveAlert;
+    }
     if (facility.status === 'Warning') return customIcons.warning;
     if (facility.type === 'District Hospital' || facility.status === 'Regional Depot') return customIcons.warehouse;
     return customIcons.optimal;

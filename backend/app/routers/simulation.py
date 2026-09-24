@@ -220,3 +220,38 @@ def trigger_crisis_scenario(req: CrisisScenarioRequest):
         },
         message=f"Crisis simulation generated dynamically from real health data — {crisis_class}"
     )
+
+
+# ── Simulation Clock & Daily Consumption Decay Endpoints ─────────────────────
+
+@router.get("/api/simulation/clock/status")
+def get_clock_status():
+    """Retrieves virtual simulation clock state, virtual day, and next central procurement push."""
+    from ..services.simulation_clock import simulation_clock
+    return success_response(data=simulation_clock.get_status(), message="Simulation clock status retrieved.")
+
+
+@router.post("/api/simulation/clock/tick")
+def trigger_clock_tick():
+    """Advances the simulation by 1 virtual day: decays stock, triggers auto-reallocation on breaches, and pushes central inventory."""
+    from ..services.simulation_clock import simulation_clock
+    result = simulation_clock.trigger_tick()
+    return success_response(data=result, message=f"Virtual day {result.get('virtual_day')} advanced successfully.")
+
+
+@router.post("/api/simulation/clock/start")
+def start_simulation_clock(interval_seconds: float = Query(60.0, ge=5.0, le=3600.0, description="Virtual day duration in seconds")):
+    """Starts the background continuous simulation clock."""
+    from ..services.simulation_clock import simulation_clock
+    simulation_clock.tick_interval_seconds = interval_seconds
+    simulation_clock.start_clock()
+    return success_response(data=simulation_clock.get_status(), message="Continuous simulation clock started.")
+
+
+@router.post("/api/simulation/clock/stop")
+def stop_simulation_clock():
+    """Pauses the background continuous simulation clock."""
+    from ..services.simulation_clock import simulation_clock
+    simulation_clock.stop_clock()
+    return success_response(data=simulation_clock.get_status(), message="Continuous simulation clock stopped.")
+
