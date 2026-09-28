@@ -223,41 +223,28 @@ def dispatch_multi_vehicle_fleet(req: FleetDispatchRequest):
                 if len(distinct_deficits) >= (req.count or 3):
                     break
 
-        # Rotating distinct vital emergency medicines
-        essential_meds = [
-            ("MED-RAB-001", 25),
-            ("MED-SNAKE-002", 20),
-            ("MED-INS-003", 35),
-            ("MED-OXY-004", 40),
-            ("MED-DPT-005", 30),
-            ("MED-CRYO-006", 50)
+        # Balanced Multi-Modal Emergency Fleet Archetypes (Rotating across all 6 specialized logistics modes)
+        fleet_archetype_missions = [
+            # 1. P1 Urgent Lifesaver Antidote -> Autonomous Medical Drone (Direct Air Corridor)
+            ("MED-SNAKE-002", 25, "Drone"),
+            # 2. Bulk Cold-Chain Vaccines & Biologicals (2-8°C) -> Solar-Cooled ILR Van (Ground Road)
+            ("MED-INS-003", 60, "ILR"),
+            # 3. Essential Antibiotics & IV Consumables (15-25°C) -> Electric Medical Courier
+            ("MED-OXY-004", 45, "Electric"),
+            # 4. Ultra-Low Cryogenic Biologicals (-20°C to -80°C) -> Insulated Cryo Van
+            ("MED-CRYO-006", 40, "Cryo"),
+            # 5. Heavy Emergency Transfer (> 150 units) -> District Ambulance Medical Transfer
+            ("MED-AMB-007", 160, "Ambulance"),
+            # 6. Agile Local PHC Ice-Pack Delivery (<= 35 km) -> Rapid Response Motorbike Carrier
+            ("MED-DPT-005", 20, "Motorbike")
         ]
 
-        # Match vehicles strictly by priority (RED emergency) and supply count
         facs_map = {f["id"]: f for f in get_active_public_facilities()}
         for idx, def_item in enumerate(distinct_deficits):
-            med_tuple = essential_meds[idx % len(essential_meds)]
-            med_id = def_item.get("medicine_id") if def_item.get("medicine_id") != "PUB-MED-001" else med_tuple[0]
-            supply_qty = def_item.get("deficit_units") or med_tuple[1]
-            target_fac = facs_map.get(def_item.get("facility_id"), {})
-            is_red = target_fac.get("status") in ("Critical Deficit", "RED", "EMERGENCY") or idx == 0
-
-            # Priority & Supply Count Matrix:
-            # 1. RED Emergency + supply <= 150 -> Drone (Direct Air Corridor)
-            # 2. RED Emergency + supply > 150 -> Ambulance (High Capacity Emergency)
-            # 3. Cryo medicine (-20°C to -80°C) -> Cryo Van
-            # 4. Small cold chain (<= 80 units) -> Motorbike Ice-Carrier
-            # 5. Bulk cold chain (> 80 units) -> Solar ILR Van
-            if is_red and supply_qty <= 150:
-                pref_veh = "Drone"
-            elif is_red and supply_qty > 150:
-                pref_veh = "Ambulance"
-            elif "cryo" in med_id.lower():
-                pref_veh = "Cryo"
-            elif supply_qty <= 80:
-                pref_veh = "Motorbike"
-            else:
-                pref_veh = "ILR"
+            mission = fleet_archetype_missions[idx % len(fleet_archetype_missions)]
+            med_id = def_item.get("medicine_id") if (def_item.get("medicine_id") and def_item.get("medicine_id") != "PUB-MED-001") else mission[0]
+            supply_qty = def_item.get("deficit_units") or mission[1]
+            pref_veh = mission[2]
 
             items_to_dispatch.append(FleetDispatchItem(
                 target_facility_id=def_item.get("facility_id"),
@@ -267,10 +254,15 @@ def dispatch_multi_vehicle_fleet(req: FleetDispatchRequest):
             ))
 
 
+    claimed_vehicle_ids = []
     for item in items_to_dispatch:
         try:
-            # Claim a specific vehicle tailored to supply count and priority
-            assigned_veh = reallocation_db.claim_vehicle(item.preferred_vehicle_type)
+            # Claim a distinct vehicle tailored to the mission archetype, preventing duplicate concurrent assignments
+            assigned_veh = reallocation_db.claim_vehicle(
+                preferred_type=item.preferred_vehicle_type,
+                exclude_vehicle_ids=claimed_vehicle_ids
+            )
+            claimed_vehicle_ids.append(assigned_veh["vehicle_id"])
             is_drone = "drone" in assigned_veh.get("vehicle_type", "").lower() or "vtol" in assigned_veh.get("vehicle_type", "").lower()
             
             # Plan reallocation corridor (Direct flight corridor for Drone; road network for ground vehicles)

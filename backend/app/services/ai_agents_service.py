@@ -210,13 +210,23 @@ class FleetRoutingAgent:
         supply_count = (target_facility or {}).get("requested_quantity") or 25
         is_red = target_status in ("Critical Deficit", "RED", "EMERGENCY")
 
-        # 1. Tool execution: Allocate vehicle strictly based on supply count and emergency priority
+        # 1. Tool execution: Allocate vehicle strictly based on cargo requirements, distance, and clinical priority
+        import math
+        dlat = math.radians(dest_lat - origin_lat)
+        dlng = math.radians(dest_lng - origin_lng)
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(origin_lat)) * math.cos(math.radians(dest_lat)) * math.sin(dlng / 2)**2
+        approx_km = round(6371.0 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)), 1)
+
+        med_dict = medicine or {}
         veh_res = self.registry.call_tool("allocate_medical_vehicle", {
-            "distance_km": 10.0,
+            "distance_km": approx_km,
             "is_cold_chain": any(t in str(medicine_storage_temp) for t in ["2", "8", "−", "cryo", "freeze"]),
             "supply_count": supply_count,
             "priority": "CRITICAL" if is_red else "HIGH",
-            "destination_status": target_status
+            "destination_status": target_status,
+            "medicine_name": med_dict.get("name"),
+            "medicine_category": med_dict.get("category"),
+            "storage_temp": medicine_storage_temp
         })
         veh_data = veh_res["content"][0]["data"] if not veh_res.get("isError") else {}
         is_drone = veh_data.get("is_drone", False) or "drone" in veh_data.get("vehicle_type", "").lower() or "vtol" in veh_data.get("vehicle_type", "").lower()

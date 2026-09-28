@@ -105,11 +105,16 @@ def generate_reallocation_plan(
     candidate_donors.sort(key=lambda x: x["distance_km"])
     selected_donor = candidate_donors[0] if candidate_donors else None
 
-    # Determine vehicle type and routing based on priority and supply count
+    # Determine vehicle type and routing based on preference or clinical criteria
     target_status = target_facility.get("status", "Normal")
     is_red = target_status in ("Critical Deficit", "RED", "EMERGENCY")
     pref = (preferred_vehicle_type or "").lower()
-    is_drone = ("drone" in pref or "vtol" in pref) or (is_red and required_quantity <= 150)
+    if pref:
+        is_drone = "drone" in pref or "vtol" in pref
+    else:
+        med_name = (medicine.get("name") or "").lower()
+        is_antidote = any(k in med_name for k in ["antiven", "snake", "rabies", "antidote"])
+        is_drone = is_antidote and is_red and required_quantity <= 150
 
     # Calculate turn-by-turn road route for ground vehicles OR direct airspace corridor for Drones
     route_waypoints = []
@@ -144,19 +149,36 @@ def generate_reallocation_plan(
         est_transit_hrs = round(distance_km / 80.0, 2) if distance_km else 0
         holdover_hours = 6.0
         carbon_kg = round(0.012 * distance_km, 2) if distance_km else 0.0
+    elif "cryo" in pref:
+        transport_mode = "Insulated Cryo Van (Deep-Cold Ultra-Low Temp)"
+        cold_box_spec = "Ultra-Low Temperature Liquid Nitrogen Cryo-Box (-20°C to -80°C)"
+        est_transit_hrs = round(distance_km / 40.0, 1) if distance_km else 0
+        holdover_hours = 96.0
+        carbon_kg = round(0.075 * distance_km, 2) if distance_km else 0.0
+    elif "amb" in pref:
+        transport_mode = "District Ambulance Emergency Medical Transfer"
+        cold_box_spec = "Insulated Emergency Medical Box & Life-Support Transit Pack"
+        est_transit_hrs = round(distance_km / 45.0, 1) if distance_km else 0
+        holdover_hours = 24.0
+        carbon_kg = round(0.095 * distance_km, 2) if distance_km else 0.0
+    elif "elec" in pref or "courier" in pref:
+        transport_mode = "Zero-Emission High-Speed Electric Medical Courier"
+        cold_box_spec = "Controlled Room Temperature Storage Container (15°C to 25°C)"
+        est_transit_hrs = round(distance_km / 42.0, 1) if distance_km else 0
+        holdover_hours = 48.0
+        carbon_kg = 0.0
+    elif "bike" in pref or "moto" in pref:
+        transport_mode = "Rapid Response Motorbike Ice-Carrier"
+        cold_box_spec = "Insulated Cold Icepack Carrier (2°C to 8°C)"
+        est_transit_hrs = round(distance_km / 40.0, 1) if distance_km else 0
+        holdover_hours = 18.0
+        carbon_kg = round(0.035 * distance_km, 2) if distance_km else 0.0
     else:
+        transport_mode = "Solar-Cooled Emergency Vaccine Van (SDD-ILR)"
+        cold_box_spec = "WHO PQS E004/006 Ice-Lined Refrigerator Carrier (VVM compliant)"
         est_transit_hrs = round(distance_km / 36.0, 1) if distance_km else 0
-        holdover_hours = 72 if not is_cold_chain else (48 if distance_km < 100 else 24)
-        transport_mode = (
-            "Solar-Cooled Emergency Vaccine Van (SDD-ILR)" if is_cold_chain and distance_km > 50 else
-            ("Insulated Ice-Pack Carrier / Motorbike Courier" if is_cold_chain else
-             "Emergency Medical Courier (Non-Cold Chain)")
-        )
-        cold_box_spec = (
-            "WHO PQS E004/006 Ice-Lined Refrigerator Carrier (VVM compliant)" if is_cold_chain
-            else "Standard Secure Medicine Transport Box"
-        )
-        carbon_kg = round(0.089 * distance_km, 2) if distance_km else 0.0
+        holdover_hours = 72.0
+        carbon_kg = round(0.045 * distance_km, 2) if distance_km else 0.0
 
     from ..utils.response_helper import success_response
     unique_suffix = uuid.uuid4().hex[:6].upper()

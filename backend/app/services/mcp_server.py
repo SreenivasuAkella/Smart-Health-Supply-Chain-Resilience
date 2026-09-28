@@ -406,62 +406,67 @@ def tool_calculate_road_route_and_distance(
 
 # Tool 4: allocate_medical_vehicle
 def tool_allocate_medical_vehicle(
-    distance_km: float,
+    distance_km: float = 25.0,
     is_cold_chain: bool = True,
     supply_count: int = 25,
     priority: str = "CRITICAL",
     destination_status: str = "Critical Deficit",
-    preferred_type: Optional[str] = None
+    preferred_type: Optional[str] = None,
+    medicine_name: Optional[str] = None,
+    medicine_category: Optional[str] = None,
+    storage_temp: Optional[str] = None,
+    exclude_vehicle_ids: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    Allocates specialized medical transport vehicle based on supply count (cargo capacity)
-    and destination priority:
-    - DRONE: Emergency / RED destination priority for rapid lifesavers up to 150 units.
-    - AMBULANCE: Critical emergency with heavy payload (150-300 units).
-    - MOTORBIKE: Rapid urgent cold-chain for small payloads (1-80 units).
-    - CRYO VAN: Ultra-low temp storage (-20°C to -80°C) up to 400 units.
-    - SOLAR ILR VAN: Bulk cold-chain vaccines (80-600 units) or long distances.
-    - ELECTRIC COURIER: Ambient/controlled medicine up to 500 units.
+    Intelligently allocates specialized medical transport vehicles across the full 6-archetype fleet:
+    1. AUTONOMOUS DRONE: Rapid aerial corridor for emergency lifesavers (Antivenom, Rabies, Antidotes) <= 150 units.
+    2. SOLAR-COOLED ILR VAN: Bulk cold-chain vaccines & biologicals (2°C to 8°C) > 45 units or distance > 35 km.
+    3. INSUALATED CRYO VAN: Ultra-low temp cryogenic biologicals (-20°C to -80°C, mRNA, plasma) up to 400 units.
+    4. MOTORBIKE ICE-CARRIER: Agile small cold-chain payload (<= 45 units, distance <= 35 km) to rural/tight clinic roads.
+    5. ELECTRIC MEDICAL COURIER: Ambient/controlled room temp medicines (15°C to 25°C, antibiotics, IV fluids, tablets).
+    6. DISTRICT AMBULANCE: Heavy emergency transfer (> 150 units), trauma blood reserves, hospital-to-hospital transfer.
     """
-    fleet = reallocation_db.get_vehicle_fleet()
-    assigned = None
+    # 1. Determine vehicle archetype requirement
     pref = (preferred_type or "").lower()
+    med_str = f"{medicine_name or ''} {medicine_category or ''}".lower()
+    temp_str = str(storage_temp or "").lower()
 
-    is_red = (destination_status in ("Critical Deficit", "RED", "EMERGENCY")) or (str(priority).upper() in ("CRITICAL", "EMERGENCY", "RED", "HIGH_RISK"))
+    is_cryo = any(k in temp_str for k in ["-20", "-80", "cryo", "ultra-low", "freeze"]) or any(k in med_str for k in ["cryo", "plasma", "mrna"])
+    is_lifesaver_antidote = any(k in med_str for k in ["antiven", "snake", "rabies", "antidote", "adrenaline", "atropine", "poison"])
+    is_red = (destination_status in ("Critical Deficit", "RED", "EMERGENCY")) or (str(priority).upper() in ("CRITICAL", "EMERGENCY", "RED", "P1"))
+    is_ambient = any(k in temp_str for k in ["15", "25", "30", "ambient", "room"]) or any(k in med_str for k in ["antibiotic", "tablet", "oral", "iv fluid", "paracetamol", "ors", "saline"])
 
     if pref:
-        assigned = next((v for v in fleet if pref in v.get("vehicle_type", "").lower() or pref in v.get("vehicle_name", "").lower()), None)
-
-    if not assigned:
-        if is_red and supply_count <= 150:
-            # Emergency RED destination within drone payload limit -> Drone
-            assigned = next((v for v in fleet if "drone" in v.get("vehicle_type", "").lower() or "vtol" in v.get("vehicle_type", "").lower()), None)
-        elif is_red and supply_count > 150:
-            # Emergency RED destination with heavy payload -> Ambulance
-            assigned = next((v for v in fleet if "amb" in v.get("vehicle_type", "").lower()), None)
-        elif is_cold_chain:
-            if supply_count <= 80 and distance_km <= 60:
-                # Small cold-chain payload -> Motorbike Ice-Carrier
-                assigned = next((v for v in fleet if "motorbike" in v.get("vehicle_type", "").lower() or "moto" in v.get("vehicle_type", "").lower()), None)
-            else:
-                # Bulk cold-chain payload -> Solar ILR Van
-                assigned = next((v for v in fleet if "ilr" in v.get("vehicle_type", "").lower() or "sdd" in v.get("vehicle_type", "").lower() or "van" in v.get("vehicle_type", "").lower()), None)
+        selected_archetype = pref
+    elif is_cryo:
+        selected_archetype = "Cryo"
+    elif is_lifesaver_antidote and supply_count <= 150:
+        selected_archetype = "Drone"
+    elif is_red and supply_count > 150:
+        selected_archetype = "Ambulance"
+    elif is_ambient and not is_cold_chain:
+        selected_archetype = "Electric"
+    elif is_cold_chain:
+        if supply_count <= 45 and distance_km <= 35:
+            selected_archetype = "Motorbike"
         else:
-            # Ambient / general controlled -> Electric Medical Courier
-            assigned = next((v for v in fleet if "elec" in v.get("vehicle_type", "").lower() or "courier" in v.get("vehicle_type", "").lower()), None)
+            selected_archetype = "ILR"
+    elif supply_count > 150:
+        selected_archetype = "Ambulance"
+    else:
+        selected_archetype = "Electric"
 
-    if not assigned and fleet:
-        assigned = fleet[0]
-
-    v_type = assigned.get("vehicle_type", "Solar-Cooled ILR Van") if assigned else "Solar-Cooled ILR Van"
+    # 2. Claim available vehicle or provision uniquely numbered unit from DB
+    assigned = reallocation_db.claim_vehicle(preferred_type=selected_archetype, exclude_vehicle_ids=exclude_vehicle_ids)
+    v_type = assigned.get("vehicle_type", "Solar-Cooled ILR Van")
     is_drone_veh = "drone" in v_type.lower() or "vtol" in v_type.lower()
 
     return {
-        "vehicle_id": assigned.get("vehicle_id", "VEH-SDD-01") if assigned else "VEH-SDD-01",
-        "vehicle_name": assigned.get("vehicle_name", "Solar-Cooled Emergency Vaccine Van") if assigned else "Solar-Cooled Vaccine Van",
+        "vehicle_id": assigned.get("vehicle_id", "VEH-SDD-01"),
+        "vehicle_name": assigned.get("vehicle_name", "Solar-Cooled Emergency Vaccine Van"),
         "vehicle_type": v_type,
-        "registration_no": assigned.get("registration_no", "UP-65-MED-8492") if assigned else "UP-65-MED-8492",
-        "cold_chain_type": assigned.get("cold_chain_type", "ILR_SOLAR") if assigned else "ILR_SOLAR",
+        "registration_no": assigned.get("registration_no", "UP-65-MED-8492"),
+        "cold_chain_type": assigned.get("cold_chain_type", "ILR_SOLAR"),
         "is_drone": is_drone_veh,
         "is_aerial": is_drone_veh
     }

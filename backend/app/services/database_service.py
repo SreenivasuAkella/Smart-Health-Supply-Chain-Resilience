@@ -2,7 +2,7 @@ import sqlite3
 import os
 import json
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from .firebase_service import firebase_service
 from .bigquery_service import bigquery_service
@@ -403,9 +403,10 @@ class ReallocationDatabaseService:
             rows = cursor.fetchall()
             return [self._row_to_reallocation_dict(dict(r)) for r in rows]
 
-    def claim_vehicle(self, preferred_type: Optional[str] = None) -> Dict[str, Any]:
+    def claim_vehicle(self, preferred_type: Optional[str] = None, exclude_vehicle_ids: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Allocates an available vehicle from the fleet and marks it IN_TRANSIT.
+        Guarantees that no two active concurrent corridors ever share the same vehicle ID.
         Auto-reconciles vehicles whose dispatches are completed and generates distinct vehicle IDs.
         Dual-syncs vehicle status to Firebase RTDB.
         """
@@ -413,20 +414,38 @@ class ReallocationDatabaseService:
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            # 1. Auto-reconcile: return any vehicles whose active corridors have concluded
+            # 1. Auto-reconcile only concluded corridors (where updated_at is older than 3 minutes)
+            # This prevents race conditions where vehicles claimed in a batch loop get reset before save_reallocation
+            cutoff_time = (datetime.utcnow() - timedelta(minutes=3)).isoformat() + "Z"
             cursor.execute("""
                 UPDATE vehicle_fleet SET status = 'AVAILABLE', updated_at = ?
                 WHERE status = 'IN_TRANSIT'
+                AND updated_at < ?
                 AND vehicle_id NOT IN (
                     SELECT DISTINCT vehicle_id FROM reallocations 
                     WHERE status NOT IN ('DELIVERED', 'COMPLETED', 'CANCELLED')
                     AND vehicle_id IS NOT NULL
                 )
-            """, (now_str,))
+            """, (now_str, cutoff_time))
             conn.commit()
 
-            cursor.execute("SELECT * FROM vehicle_fleet WHERE status = 'AVAILABLE' ORDER BY vehicle_id ASC")
-            available = [dict(r) for r in cursor.fetchall()]
+            # 2. Identify all vehicles currently active in transit across the entire network
+            cursor.execute("""
+                SELECT DISTINCT vehicle_id FROM reallocations 
+                WHERE status NOT IN ('DELIVERED', 'COMPLETED', 'CANCELLED')
+                AND vehicle_id IS NOT NULL
+            """)
+            busy_ids = {r[0] for r in cursor.fetchall()}
+            if exclude_vehicle_ids:
+                busy_ids.update(exclude_vehicle_ids)
+
+            # Query all registered vehicles in fleet
+            cursor.execute("SELECT * FROM vehicle_fleet ORDER BY vehicle_id ASC")
+            all_fleet = [dict(r) for r in cursor.fetchall()]
+            existing_ids = {v["vehicle_id"] for v in all_fleet}
+
+            # Filter vehicles that are strictly AVAILABLE and not currently assigned to any active corridor
+            available = [v for v in all_fleet if v["status"] == "AVAILABLE" and v["vehicle_id"] not in busy_ids]
 
             assigned = None
             if preferred_type and available:
@@ -469,7 +488,7 @@ class ReallocationDatabaseService:
                 assigned["is_aerial"] = is_d
                 return assigned
 
-            # 2. Dynamic vehicle provisioning: Generate a dedicated vehicle tailored to preferred type
+            # 3. Dynamic vehicle provisioning: Generate a dedicated vehicle tailored to preferred type
             pref = (preferred_type or "van").lower()
             rand_suffix = random.randint(10, 99)
             if "drone" in pref or "vtol" in pref:
@@ -532,18 +551,23 @@ class ReallocationDatabaseService:
                     "capacity_units": 500,
                     "updated_at": now_str
                 }
-            else:
-                fallback = {
-                    "vehicle_id": f"VEH-SDD-{rand_suffix}",
-                    "vehicle_name": "Solar-Cooled Emergency Vaccine Van (SDD-ILR)",
-                    "vehicle_type": "Solar-Cooled ILR Van",
-                    "registration_no": f"UP-65-MED-{rand_suffix}8",
-                    "status": "IN_TRANSIT",
-                    "cold_chain_type": "ILR_SOLAR",
-                    "temperature_range": "2°C to 8°C",
-                    "capacity_units": 600,
-                    "updated_at": now_str
-                }
+            # Guarantee uniquely numbered vehicle identifier that never collides with active vehicles
+            prefix = "SDD"
+            if "drone" in pref or "vtol" in pref:
+                prefix = "DRONE"
+            elif "cryo" in pref:
+                prefix = "CRYO"
+            elif "bike" in pref or "moto" in pref:
+                prefix = "MOTO"
+            elif "amb" in pref:
+                prefix = "AMB"
+            elif "elec" in pref or "ev" in pref:
+                prefix = "ELEC"
+
+            while fallback["vehicle_id"] in busy_ids or fallback["vehicle_id"] in existing_ids:
+                rand_suffix = random.randint(10, 99)
+                fallback["vehicle_id"] = f"VEH-{prefix}-{rand_suffix}"
+                fallback["registration_no"] = f"IND-MED-{prefix}-{rand_suffix}"
 
             cursor.execute("""
                 INSERT OR REPLACE INTO vehicle_fleet (
