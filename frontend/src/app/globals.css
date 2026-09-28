@@ -227,6 +227,17 @@ code, pre, .font-mono {
   color: #38bdf8 !important;
 }
 
+/* Leaflet Custom DivIcon & Vehicle Marker Resets */
+.leaflet-div-icon,
+.custom-pin,
+.vehicle-marker,
+.vehicle-marker-wrapper {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+
 /* Animations */
 @keyframes fadeIn {
   from {

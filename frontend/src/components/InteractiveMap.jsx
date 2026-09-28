@@ -70,86 +70,176 @@ const MapResizer = dynamic(
 
 export const getVehicleStyle = (vehicleType = '', index = 0) => {
   const v = (vehicleType || '').toLowerCase();
-  if (v.includes('drone')) {
+
+  // 1. Autonomous eVTOL Drone
+  if (v.includes('drone') || v.includes('vtol') || v.includes('uas')) {
     return {
       color: '#06b6d4',
       border: '#22d3ee',
       dash: '4, 8',
       label: 'Autonomous Medical Drone',
+      code: 'DRONE',
       iconSvg: (stroke) => `
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-          <circle cx="12" cy="12" r="3"/>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Central Drone Pod -->
+          <circle cx="12" cy="12" r="3.2" fill="${stroke}" fill-opacity="0.3"/>
+          <path d="M12 10.5v3M10.5 12h3" stroke="#ffffff" stroke-width="1.8"/>
+          <!-- 4 Rotor Arms -->
+          <line x1="5.5" y1="5.5" x2="9.8" y2="9.8" stroke-width="1.8"/>
+          <line x1="18.5" y1="5.5" x2="14.2" y2="9.8" stroke-width="1.8"/>
+          <line x1="5.5" y1="18.5" x2="9.8" y2="14.2" stroke-width="1.8"/>
+          <line x1="18.5" y1="18.5" x2="14.2" y2="14.2" stroke-width="1.8"/>
+          <!-- 4 Spinning Rotor Discs -->
+          <ellipse cx="4.5" cy="4.5" rx="3.5" ry="1.8" stroke="${stroke}" stroke-width="1.8"/>
+          <ellipse cx="19.5" cy="4.5" rx="3.5" ry="1.8" stroke="${stroke}" stroke-width="1.8"/>
+          <ellipse cx="4.5" cy="19.5" rx="3.5" ry="1.8" stroke="${stroke}" stroke-width="1.8"/>
+          <ellipse cx="19.5" cy="19.5" rx="3.5" ry="1.8" stroke="${stroke}" stroke-width="1.8"/>
         </svg>
       `
     };
   }
+
+  // 2. Solar-Cooled Vaccine Van (SDD-ILR)
+  if (v.includes('van') || v.includes('ilr') || v.includes('sdd') || v.includes('solar')) {
+    return {
+      color: '#10b981',
+      border: '#34d399',
+      dash: '8, 12',
+      label: 'Solar-Cooled ILR Van',
+      code: 'VAN',
+      iconSvg: (stroke) => `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Van Body -->
+          <path d="M2.5 6.5h11v10.5h-11z" fill="${stroke}" fill-opacity="0.2"/>
+          <path d="M13.5 8.5h4.2l2.8 3.5v5h-7"/>
+          <!-- Solar Roof Grid -->
+          <line x1="4.5" y1="4.5" x2="11.5" y2="4.5" stroke="#34d399" stroke-width="1.8"/>
+          <line x1="8" y1="3.5" x2="8" y2="5.5" stroke="#34d399" stroke-width="1.8"/>
+          <!-- Cold Cross -->
+          <path d="M8 9.5v4M6 11.5h4" stroke="${stroke}" stroke-width="1.8"/>
+          <!-- Wheels -->
+          <circle cx="6.5" cy="17.5" r="2" fill="#090e17" stroke="${stroke}" stroke-width="2"/>
+          <circle cx="17.5" cy="17.5" r="2" fill="#090e17" stroke="${stroke}" stroke-width="2"/>
+        </svg>
+      `
+    };
+  }
+
+  // 3. Rapid Motorbike Carrier
   if (v.includes('bike') || v.includes('moto')) {
     return {
       color: '#f59e0b',
       border: '#fbbf24',
       dash: '6, 10',
       label: 'Rapid Motorbike Carrier',
+      code: 'MOTO',
       iconSvg: (stroke) => `
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="18.5" cy="17.5" r="3.5"/>
-          <circle cx="5.5" cy="17.5" r="3.5"/>
-          <circle cx="15" cy="5" r="1"/>
-          <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Wheels -->
+          <circle cx="5" cy="17" r="2.8" fill="#090e17" stroke="${stroke}" stroke-width="2"/>
+          <circle cx="19" cy="17" r="2.8" fill="#090e17" stroke="${stroke}" stroke-width="2"/>
+          <!-- Bike Frame -->
+          <path d="M5 17l4-5.5h5l4 5.5" stroke-width="2"/>
+          <path d="M9 11.5l2.5-4.5h3" stroke-width="2"/>
+          <!-- Rear Cold Box -->
+          <rect x="3.5" y="8" width="4" height="4" rx="1" fill="${stroke}" fill-opacity="0.35" stroke="${stroke}" stroke-width="1.6"/>
         </svg>
       `
     };
   }
-  if (v.includes('cryo')) {
+
+  // 4. Deep-Cold Cryo Carrier
+  if (v.includes('cryo') || v.includes('freeze') || v.includes('ultra')) {
     return {
       color: '#a855f7',
       border: '#c084fc',
       dash: '8, 12',
       label: 'Deep-Cold Cryo Carrier',
+      code: 'CRYO',
       iconSvg: (stroke) => `
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="2" x2="12" y2="22"/>
-          <line x1="2" y1="12" x2="22" y2="12"/>
-          <path d="m20 16-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4"/>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Cryo Snowflake / Cold-Chain Symbol -->
+          <line x1="12" y1="2.5" x2="12" y2="21.5"/>
+          <line x1="2.5" y1="12" x2="21.5" y2="12"/>
+          <path d="m19 16-3-4 3-4M5 8l3 4-3 4M16 5l-4 3-4-3M8 19l4-3 4 3"/>
+          <circle cx="12" cy="12" r="2.5" fill="${stroke}"/>
         </svg>
       `
     };
   }
-  if (v.includes('elec')) {
+
+  // 5. District Emergency Ambulance
+  if (v.includes('amb') || v.includes('emergency')) {
+    return {
+      color: '#ef4444',
+      border: '#f87171',
+      dash: '5, 9',
+      label: 'District Ambulance Transfer',
+      code: 'AMB',
+      iconSvg: (stroke) => `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Ambulance Body -->
+          <path d="M2.5 7h12v10h-12z" fill="${stroke}" fill-opacity="0.2"/>
+          <path d="M14.5 9h4l3 3.5V17h-7"/>
+          <!-- Rooftop Siren Light -->
+          <rect x="8.5" y="4.5" width="3" height="2" rx="0.5" fill="#ef4444" stroke="#f87171" stroke-width="1.4"/>
+          <!-- Medical Cross -->
+          <path d="M8.5 10v4M6.5 12h4" stroke="#ffffff" stroke-width="2"/>
+          <!-- Wheels -->
+          <circle cx="6.5" cy="17" r="2" fill="#090e17" stroke="${stroke}" stroke-width="2"/>
+          <circle cx="17.5" cy="17" r="2" fill="#090e17" stroke="${stroke}" stroke-width="2"/>
+        </svg>
+      `
+    };
+  }
+
+  // 6. Zero-Emission Electric Medical Courier
+  if (v.includes('elec') || v.includes('ev') || v.includes('courier')) {
     return {
       color: '#38bdf8',
       border: '#7dd3fc',
       dash: '7, 11',
       label: 'Electric Medical Courier',
+      code: 'ELEC',
       iconSvg: (stroke) => `
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Vehicle Profile -->
+          <path d="M3 9a2 2 0 0 1 2-2h9l4 3 3 1v6H3V9z" fill="${stroke}" fill-opacity="0.2"/>
+          <!-- Lightning Energy Bolt -->
+          <polygon points="12 4 8 11 12 11 10 17 16 9 12 9 14 4" fill="${stroke}" stroke="${stroke}" stroke-width="1"/>
+          <!-- Wheels -->
+          <circle cx="6.5" cy="17" r="2" fill="#090e17" stroke="${stroke}" stroke-width="2"/>
+          <circle cx="17.5" cy="17" r="2" fill="#090e17" stroke="${stroke}" stroke-width="2"/>
         </svg>
       `
     };
   }
+
+  // Fallback / Mutual-Aid Carrier
   const palette = [
-    { color: '#10b981', border: '#34d399' },
-    { color: '#06b6d4', border: '#22d3ee' },
-    { color: '#f59e0b', border: '#fbbf24' },
-    { color: '#8b5cf6', border: '#a78bfa' }
+    { color: '#10b981', border: '#34d399', label: 'Solar-Cooled Vaccine Van' },
+    { color: '#06b6d4', border: '#22d3ee', label: 'Autonomous Medical Drone' },
+    { color: '#f59e0b', border: '#fbbf24', label: 'Rapid Motorbike Carrier' },
+    { color: '#a855f7', border: '#c084fc', label: 'Deep-Cold Cryo Carrier' }
   ];
   const choice = palette[index % palette.length];
   return {
     color: choice.color,
     border: choice.border,
     dash: '8, 12',
-    label: 'Solar-Cooled Vaccine Van',
+    label: choice.label,
+    code: 'FLEET',
     iconSvg: (stroke) => `
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M10 17h4V5H2v12h3"/>
         <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h2"/>
-        <circle cx="7.5" cy="17.5" r="2.5"/>
-        <circle cx="17.5" cy="17.5" r="2.5"/>
+        <circle cx="7.5" cy="17.5" r="2"/>
+        <circle cx="17.5" cy="17.5" r="2"/>
       </svg>
     `
   };
 };
+
 
 export default function InteractiveMap({ isLoading = false, facilities = [], activeReallocation, onSelectFacility }) {
   const [localFacilities, setLocalFacilities] = useState(facilities || []);
@@ -369,56 +459,65 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     }
   }, []);
 
-  // Dynamic icon generator tailored to vehicle type & arrival state
-  const getDynamicVehicleIcon = (vStyle, arrived = false) => {
+  // Dynamic icon generator tailored to vehicle type & arrival state with sharp vehicle logos
+  const getDynamicVehicleIcon = (vStyle, arrived = false, label = '') => {
     if (!leafletRef.current) return vehicleIcon?.inTransit;
     const themeColor = arrived ? '#10b981' : (vStyle?.color || '#06b6d4');
     const strokeColor = arrived ? '#34d399' : '#ffffff';
     return leafletRef.current.divIcon({
-      className: 'vehicle-marker',
+      className: 'vehicle-marker-wrapper',
       html: `
-        <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;">
-          ${!arrived ? `<div style="position: absolute; width: 34px; height: 34px; border-radius: 50%; background: ${themeColor}40; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : `<div style="position: absolute; width: 34px; height: 34px; border-radius: 50%; background: rgba(16, 185, 129, 0.25);"></div>`}
-          <div style="width: 28px; height: 28px; border-radius: 50%; background: #0f172a; border: 2px solid ${themeColor}; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px ${themeColor};">
-            ${vStyle?.iconSvg ? vStyle.iconSvg(strokeColor) : ''}
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 48px; pointer-events: auto;">
+          ${label ? `<div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: #fff; background: rgba(9, 14, 23, 0.95); border: 1.5px solid ${themeColor}; padding: 0.5px 5px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.6); white-space: nowrap; margin-bottom: 2px;">${label}</div>` : ''}
+          <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px;">
+            ${!arrived ? `<div style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background: ${themeColor}40; animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : `<div style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background: rgba(16, 185, 129, 0.25);"></div>`}
+            <div style="width: 30px; height: 30px; border-radius: 50%; background: #090e17; border: 2px solid ${themeColor}; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 14px ${themeColor}aa, 0 4px 10px rgba(0,0,0,0.7); z-index: 2;">
+              ${arrived ? `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+              ` : (vStyle?.iconSvg ? vStyle.iconSvg(strokeColor) : '')}
+            </div>
           </div>
         </div>
       `,
-      iconSize: [34, 34],
-      iconAnchor: [17, 17]
+      iconSize: [44, 48],
+      iconAnchor: [22, label ? 34 : 24]
     });
   };
 
-  // Turn-by-turn road navigation for all active fleet corridors simultaneously
+  // Turn-by-turn road navigation engine for all active fleet corridors simultaneously
   useEffect(() => {
-    const corridors = [...activeFleet];
-    if (reallocationPlan && !corridors.some(c => c.dispatch_id === reallocationPlan.dispatch_id)) {
-      corridors.push(reallocationPlan);
-    }
-    if (corridors.length === 0) return;
+    if (!activeFleet || activeFleet.length === 0) return;
 
-    const intervals = [];
+    const timer = setInterval(() => {
+      setFleetIndices(prev => {
+        let hasChanges = false;
+        const next = { ...prev };
 
-    corridors.forEach((plan, pIdx) => {
-      const waypoints = plan.route_coordinates || [];
-      if (waypoints.length < 2) return;
-      const count = waypoints.length;
-      const dispId = plan.dispatch_id || `CORRIDOR-${pIdx}`;
+        activeFleet.forEach(plan => {
+          const dispId = plan.dispatch_id;
+          if (!dispId) return;
+          const waypoints = plan.route_coordinates || [];
+          if (waypoints.length < 2) return;
+          const count = waypoints.length;
 
-      if (plan.status === 'DELIVERED' || deliveredDispatchesRef.current.has(dispId)) {
-        setFleetIndices(prev => ({ ...prev, [dispId]: count - 1 }));
-        return;
-      }
+          // If already marked delivered, ensure pin is at destination
+          if (plan.status === 'DELIVERED') {
+            if (next[dispId] !== count - 1) {
+              next[dispId] = count - 1;
+              hasChanges = true;
+            }
+            return;
+          }
 
-      const aiStepDelay = plan.logistics_parameters?.simulation_step_delay_ms
-        || plan.simulation_step_delay_ms
-        || Math.max(160, Math.min(480, Math.round(18000 / count)));
-
-      const interval = setInterval(() => {
-        setFleetIndices(prev => {
-          const cur = prev[dispId] ?? 0;
+          const cur = next[dispId] ?? 0;
           if (cur < count - 1) {
             const nextIdx = cur + 1;
+            next[dispId] = nextIdx;
+            hasChanges = true;
+
+            // Trigger two-node delivery handshake when destination is reached
             if (nextIdx >= count - 1) {
               if (!deliveredDispatchesRef.current.has(dispId)) {
                 deliveredDispatchesRef.current.add(dispId);
@@ -428,30 +527,28 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                 handleMarkDelivered(dispId, targetId, donorId, qty);
               }
             }
-            return { ...prev, [dispId]: nextIdx };
           }
-          clearInterval(interval);
-          return { ...prev, [dispId]: count - 1 };
         });
-      }, aiStepDelay);
 
-      intervals.push(interval);
-    });
+        return hasChanges ? next : prev;
+      });
+    }, 280);
 
-    return () => {
-      intervals.forEach(inv => clearInterval(inv));
-    };
-  }, [activeFleet, reallocationPlan?.dispatch_id]);
+    return () => clearInterval(timer);
+  }, [activeFleet]);
 
-  const handleReplayTransit = () => {
-    if (!reallocationPlan?.route_coordinates || reallocationPlan.route_coordinates.length < 2) return;
-    const dispId = reallocationPlan.dispatch_id;
+  const handleReplayTransit = (corridorToReplay) => {
+    const plan = corridorToReplay || reallocationPlan;
+    if (!plan?.route_coordinates || plan.route_coordinates.length < 2) return;
+    const dispId = plan.dispatch_id;
     if (dispId) {
       deliveredDispatchesRef.current.delete(dispId);
       setFleetIndices(prev => ({ ...prev, [dispId]: 0 }));
+      setReallocationPlan(plan);
+      setActiveFleet(prev => prev.map(p => p.dispatch_id === dispId ? { ...p, status: "IN_TRANSIT" } : p));
     }
-    setVehicleIndex(0);
   };
+
 
   const handleSimulateRoute = async (facilityId = "DH-VAR-001", medId = "PUB-MED-001") => {
     setLoadingRoute(true);
@@ -484,22 +581,28 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     try {
       const records = await dispatchFleet({ auto_multi: true, count: 3 });
       if (records && records.length > 0) {
-        setActiveFleet(records);
+        // Merge with existing active fleet dispatches without erasing in-progress corridors
+        setActiveFleet(prev => {
+          const map = new Map((prev || []).map(p => [p.dispatch_id, p]));
+          records.forEach(r => map.set(r.dispatch_id, r));
+          return Array.from(map.values());
+        });
         setReallocationPlan(records[0]);
         setShowFleetPanel(true);
         setShowHistory(false);
-        const initialIndices = {};
+        const newIndices = {};
         records.forEach(r => {
-          initialIndices[r.dispatch_id] = 0;
+          newIndices[r.dispatch_id] = 0;
           deliveredDispatchesRef.current.delete(r.dispatch_id);
         });
-        setFleetIndices(initialIndices);
+        setFleetIndices(prev => ({ ...prev, ...newIndices }));
       }
     } catch (err) {
       console.error("handleDispatchFleet error:", err);
     }
     setDispatchingFleet(false);
   };
+
 
   const handleOpenHistory = async () => {
     setShowHistory(true);
@@ -606,24 +709,28 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
   const routeWaypoints = reallocationPlan?.route_coordinates || [];
   const waypointsCount = routeWaypoints.length;
-  const isArrived = waypointsCount > 1 && vehicleIndex >= waypointsCount - 1;
-  const transitProgressPercent = waypointsCount > 1 
-    ? Math.min(100, Math.round((vehicleIndex / (waypointsCount - 1)) * 100)) 
-    : (isArrived ? 100 : 0);
-  const remainingEtaMins = isArrived ? 0 : Math.max(0, Math.round(etaMins * (1 - (vehicleIndex / Math.max(1, waypointsCount - 1)))));
+  const curPlanDispId = reallocationPlan?.dispatch_id;
+  const activePlanIndex = (curPlanDispId && fleetIndices[curPlanDispId] !== undefined)
+    ? fleetIndices[curPlanDispId]
+    : vehicleIndex;
+  const isPlanDelivered = reallocationPlan?.status === 'DELIVERED';
+  const isArrived = isPlanDelivered || (waypointsCount > 1 && activePlanIndex >= waypointsCount - 1);
+  const transitProgressPercent = isArrived ? 100 : (waypointsCount > 1 
+    ? Math.min(100, Math.round((activePlanIndex / (waypointsCount - 1)) * 100)) 
+    : 0);
+  const remainingEtaMins = isArrived ? 0 : Math.max(0, Math.round(etaMins * (1 - (activePlanIndex / Math.max(1, waypointsCount - 1)))));
 
   const vehicleCoord = routeWaypoints.length > 0 
-    ? routeWaypoints[Math.min(vehicleIndex, routeWaypoints.length - 1)] 
+    ? routeWaypoints[Math.min(activePlanIndex, routeWaypoints.length - 1)] 
     : null;
   const vehicleType = reallocationPlan?.vehicle_details?.vehicle_type || reallocationPlan?.logistics_parameters?.transport_mode || "Solar-Cooled Emergency Vaccine Van (SDD-ILR)";
   const registrationNo = reallocationPlan?.vehicle_details?.vehicle_id || reallocationPlan?.vehicle_details?.registration_no || "UP-65-MED-8492";
-  const driverName = reallocationPlan?.vehicle_details?.driver_name || "Rajesh Kumar Verma";
-  const driverContact = reallocationPlan?.vehicle_details?.driver_contact || "+91 94501 28471";
   const medicineName = reallocationPlan?.medicine_details?.name || "Essential Emergency Stock";
   const requestedQty = reallocationPlan?.target_facility?.requested_quantity || reallocationPlan?.quantity || 25;
   const rawStatus = reallocationPlan?.status || "APPROVED & EN ROUTE";
   const dispatchStatus = isArrived ? "ARRIVED & DELIVERED" : (transitProgressPercent > 0 ? `EN ROUTE (${transitProgressPercent}%)` : rawStatus);
   const aiReasoning = reallocationPlan?.ai_reasoning || reallocationPlan?.agent_ai_briefings?.fleet_logistics_assessment;
+
 
   if (isLoading && facilities.length === 0) {
     return (
@@ -1086,8 +1193,6 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
                 const vType = corridor.vehicle_details?.vehicle_type || corridor.vehicle_type || vStyle.label;
                 const regNo = corridor.vehicle_details?.vehicle_id || corridor.vehicle_details?.registration_no || `VEH-0${cIdx + 1}`;
-                const drvName = corridor.vehicle_details?.driver_name || "Autonomous AI Mesh";
-                const drvContact = corridor.vehicle_details?.driver_contact || "+91 1800-MED-FLEET";
                 const medName = corridor.medicine_details?.name || corridor.medicine_name || "Emergency Medical Consumable";
                 const tgtName = corridor.target_facility?.name || corridor.target_facility_name || "Target Health Node";
                 const totalEta = corridor.estimated_transit_minutes || corridor.logistics_parameters?.estimated_transit_minutes || 25;
@@ -1129,11 +1234,11 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                       }}
                     />
 
-                    {/* Live Moving Vehicle Marker */}
+                    {/* Live Moving Vehicle Marker with Crisp Vector Logo */}
                     {vCoord && (
                       <Marker 
                         position={vCoord} 
-                        icon={getDynamicVehicleIcon(vStyle, isArr)}
+                        icon={getDynamicVehicleIcon(vStyle, isArr, regNo.replace('VEH-', ''))}
                       >
                         <Popup className="custom-leaflet-popup">
                           <div className="p-2 space-y-1.5 text-xs text-slate-100 min-w-[210px]">
@@ -1148,7 +1253,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                             <p className="font-semibold text-white">{vType}</p>
                             <p className="text-[11px] text-slate-300">Target: <strong className="text-white">{tgtName}</strong></p>
                             <p className="text-[11px] text-slate-300">Cargo: <span className="text-cyan-300 font-semibold">{medName}</span> ({corridor.target_facility?.requested_quantity || corridor.quantity || 25}u)</p>
-                            <p className="text-[10px] text-slate-400">Driver: {drvName} ({drvContact})</p>
+                            <p className="text-[10px] text-slate-400">Fleet Unit: <span className="text-cyan-300 font-mono font-bold">{regNo}</span> &bull; <span className="text-emerald-400 font-medium">GPS Secured</span></p>
                             <div className="pt-1 border-t border-slate-800 text-[11px] flex justify-between">
                               <span className="text-emerald-400 font-bold">Cold-Chain: 2-8°C Safe</span>
                               <span className="font-bold" style={{ color: isArr ? '#10b981' : vStyle.color }}>
@@ -1230,7 +1335,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                       <Navigation size={10} className="text-cyan-400 shrink-0" /> Route Progress
                     </span>
                     <span className="font-mono text-cyan-300 font-bold">
-                      {transitProgressPercent}% &bull; {isArrived ? "Delivered at Destination" : `Waypoint ${vehicleIndex + 1}/${waypointsCount}`}
+                      {transitProgressPercent}% &bull; {isArrived ? "Delivered at Destination" : `Waypoint ${activePlanIndex + 1}/${waypointsCount}`}
                     </span>
                   </div>
                   <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
@@ -1279,7 +1384,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                 </div>
               </div>
 
-              {/* Carrier & Driver Info */}
+              {/* Carrier & Corridor Telemetry Info */}
               <div className="flex items-center justify-between text-xs bg-slate-900/60 p-2 rounded-xl border border-slate-800/80">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-300 shrink-0">
@@ -1287,7 +1392,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-white text-[11px] truncate">{vehicleType}</p>
-                    <p className="text-[10px] text-slate-400 truncate">Driver: {driverName} &bull; <span className="text-cyan-300">{driverContact}</span></p>
+                    <p className="text-[10px] text-slate-400 truncate">Vehicle ID: <span className="font-mono text-cyan-300 font-bold">{registrationNo}</span> &bull; <span className="text-emerald-400 font-medium">Encrypted Telemetry</span></p>
                   </div>
                 </div>
                 <div className="text-right shrink-0 pl-2">

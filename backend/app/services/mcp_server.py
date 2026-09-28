@@ -259,7 +259,7 @@ def tool_find_surplus_donor_nodes(
             "distance_km": distance_km,
             "estimated_transit_minutes": est_minutes,
             "cold_chain_type": fac.get("coldChainType", "ILR_SOLAR"),
-            "contact": fac.get("contact", "+91 94501 28471"),
+            "contact": fac.get("contact", "1800-11-4477 (National Health Portal)"),
             "is_user_specified": False
         }
 
@@ -394,8 +394,6 @@ def tool_allocate_medical_vehicle(
         "vehicle_name": assigned.get("vehicle_name", "Solar-Cooled Emergency Vaccine Van") if assigned else "Solar-Cooled Vaccine Van",
         "vehicle_type": assigned.get("vehicle_type", "Solar-Cooled ILR Van") if assigned else "Solar-Cooled ILR Van",
         "registration_no": assigned.get("registration_no", "UP-65-MED-8492") if assigned else "UP-65-MED-8492",
-        "driver_name": assigned.get("driver_name", "Rajesh Kumar Verma") if assigned else "Rajesh Kumar Verma",
-        "driver_contact": assigned.get("driver_contact", "+91 94501 28471") if assigned else "+91 94501 28471",
         "cold_chain_type": assigned.get("cold_chain_type", "ILR_SOLAR") if assigned else "ILR_SOLAR"
     }
 

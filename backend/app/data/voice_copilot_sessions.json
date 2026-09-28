@@ -807,9 +807,7 @@
             },
             "vehicle_details": {
               "vehicle_id": "VEH-SDD-01",
-              "vehicle_type": "Solar-Cooled ILR Van",
-              "driver_name": "Rajesh Kumar Verma",
-              "driver_contact": "+91 94501 28471"
+              "vehicle_type": "Solar-Cooled ILR Van"
             },
             "logistics_parameters": {
               "distance_km": 174.96,
@@ -10036,9 +10034,7 @@
             },
             "vehicle_details": {
               "vehicle_id": "VEH-AMB-05",
-              "vehicle_type": "Insulated Ambulance",
-              "driver_name": "V. Venkatesh",
-              "driver_contact": "+91 98480 12398"
+              "vehicle_type": "Insulated Ambulance"
             },
             "logistics_parameters": {
               "distance_km": 0.29,
@@ -15026,9 +15022,7 @@
             },
             "vehicle_details": {
               "vehicle_id": "VEH-SDD-01",
-              "vehicle_type": "Solar-Cooled ILR Van",
-              "driver_name": "Rajesh Kumar Verma",
-              "driver_contact": "+91 94501 28471"
+              "vehicle_type": "Solar-Cooled ILR Van"
             },
             "logistics_parameters": {
               "distance_km": 115.73,
@@ -26292,9 +26286,7 @@
             },
             "vehicle_details": {
               "vehicle_id": "VEH-CRYO-02",
-              "vehicle_type": "Insulated Cryo Van",
-              "driver_name": "Sachin Shinde",
-              "driver_contact": "+91 98220 91823"
+              "vehicle_type": "Insulated Cryo Van"
             },
             "logistics_parameters": {
               "distance_km": 38.05,

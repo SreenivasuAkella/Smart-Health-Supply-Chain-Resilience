@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import json
+import random
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from .firebase_service import firebase_service
@@ -93,8 +94,8 @@ class ReallocationDatabaseService:
                 status TEXT NOT NULL DEFAULT 'AVAILABLE',
                 cold_chain_type TEXT NOT NULL,
                 temperature_range TEXT NOT NULL,
-                driver_name TEXT NOT NULL,
-                driver_contact TEXT NOT NULL,
+                driver_name TEXT,
+                driver_contact TEXT,
                 current_lat REAL,
                 current_lng REAL,
                 capacity_units INTEGER NOT NULL DEFAULT 500,
@@ -115,8 +116,8 @@ class ReallocationDatabaseService:
                         "AVAILABLE",
                         "ILR_SOLAR",
                         "2°C to 8°C",
-                        "Rajesh Kumar Verma",
-                        "+91 94501 28471",
+                        None,
+                        None,
                         25.3176,
                         82.9739,
                         600,
@@ -131,8 +132,8 @@ class ReallocationDatabaseService:
                         "AVAILABLE",
                         "CRYO_ULTRA_LOW",
                         "-20°C to -80°C",
-                        "Sachin Shinde",
-                        "+91 98220 91823",
+                        None,
+                        None,
                         18.5204,
                         73.8567,
                         400,
@@ -147,8 +148,8 @@ class ReallocationDatabaseService:
                         "AVAILABLE",
                         "INSULATED_ICEPACK",
                         "2°C to 8°C",
-                        "K. Murugan",
-                        "+91 94432 66201",
+                        None,
+                        None,
                         12.9165,
                         79.1325,
                         80,
@@ -163,8 +164,8 @@ class ReallocationDatabaseService:
                         "AVAILABLE",
                         "TEMPERATURE_CONTROLLED",
                         "15°C to 25°C",
-                        "Amitabh Sharma",
-                        "+91 98110 54329",
+                        None,
+                        None,
                         28.6139,
                         77.2090,
                         500,
@@ -179,8 +180,8 @@ class ReallocationDatabaseService:
                         "AVAILABLE",
                         "INSULATED_BOX",
                         "2°C to 8°C",
-                        "V. Venkatesh",
-                        "+91 98480 12398",
+                        None,
+                        None,
                         17.3850,
                         78.4867,
                         300,
@@ -195,8 +196,8 @@ class ReallocationDatabaseService:
                         "AVAILABLE",
                         "THERMAL_PAYLOAD_BAY",
                         "2°C to 8°C",
-                        "AI Flight Mesh (Sanjeevani DroneNet)",
-                        "+91 1800-DRONE-MED",
+                        None,
+                        None,
                         25.3176,
                         82.9739,
                         150,
@@ -211,7 +212,9 @@ class ReallocationDatabaseService:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, fleet_seeds)
 
-
+            # Strict Privacy Enforcement: Never retain personal driver names or telephone numbers
+            cursor.execute("UPDATE vehicle_fleet SET driver_name = NULL, driver_contact = NULL")
+            cursor.execute("UPDATE reallocations SET driver_name = NULL, driver_contact = NULL")
             conn.commit()
 
     def save_reallocation(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -266,8 +269,8 @@ class ReallocationDatabaseService:
                 target.get("requested_quantity") or record.get("quantity") or 25,
                 vehicle.get("vehicle_id") or "VEH-SDD-01",
                 vehicle.get("vehicle_type") or logistics.get("transport_mode") or "Solar-Cooled Emergency Vaccine Van",
-                vehicle.get("driver_name") or "Rajesh Kumar Verma",
-                vehicle.get("driver_contact") or "+91 94501 28471",
+                None,
+                None,
                 record.get("estimated_distance_km") or record.get("distance_km") or donor.get("distance_km") or logistics.get("distance_km") or 0.0,
                 logistics.get("estimated_transit_minutes") or record.get("estimated_transit_minutes") or donor.get("estimated_transit_minutes") or max(2, int(round(((record.get("distance_km") or 10.0) / 36.0) * 60))),
                 logistics.get("temperature_holdover_hours") or record.get("safe_transit_window_hours") or 48.0,
@@ -344,7 +347,7 @@ class ReallocationDatabaseService:
             return [self._row_to_reallocation_dict(dict(r)) for r in rows]
 
     def update_reallocation_status(self, dispatch_id: str, new_status: str) -> bool:
-        """Updates status of a dispatch (e.g. IN_TRANSIT, DELIVERED)."""
+        """Updates status of a dispatch (e.g. IN_TRANSIT, DELIVERED) and releases vehicle upon arrival."""
         now_str = datetime.utcnow().isoformat() + "Z"
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -354,6 +357,10 @@ class ReallocationDatabaseService:
 
         if updated:
             rec = self.get_reallocation(dispatch_id)
+            if rec and new_status in ('DELIVERED', 'COMPLETED', 'CANCELLED'):
+                veh_id = rec.get("vehicle_id")
+                if veh_id:
+                    self.release_vehicle(veh_id)
             try:
                 firebase_service.write_data(f"reallocations/{dispatch_id}/status", new_status)
                 if rec:
@@ -369,12 +376,18 @@ class ReallocationDatabaseService:
         return updated
 
     def get_vehicle_fleet(self) -> List[Dict[str, Any]]:
-        """Returns all registered emergency logistics vehicles."""
+        """Returns all registered emergency logistics vehicles with driver PII omitted for privacy."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM vehicle_fleet ORDER BY vehicle_id ASC")
             rows = cursor.fetchall()
-            return [dict(r) for r in rows]
+            fleet = []
+            for r in rows:
+                item = dict(r)
+                item.pop("driver_name", None)
+                item.pop("driver_contact", None)
+                fleet.append(item)
+            return fleet
 
     def list_active_reallocations(self) -> List[Dict[str, Any]]:
         """Returns all reallocations that are currently active (not DELIVERED, COMPLETED, or CANCELLED)."""
@@ -389,11 +402,25 @@ class ReallocationDatabaseService:
     def claim_vehicle(self, preferred_type: Optional[str] = None) -> Dict[str, Any]:
         """
         Allocates an available vehicle from the fleet and marks it IN_TRANSIT.
+        Auto-reconciles vehicles whose dispatches are completed and generates distinct vehicle IDs.
         Dual-syncs vehicle status to Firebase RTDB.
         """
         now_str = datetime.utcnow().isoformat() + "Z"
         with self._get_connection() as conn:
             cursor = conn.cursor()
+
+            # 1. Auto-reconcile: return any vehicles whose active corridors have concluded
+            cursor.execute("""
+                UPDATE vehicle_fleet SET status = 'AVAILABLE', updated_at = ?
+                WHERE status = 'IN_TRANSIT'
+                AND vehicle_id NOT IN (
+                    SELECT DISTINCT vehicle_id FROM reallocations 
+                    WHERE status NOT IN ('DELIVERED', 'COMPLETED', 'CANCELLED')
+                    AND vehicle_id IS NOT NULL
+                )
+            """, (now_str,))
+            conn.commit()
+
             cursor.execute("SELECT * FROM vehicle_fleet WHERE status = 'AVAILABLE' ORDER BY vehicle_id ASC")
             available = [dict(r) for r in cursor.fetchall()]
 
@@ -418,6 +445,9 @@ class ReallocationDatabaseService:
                 conn.commit()
                 assigned["status"] = "IN_TRANSIT"
                 assigned["updated_at"] = now_str
+                # Privacy protection: strip personal driver information
+                assigned.pop("driver_name", None)
+                assigned.pop("driver_contact", None)
 
                 # Sync to Firebase
                 try:
@@ -428,21 +458,98 @@ class ReallocationDatabaseService:
 
                 return assigned
 
-            # Dynamic mutual-aid standby vehicle if entire fleet is currently on active corridors
-            fallback = {
-                "vehicle_id": f"VEH-AUX-{int(datetime.utcnow().timestamp()) % 1000:03d}",
-                "vehicle_name": "Rapid Inter-District Mutual Aid Carrier",
-                "vehicle_type": "Insulated Mutual-Aid Carrier",
-                "registration_no": "DL-01-MED-AUX",
-                "status": "IN_TRANSIT",
-                "cold_chain_type": "INSULATED_BOX",
-                "temperature_range": "2°C to 8°C",
-                "driver_name": "Emergency Standby Driver",
-                "driver_contact": "+91 1800-MED-FLEET",
-                "capacity_units": 400,
-                "updated_at": now_str
-            }
+            # 2. Dynamic vehicle provisioning: Generate a dedicated vehicle tailored to preferred type
+            pref = (preferred_type or "van").lower()
+            rand_suffix = random.randint(10, 99)
+            if "drone" in pref or "vtol" in pref:
+                fallback = {
+                    "vehicle_id": f"VEH-DRONE-{rand_suffix}",
+                    "vehicle_name": "Autonomous Long-Range Medical eVTOL Drone",
+                    "vehicle_type": "Autonomous Medical Drone",
+                    "registration_no": f"IND-DGCA-UAS-{rand_suffix}0",
+                    "status": "IN_TRANSIT",
+                    "cold_chain_type": "THERMAL_PAYLOAD_BAY",
+                    "temperature_range": "2°C to 8°C",
+                    "capacity_units": 150,
+                    "updated_at": now_str
+                }
+            elif "cryo" in pref:
+                fallback = {
+                    "vehicle_id": f"VEH-CRYO-{rand_suffix}",
+                    "vehicle_name": "Deep-Cold Cryo Carrier (Ultra-Low Temp)",
+                    "vehicle_type": "Insulated Cryo Van",
+                    "registration_no": f"MH-12-MED-{rand_suffix}2",
+                    "status": "IN_TRANSIT",
+                    "cold_chain_type": "CRYO_ULTRA_LOW",
+                    "temperature_range": "-20°C to -80°C",
+                    "capacity_units": 400,
+                    "updated_at": now_str
+                }
+            elif "bike" in pref or "moto" in pref:
+                fallback = {
+                    "vehicle_id": f"VEH-MOTO-{rand_suffix}",
+                    "vehicle_name": "Rapid Response Motorbike Ice-Carrier",
+                    "vehicle_type": "Insulated Motorbike Carrier",
+                    "registration_no": f"TN-23-MED-{rand_suffix}1",
+                    "status": "IN_TRANSIT",
+                    "cold_chain_type": "INSULATED_ICEPACK",
+                    "temperature_range": "2°C to 8°C",
+                    "capacity_units": 80,
+                    "updated_at": now_str
+                }
+            elif "amb" in pref:
+                fallback = {
+                    "vehicle_id": f"VEH-AMB-{rand_suffix}",
+                    "vehicle_name": "District Ambulance Emergency Medical Transfer",
+                    "vehicle_type": "Insulated Ambulance",
+                    "registration_no": f"TS-07-MED-{rand_suffix}4",
+                    "status": "IN_TRANSIT",
+                    "cold_chain_type": "INSULATED_BOX",
+                    "temperature_range": "2°C to 8°C",
+                    "capacity_units": 300,
+                    "updated_at": now_str
+                }
+            elif "elec" in pref or "ev" in pref:
+                fallback = {
+                    "vehicle_id": f"VEH-ELEC-{rand_suffix}",
+                    "vehicle_name": "Zero-Emission High-Speed Electric Medical Courier",
+                    "vehicle_type": "Electric Medical Van",
+                    "registration_no": f"DL-01-MED-{rand_suffix}9",
+                    "status": "IN_TRANSIT",
+                    "cold_chain_type": "TEMPERATURE_CONTROLLED",
+                    "temperature_range": "15°C to 25°C",
+                    "capacity_units": 500,
+                    "updated_at": now_str
+                }
+            else:
+                fallback = {
+                    "vehicle_id": f"VEH-SDD-{rand_suffix}",
+                    "vehicle_name": "Solar-Cooled Emergency Vaccine Van (SDD-ILR)",
+                    "vehicle_type": "Solar-Cooled ILR Van",
+                    "registration_no": f"UP-65-MED-{rand_suffix}8",
+                    "status": "IN_TRANSIT",
+                    "cold_chain_type": "ILR_SOLAR",
+                    "temperature_range": "2°C to 8°C",
+                    "capacity_units": 600,
+                    "updated_at": now_str
+                }
+
+            cursor.execute("""
+                INSERT OR REPLACE INTO vehicle_fleet (
+                    vehicle_id, vehicle_name, vehicle_type, registration_no, base_facility_id,
+                    status, cold_chain_type, temperature_range, driver_name, driver_contact,
+                    current_lat, current_lng, capacity_units, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                fallback["vehicle_id"], fallback["vehicle_name"], fallback["vehicle_type"],
+                fallback["registration_no"], "DH-AUTO-01", "IN_TRANSIT",
+                fallback["cold_chain_type"], fallback["temperature_range"],
+                None, None,
+                22.5937, 78.9629, fallback["capacity_units"], now_str
+            ))
+            conn.commit()
             return fallback
+
 
     def release_vehicle(self, vehicle_id: str) -> bool:
         """
@@ -563,9 +670,7 @@ class ReallocationDatabaseService:
             },
             "vehicle_details": {
                 "vehicle_id": row["vehicle_id"],
-                "vehicle_type": row["vehicle_type"],
-                "driver_name": row["driver_name"],
-                "driver_contact": row["driver_contact"]
+                "vehicle_type": row["vehicle_type"]
             },
             "logistics_parameters": {
                 "distance_km": row["distance_km"],
@@ -578,6 +683,8 @@ class ReallocationDatabaseService:
                 "transport_mode": row["vehicle_type"]
             },
             # Top-level helper properties for seamless frontend consumption
+            "vehicle_id": row["vehicle_id"],
+            "vehicle_type": row["vehicle_type"],
             "target_facility_name": row["target_facility_name"],
             "donor_facility_name": row["donor_facility_name"],
             "estimated_distance_km": row["distance_km"],

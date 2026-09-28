@@ -200,27 +200,44 @@ def dispatch_multi_vehicle_fleet(req: FleetDispatchRequest):
             if len(distinct_deficits) >= (req.count or 3):
                 break
 
-        if not distinct_deficits:
-            # Fallback to public facilities
+        # Top-up to ensure full fleet count (at least req.count or 3 distinct facilities)
+        if len(distinct_deficits) < (req.count or 3):
             facs = get_active_public_facilities()
-            for f in facs[:(req.count or 3)]:
-                distinct_deficits.append({
-                    "facility_id": f["id"],
-                    "facility_name": f["name"],
-                    "medicine_id": "PUB-MED-001",
-                    "deficit_units": 25
-                })
+            candidates = [f for f in facs if f.get("status") in ("Critical Deficit", "Warning")] + facs
+            for f in candidates:
+                if f["id"] not in seen_facs:
+                    seen_facs.add(f["id"])
+                    distinct_deficits.append({
+                        "facility_id": f["id"],
+                        "facility_name": f["name"],
+                        "medicine_id": "MED-RAB-001",
+                        "deficit_units": 30
+                    })
+                if len(distinct_deficits) >= (req.count or 3):
+                    break
 
-        # Assign preferred vehicle types based on corridor profile
-        preferred_types = ["Drone", "ILR", "Motorbike", "Cryo", "Electric"]
+        # Rotating distinct vital emergency medicines
+        essential_meds = [
+            ("MED-RAB-001", 25),
+            ("MED-SNAKE-002", 20),
+            ("MED-INS-003", 35),
+            ("MED-OXY-004", 40),
+            ("MED-DPT-005", 30),
+            ("MED-CRYO-006", 50)
+        ]
+
+        # Preferred vehicle types across different corridor profiles
+        preferred_types = ["Drone", "ILR", "Motorbike", "Cryo", "Electric", "Ambulance"]
         for idx, def_item in enumerate(distinct_deficits):
             pref_veh = preferred_types[idx % len(preferred_types)]
+            med_tuple = essential_meds[idx % len(essential_meds)]
             items_to_dispatch.append(FleetDispatchItem(
                 target_facility_id=def_item.get("facility_id"),
-                medicine_id=def_item.get("medicine_id") or "PUB-MED-001",
-                required_quantity=def_item.get("deficit_units") or 25,
+                medicine_id=def_item.get("medicine_id") if def_item.get("medicine_id") != "PUB-MED-001" else med_tuple[0],
+                required_quantity=def_item.get("deficit_units") or med_tuple[1],
                 preferred_vehicle_type=pref_veh
             ))
+
 
     for item in items_to_dispatch:
         try:

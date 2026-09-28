@@ -1,4 +1,5 @@
 import math
+import uuid
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
@@ -141,9 +142,10 @@ def generate_reallocation_plan(
     carbon_kg = round(0.089 * distance_km, 2) if distance_km else 0.0
 
     from ..utils.response_helper import success_response
+    unique_suffix = uuid.uuid4().hex[:6].upper()
     return success_response(
         data={
-            "dispatch_id": f"DISPATCH-{target_fac_id[-6:].replace('-','')}-{datetime.utcnow().strftime('%Y%m%d%H%M')}",
+            "dispatch_id": f"DISP-{target_fac_id[-5:].replace('-','')}-{datetime.utcnow().strftime('%M%S')}-{unique_suffix}",
             "timestamp": datetime.utcnow().isoformat() + "Z",  # H1: dynamic UTC timestamp
             "target_facility": {
                 "id": target_fac_id,
