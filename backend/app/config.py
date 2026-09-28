@@ -17,28 +17,34 @@ GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "sanjeevani-ai-health-n
 BIGQUERY_DATASET = os.getenv("BIGQUERY_DATASET", "indian_public_health_surveillance")
 
 # GCP Credentials resolution for Local and Cloud Deployments (Render / Cloud Run / Docker)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GCP_SERVICE_ACCOUNT_JSON = os.getenv("GCP_SERVICE_ACCOUNT_JSON", os.getenv("GOOGLE_CREDENTIALS_JSON", ""))
 GCP_CREDS_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
 
+candidate_paths = [
+    GCP_CREDS_PATH if (GCP_CREDS_PATH and os.path.isabs(GCP_CREDS_PATH)) else None,
+    "/etc/secrets/gcp-key.json",
+    "/etc/secrets/google-credentials.json",
+    os.path.abspath(os.path.join(BASE_DIR, GCP_CREDS_PATH)) if GCP_CREDS_PATH else None,
+    os.path.abspath(os.path.join(ROOT_DIR, GCP_CREDS_PATH)) if GCP_CREDS_PATH else None,
+    os.path.abspath(os.path.join(os.getcwd(), GCP_CREDS_PATH)) if GCP_CREDS_PATH else None,
+    os.path.abspath(os.path.join(BASE_DIR, "gcp-key.json")),
+    os.path.abspath(os.path.join(ROOT_DIR, "backend", "gcp-key.json")),
+    os.path.abspath(os.path.join(ROOT_DIR, "gcp-key.json")),
+    os.path.abspath(os.path.join(os.getcwd(), "backend", "gcp-key.json")),
+    os.path.abspath(os.path.join(os.getcwd(), "gcp-key.json")),
+]
+
 resolved_key_path = None
-if GCP_CREDS_PATH:
-    candidate_paths = [
-        GCP_CREDS_PATH if os.path.isabs(GCP_CREDS_PATH) else os.path.abspath(os.path.join(BASE_DIR, GCP_CREDS_PATH)),
-        os.path.abspath(os.path.join(os.getcwd(), GCP_CREDS_PATH)),
-        os.path.abspath(os.path.join(BASE_DIR, "gcp-key.json"))
-    ]
-    for p in candidate_paths:
-        if os.path.exists(p):
-            resolved_key_path = p
-            break
-elif os.path.exists(os.path.join(BASE_DIR, "gcp-key.json")):
-    resolved_key_path = os.path.join(BASE_DIR, "gcp-key.json")
+for p in candidate_paths:
+    if p and os.path.exists(p):
+        resolved_key_path = p
+        break
 
 if resolved_key_path:
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = resolved_key_path
     GOOGLE_APPLICATION_CREDENTIALS = resolved_key_path
 else:
+    os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
     GOOGLE_APPLICATION_CREDENTIALS = ""
 
 # Firebase Configuration

@@ -26,7 +26,13 @@ class BigQueryHealthWarehouse:
             # 1. Inline JSON environment string (Production / Render / Cloud Run)
             if GCP_SERVICE_ACCOUNT_JSON:
                 try:
-                    sa_info = json.loads(GCP_SERVICE_ACCOUNT_JSON)
+                    raw_str = GCP_SERVICE_ACCOUNT_JSON.strip()
+                    if raw_str.startswith("{"):
+                        sa_info = json.loads(raw_str)
+                    else:
+                        import base64
+                        decoded = base64.b64decode(raw_str).decode("utf-8")
+                        sa_info = json.loads(decoded)
                     auth_sa = importlib.import_module("google.oauth2.service_account")
                     credentials = auth_sa.Credentials.from_service_account_info(sa_info)
                     self.client = bq_mod.Client(credentials=credentials, project=self.project_id)
@@ -37,6 +43,24 @@ class BigQueryHealthWarehouse:
 
             # 2. File-based credentials
             creds_path = GOOGLE_APPLICATION_CREDENTIALS or os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+            if not creds_path or not os.path.exists(creds_path):
+                svc_dir = os.path.dirname(os.path.abspath(__file__))
+                base_dir = os.path.dirname(svc_dir)
+                root_dir = os.path.dirname(base_dir)
+                for cand in [
+                    "/etc/secrets/gcp-key.json",
+                    "/etc/secrets/google-credentials.json",
+                    os.path.join(base_dir, "gcp-key.json"),
+                    os.path.join(root_dir, "gcp-key.json"),
+                    os.path.join(root_dir, "backend", "gcp-key.json"),
+                    os.path.join(os.getcwd(), "backend", "gcp-key.json"),
+                    os.path.join(os.getcwd(), "gcp-key.json"),
+                ]:
+                    if os.path.exists(cand):
+                        creds_path = cand
+                        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = cand
+                        break
+
             if creds_path and os.path.exists(creds_path):
                 self.client = bq_mod.Client.from_service_account_json(creds_path, project=self.project_id)
                 print(f"[BigQuery]: Authenticated successfully with service account key at {creds_path}")
@@ -44,6 +68,10 @@ class BigQueryHealthWarehouse:
 
             # 3. Default Application Credentials
             if self.project_id:
+                # Remove invalid/unresolved file paths from env before invoking default auth
+                env_creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+                if env_creds and not os.path.exists(env_creds):
+                    os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
                 self.client = bq_mod.Client(project=self.project_id)
                 print(f"[BigQuery]: Initialized client with project {self.project_id}")
         except Exception as e:
