@@ -72,29 +72,24 @@ export default function CrisisSandbox({ onNavigateToMap }) {
           if (scRes.status === 'fulfilled' && Array.isArray(scRes.value) && scRes.value.length > 0) {
             setScenarios(scRes.value);
             setSelectedScenarioId(scRes.value[0].id);
-          } else if (loadedFacilities.length > 0) {
+          } else {
             const categories = [
-              { crisis_class: "FLOOD_INUNDATION", name: "Monsoon Riverine Inundation", badge: "Flood Inundation", badge_color: "rose", burn: 4.5 },
-              { crisis_class: "CYCLONE_COASTAL", name: "Severe Coastal Cyclone Surge", badge: "Storm Surge", badge_color: "purple", burn: 4.0 },
-              { crisis_class: "VECTOR_OUTBREAK", name: "Vector-Borne Epidemic Surge", badge: "Vector Shock", badge_color: "cyan", burn: 5.0 },
-              { crisis_class: "COLD_CHAIN_GRID_FAILURE", name: "Cold-Chain Thermal Power Outage", badge: "Thermal Excursion", badge_color: "amber", burn: 3.0 },
-              { crisis_class: "HEATWAVE_SURGE", name: "Extreme Arid Heatwave Emergency", badge: "Heatwave", badge_color: "orange", burn: 3.5 },
-              { crisis_class: "WATERBORNE_EPIDEMIC", name: "Acute Waterborne Diarrheal Cluster", badge: "Waterborne", badge_color: "emerald", burn: 4.2 }
+              { crisis_class: "FLOOD_INUNDATION", name: "Monsoon Riverine Inundation Cutoff", badge: "Monsoon Flood Inundation", badge_color: "rose", burn: 4.5, desc: "Surface road access cut off by surging floodwaters. Critical antivenom and rehydration buffers require aerial Drone Corridor delivery." },
+              { crisis_class: "CYCLONE_COASTAL", name: "Severe Coastal Cyclone Surge", badge: "Coastal Storm Surge", badge_color: "purple", burn: 4.0, desc: "Severe coastal storm landfall with severed surface logistics. Emergency trauma antibiotics, wound dressings, and antivenom required." },
+              { crisis_class: "VECTOR_OUTBREAK", name: "Vector-Borne Epidemic Surge (Dengue / Malaria)", badge: "Vector Epidemic Shock", badge_color: "cyan", burn: 5.0, desc: "Rapid surge in pediatric admissions. Platelet buffers, paracetamol, and IV fluids facing accelerated depletion." },
+              { crisis_class: "COLD_CHAIN_GRID_FAILURE", name: "Cold-Chain Thermal Power Outage", badge: "Thermal Excursion Risk", badge_color: "amber", burn: 3.0, desc: "Primary substation failure during peak heat. Temperature-sensitive vaccines and biologics at imminent excursion risk." },
+              { crisis_class: "HEATWAVE_SURGE", name: "Extreme Arid Heatwave Emergency", badge: "Thermal Climate Extreme", badge_color: "orange", burn: 3.5, desc: "Thermal emergency with 45°C+ ambient heat causing mass dehydration and heat exhaustion across peripheral clinics." },
+              { crisis_class: "WATERBORNE_EPIDEMIC", name: "Acute Waterborne Diarrheal Cluster", badge: "Waterborne Outbreak", badge_color: "emerald", burn: 4.2, desc: "Drinking water source contamination triggering acute diarrheal surge. High-volume ORS, IV saline, and antibiotic replenishment needed." }
             ];
-            const dynamicList = categories.map((cat, idx) => {
-              const fac = loadedFacilities[idx % loadedFacilities.length];
-              return {
-                id: `${cat.crisis_class}_${fac.id}`,
-                crisis_class: cat.crisis_class,
-                name: `${cat.name} (${fac.district || fac.state || 'District'}, ${fac.state || 'India'})`,
-                description: `Emergency stress drill simulating surge at ${fac.name}.`,
-                target_facility_id: fac.id,
-                target_facility_name: fac.name,
-                badge: cat.badge,
-                badge_color: cat.badge_color,
-                burn_multiplier: cat.burn
-              };
-            });
+            const dynamicList = categories.map((cat) => ({
+              id: cat.crisis_class,
+              crisis_class: cat.crisis_class,
+              name: cat.name,
+              description: cat.desc,
+              badge: cat.badge,
+              badge_color: cat.badge_color,
+              burn_multiplier: cat.burn
+            }));
             setScenarios(dynamicList);
             setSelectedScenarioId(dynamicList[0]?.id);
           }
@@ -136,9 +131,11 @@ export default function CrisisSandbox({ onNavigateToMap }) {
     const scenarioObj = scenarios.find(s => s.id === targetScenarioId) || {};
     const burnMult = severity === 'CATASTROPHIC' ? 5.5 : severity === 'MODERATE' ? 2.2 : (scenarioObj.burn_multiplier || 3.8);
 
-    const effectiveFacilityId = selectedFacilityId !== 'AUTO' 
-      ? selectedFacilityId 
-      : (scenarioObj.target_facility_id || null);
+    let effectiveFacilityId = selectedFacilityId !== 'AUTO' ? selectedFacilityId : null;
+    if (!effectiveFacilityId && selectedState !== 'ALL' && filteredFacilities.length > 0) {
+      const deficitInState = filteredFacilities.find(f => f.status === 'Critical Deficit') || filteredFacilities[0];
+      effectiveFacilityId = deficitInState?.id || null;
+    }
 
     try {
       const res = await runCrisisSimulation({
@@ -268,31 +265,19 @@ export default function CrisisSandbox({ onNavigateToMap }) {
 
       {/* Dynamic Drill Configuration Controls */}
       <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="badge-pill-indigo">
-                <Zap size={12} className="text-indigo-400" />
-                <span>Multi-Agent Stress-Testing Sandbox</span>
-              </span>
-              <span className="text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 font-bold">
-                Zero Hardcoding • Live Registry
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white mt-2 font-display">
-              Public Health Crisis & Shock Drill Simulator
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Inject climate, biological, or infrastructure shocks into any real public health facility to test autonomous buffer preservation, haversine routing, and aerial drone dispatch.
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              <Zap size={14} className="text-cyan-400" /> Operational Shock & Crisis Parameters
+            </span>
           </div>
 
           <button
             onClick={() => handleTriggerSimulation()}
             disabled={loading}
-            className="btn-primary text-xs px-5 py-2.5 font-bold shadow-lg shadow-cyan-500/20 disabled:opacity-50 shrink-0 self-start sm:self-auto flex items-center gap-2"
+            className="btn-primary text-xs px-5 py-2 font-bold shadow-lg shadow-cyan-500/20 disabled:opacity-50 shrink-0 flex items-center gap-2"
           >
-            {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
             <span>{loading ? "Simulating Shock..." : "Run Crisis Simulation Drill"}</span>
           </button>
         </div>

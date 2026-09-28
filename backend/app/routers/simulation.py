@@ -149,28 +149,11 @@ def _build_dynamic_scenarios_from_registry(facilities: List[Dict[str, Any]]) -> 
 
     dynamic_scenarios = []
     for bp in archetype_blueprints:
-        # Match real facility in the registry fitting the regional profile
-        candidate = next(
-            (f for f in facilities if f.get("state") in bp["target_states"] and f.get("status") in ("Critical Deficit", "Warning")),
-            None
-        )
-        if not candidate:
-            candidate = next((f for f in facilities if f.get("state") in bp["target_states"]), facilities[0])
-
-        fac_name = candidate.get("name", "District Health Facility")
-        district = candidate.get("district", candidate.get("state", "Regional"))
-        state = candidate.get("state", "India")
-        fac_id = candidate.get("id")
-
         dynamic_scenarios.append({
-            "id": f"{bp['crisis_class']}_{fac_id}",
+            "id": bp["crisis_class"],
             "crisis_class": bp["crisis_class"],
-            "name": f"{bp['name_template']} ({district}, {state})",
-            "description": f"{bp['description_template']} Primary affected node: {fac_name}.",
-            "target_facility_id": fac_id,
-            "target_facility_name": fac_name,
-            "target_district": district,
-            "target_state": state,
+            "name": bp["name_template"],
+            "description": bp["description_template"],
             "badge": bp["badge"],
             "badge_color": bp["badge_color"],
             "recommended_vehicle": bp["recommended_vehicle"],
@@ -241,8 +224,7 @@ Return ONLY a JSON array of 4 strings, no markdown, no extra text:
 @router.get("/api/simulation/scenarios")
 def list_simulation_scenarios():
     """Returns dynamic crisis scenarios synthesized from the live public health facility registry."""
-    facilities = get_active_public_facilities()
-    scenarios = _build_dynamic_scenarios_from_registry(facilities)
+    scenarios = _build_dynamic_scenarios_from_registry()
     return success_response(data=scenarios, message="Dynamic crisis scenarios generated from live registry.")
 
 
@@ -259,13 +241,29 @@ def trigger_crisis_scenario(req: CrisisScenarioRequest):
     # 1. Resolve target facility from live registry
     facilities = get_active_public_facilities()
     target_facility = None
-    if req.target_facility_id:
+    if req.target_facility_id and req.target_facility_id != "AUTO":
         target_facility = next((f for f in facilities if f["id"] == req.target_facility_id), None)
     
     if not target_facility:
-        # Check if scenario has a preferred district/state matching the crisis class
-        critical = [f for f in facilities if f.get("status") == "Critical Deficit" and f.get("type") == "Primary Health Centre"]
-        target_facility = critical[0] if critical else (facilities[0] if facilities else {})
+        # Match geographically relevant states for this specific crisis class
+        relevant_states = {
+            "CYCLONE_COASTAL": ["Odisha", "Andhra Pradesh", "West Bengal", "Tamil Nadu", "Kerala", "Gujarat"],
+            "FLOOD_INUNDATION": ["Assam", "Bihar", "Uttar Pradesh", "West Bengal", "Kerala"],
+            "HEATWAVE_SURGE": ["Rajasthan", "Haryana", "Punjab", "Telangana", "Gujarat", "Andhra Pradesh"],
+            "VECTOR_OUTBREAK": ["Uttar Pradesh", "Bihar", "Madhya Pradesh", "Karnataka", "West Bengal"],
+            "COLD_CHAIN_GRID_FAILURE": ["Bihar", "Maharashtra", "Jharkhand", "Delhi", "Uttar Pradesh"],
+            "WATERBORNE_EPIDEMIC": ["West Bengal", "Odisha", "Assam", "Bihar"]
+        }.get(crisis_class, [])
+
+        candidates = [f for f in facilities if f.get("state") in relevant_states and f.get("status") == "Critical Deficit"]
+        if not candidates:
+            candidates = [f for f in facilities if f.get("state") in relevant_states and f.get("status") == "Warning"]
+        if not candidates:
+            candidates = [f for f in facilities if f.get("state") in relevant_states]
+        if not candidates:
+            candidates = [f for f in facilities if f.get("status") == "Critical Deficit"]
+
+        target_facility = candidates[0] if candidates else (facilities[0] if facilities else {})
 
     target_id = target_facility.get("id", "PHC-UNKNOWN")
 
