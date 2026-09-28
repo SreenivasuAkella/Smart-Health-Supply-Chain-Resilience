@@ -44,7 +44,7 @@ export default function Sidebar({
       title: "Core Operations",
       items: [
         { id: 'overview', label: 'Command Center', icon: Activity, badge: 'Live' },
-        { id: 'clinical', label: 'Capacity & Attendance', icon: Bed, badge: 'Beds & Staff' },
+        { id: 'clinical', label: 'Clinical Capacity', icon: Bed, badge: 'Beds' },
         { id: 'map', label: 'Geospatial Rebalancer', icon: MapPin, badge: 'GIS' },
         { id: 'inventory', label: 'e-Aushadhi Ledger', icon: FileSpreadsheet, badge: 'Stocks' }
       ]
@@ -54,7 +54,7 @@ export default function Sidebar({
       items: [
         { id: 'forecasting', label: 'Epidemic Forecasting', icon: ShieldAlert, badge: 'BigQuery' },
         { id: 'coldchain', label: 'Cold-Chain IoT Twin', icon: ThermometerSnowflake, badge: 'RTDB' },
-        { id: 'cloud-data', label: 'BigQuery & Firebase Hub', icon: Database, badge: 'SQL Studio' },
+        { id: 'cloud-data', label: 'BigQuery & Firebase', icon: Database, badge: 'SQL' },
         { id: 'federated', label: 'Federated Sovereign AI', icon: Network, badge: 'Mesh' },
         { id: 'simulation', label: 'Crisis Sandbox Drills', icon: Zap, badge: 'Drills' }
       ]
@@ -191,17 +191,17 @@ export default function Sidebar({
                     />
                     
                     {!isCollapsed ? (
-                      <div className="flex items-center justify-between w-full truncate">
-                        <span className={`truncate ${!isAllowed ? 'text-slate-400' : ''}`}>
+                      <div className="flex items-center justify-between w-full min-w-0 gap-1.5">
+                        <span className={`whitespace-nowrap tracking-tight ${!isAllowed ? 'text-slate-400' : ''}`}>
                           {item.label}
                         </span>
                         {!isAllowed ? (
-                          <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <span className="shrink-0 flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                             <Lock size={9} />
                             <span>Locked</span>
                           </span>
                         ) : item.badge && (
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-medium ${
+                          <span className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded font-mono font-medium ${
                             isActive 
                               ? 'bg-cyan-400/20 text-cyan-200 border border-cyan-400/30' 
                               : 'bg-slate-900 text-slate-400 border border-slate-800'
