@@ -322,42 +322,73 @@ def fetch_real_road_directions(
     return None
 
 
+def generate_direct_aerial_flight_waypoints(
+    origin_lat: float,
+    origin_lng: float,
+    dest_lat: float,
+    dest_lng: float,
+    num_points: int = 15
+) -> List[List[float]]:
+    """
+    Generates direct aerial flight corridor waypoints (as the crow flies) for medical drones.
+    Drones fly unobstructed in 3D airspace directly to emergency red destinations without road detours.
+    """
+    origin_lat, origin_lng = float(origin_lat), float(origin_lng)
+    dest_lat, dest_lng = float(dest_lat), float(dest_lng)
+    points = []
+    for i in range(num_points):
+        frac = i / (num_points - 1)
+        lat = origin_lat + (dest_lat - origin_lat) * frac
+        lng = origin_lng + (dest_lng - origin_lng) * frac
+        points.append([round(lat, 6), round(lng, 6)])
+    return points
+
+
 # Tool 3: calculate_road_route_and_distance
 def tool_calculate_road_route_and_distance(
     origin_lat: float,
     origin_lng: float,
     dest_lat: float,
     dest_lng: float,
-    medicine_storage_temp: str = "2–8°C"
+    medicine_storage_temp: str = "2–8°C",
+    is_drone: bool = False
 ) -> Dict[str, Any]:
     """
-    Calculates actual road network navigation like Google Maps:
-    Fetches turn-by-turn road waypoints along real paved streets, highways, and corridors.
+    Calculates route navigation:
+    - For Drones: Direct airspace flight corridor (as the crow flies) at 80 km/h cruising air speed.
+    - For Ground Vehicles: Real turn-by-turn road network navigation along paved highways and corridors.
     """
     origin_lat = float(origin_lat)
     origin_lng = float(origin_lng)
     dest_lat = float(dest_lat)
     dest_lng = float(dest_lng)
 
-    # 1. Primary: Real Turn-by-Turn Road Navigation
-    real_nav = fetch_real_road_directions(origin_lat, origin_lng, dest_lat, dest_lng)
-
-    if real_nav:
-        dist_km = real_nav["distance_km"]
-        transit_minutes = real_nav["estimated_transit_minutes"]
-        waypoints = real_nav["route_coordinates"]
-        engine_name = real_nav["routing_engine"]
-    else:
-        # Resilient fallback
+    if is_drone:
+        # Drones fly direct as the crow flies across airspace
         dist_km = calculate_haversine_km(origin_lat, origin_lng, dest_lat, dest_lng)
-        transit_minutes = max(15, int((dist_km / 38.0) * 60))
-        waypoints = generate_curved_road_waypoints(origin_lat, origin_lng, dest_lat, dest_lng, num_points=14)
-        engine_name = "Geodesic Road Estimation"
+        transit_minutes = max(2, int(round((dist_km / 80.0) * 60)))  # 80 km/h air speed
+        waypoints = generate_direct_aerial_flight_waypoints(origin_lat, origin_lng, dest_lat, dest_lng, num_points=15)
+        engine_name = "Direct Airspace Flight Corridor (DGCA/FAA UAS Grid)"
+    else:
+        # 1. Primary: Real Turn-by-Turn Road Navigation
+        real_nav = fetch_real_road_directions(origin_lat, origin_lng, dest_lat, dest_lng)
+
+        if real_nav:
+            dist_km = real_nav["distance_km"]
+            transit_minutes = real_nav["estimated_transit_minutes"]
+            waypoints = real_nav["route_coordinates"]
+            engine_name = real_nav["routing_engine"]
+        else:
+            # Resilient fallback
+            dist_km = calculate_haversine_km(origin_lat, origin_lng, dest_lat, dest_lng)
+            transit_minutes = max(15, int((dist_km / 38.0) * 60))
+            waypoints = generate_curved_road_waypoints(origin_lat, origin_lng, dest_lat, dest_lng, num_points=14)
+            engine_name = "Geodesic Road Estimation"
 
     is_cold_chain = any(t in str(medicine_storage_temp) for t in ["2", "8", "−", "cryo", "freeze"])
     transit_hours = round(transit_minutes / 60.0, 1)
     holdover_hours = 72.0 if not is_cold_chain else (48.0 if dist_km < 100 else 24.0)
-    carbon_kg = round(0.089 * dist_km, 2)
+    carbon_kg = round(0.012 * dist_km, 2) if is_drone else round(0.089 * dist_km, 2)
 
     return {
         "distance_km": dist_km,
@@ -367,34 +398,72 @@ def tool_calculate_road_route_and_distance(
         "carbon_offset_kg": carbon_kg,
         "route_coordinates": waypoints,
         "is_cold_chain_required": is_cold_chain,
-        "cold_box_specification": "WHO PQS E004/006 Ice-Lined Refrigerator Carrier" if is_cold_chain else "Secure Medicine Transit Box",
-        "routing_engine": engine_name
+        "cold_box_specification": "Thermal Drone Payload Bay (2-8°C)" if is_drone else ("WHO PQS E004/006 Ice-Lined Refrigerator Carrier" if is_cold_chain else "Secure Medicine Transit Box"),
+        "routing_engine": engine_name,
+        "is_aerial": is_drone
     }
 
 
 # Tool 4: allocate_medical_vehicle
 def tool_allocate_medical_vehicle(
     distance_km: float,
-    is_cold_chain: bool = True
+    is_cold_chain: bool = True,
+    supply_count: int = 25,
+    priority: str = "CRITICAL",
+    destination_status: str = "Critical Deficit",
+    preferred_type: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Allocates a specialized medical transport vehicle from the registered fleet based on temperature specs."""
+    """
+    Allocates specialized medical transport vehicle based on supply count (cargo capacity)
+    and destination priority:
+    - DRONE: Emergency / RED destination priority for rapid lifesavers up to 150 units.
+    - AMBULANCE: Critical emergency with heavy payload (150-300 units).
+    - MOTORBIKE: Rapid urgent cold-chain for small payloads (1-80 units).
+    - CRYO VAN: Ultra-low temp storage (-20°C to -80°C) up to 400 units.
+    - SOLAR ILR VAN: Bulk cold-chain vaccines (80-600 units) or long distances.
+    - ELECTRIC COURIER: Ambient/controlled medicine up to 500 units.
+    """
     fleet = reallocation_db.get_vehicle_fleet()
     assigned = None
+    pref = (preferred_type or "").lower()
 
-    if is_cold_chain and distance_km > 40:
-        assigned = next((v for v in fleet if "ILR" in v.get("vehicle_type", "")), None)
-    elif is_cold_chain:
-        assigned = next((v for v in fleet if "Motorbike" in v.get("vehicle_type", "") or "Cryo" in v.get("vehicle_type", "")), None)
+    is_red = (destination_status in ("Critical Deficit", "RED", "EMERGENCY")) or (str(priority).upper() in ("CRITICAL", "EMERGENCY", "RED", "HIGH_RISK"))
+
+    if pref:
+        assigned = next((v for v in fleet if pref in v.get("vehicle_type", "").lower() or pref in v.get("vehicle_name", "").lower()), None)
+
+    if not assigned:
+        if is_red and supply_count <= 150:
+            # Emergency RED destination within drone payload limit -> Drone
+            assigned = next((v for v in fleet if "drone" in v.get("vehicle_type", "").lower() or "vtol" in v.get("vehicle_type", "").lower()), None)
+        elif is_red and supply_count > 150:
+            # Emergency RED destination with heavy payload -> Ambulance
+            assigned = next((v for v in fleet if "amb" in v.get("vehicle_type", "").lower()), None)
+        elif is_cold_chain:
+            if supply_count <= 80 and distance_km <= 60:
+                # Small cold-chain payload -> Motorbike Ice-Carrier
+                assigned = next((v for v in fleet if "motorbike" in v.get("vehicle_type", "").lower() or "moto" in v.get("vehicle_type", "").lower()), None)
+            else:
+                # Bulk cold-chain payload -> Solar ILR Van
+                assigned = next((v for v in fleet if "ilr" in v.get("vehicle_type", "").lower() or "sdd" in v.get("vehicle_type", "").lower() or "van" in v.get("vehicle_type", "").lower()), None)
+        else:
+            # Ambient / general controlled -> Electric Medical Courier
+            assigned = next((v for v in fleet if "elec" in v.get("vehicle_type", "").lower() or "courier" in v.get("vehicle_type", "").lower()), None)
 
     if not assigned and fleet:
         assigned = fleet[0]
 
+    v_type = assigned.get("vehicle_type", "Solar-Cooled ILR Van") if assigned else "Solar-Cooled ILR Van"
+    is_drone_veh = "drone" in v_type.lower() or "vtol" in v_type.lower()
+
     return {
         "vehicle_id": assigned.get("vehicle_id", "VEH-SDD-01") if assigned else "VEH-SDD-01",
         "vehicle_name": assigned.get("vehicle_name", "Solar-Cooled Emergency Vaccine Van") if assigned else "Solar-Cooled Vaccine Van",
-        "vehicle_type": assigned.get("vehicle_type", "Solar-Cooled ILR Van") if assigned else "Solar-Cooled ILR Van",
+        "vehicle_type": v_type,
         "registration_no": assigned.get("registration_no", "UP-65-MED-8492") if assigned else "UP-65-MED-8492",
-        "cold_chain_type": assigned.get("cold_chain_type", "ILR_SOLAR") if assigned else "ILR_SOLAR"
+        "cold_chain_type": assigned.get("cold_chain_type", "ILR_SOLAR") if assigned else "ILR_SOLAR",
+        "is_drone": is_drone_veh,
+        "is_aerial": is_drone_veh
     }
 
 

@@ -72,11 +72,12 @@ export const getVehicleStyle = (vehicleType = '', index = 0) => {
   const v = (vehicleType || '').toLowerCase();
 
   // 1. Autonomous eVTOL Drone
-  if (v.includes('drone') || v.includes('vtol') || v.includes('uas')) {
+  if (v.includes('drone') || v.includes('vtol') || v.includes('uas') || v.includes('aerial')) {
     return {
       color: '#06b6d4',
       border: '#22d3ee',
-      dash: '4, 8',
+      dash: '8, 8',
+      isAerial: true,
       label: 'Autonomous Medical Drone',
       code: 'DRONE',
       iconSvg: (stroke) => `
@@ -344,17 +345,32 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     };
   }, [isFullscreen, mapInstance]);
 
-  // Fetch active multi-vehicle fleet on initial component load
+  // Fetch active multi-vehicle fleet & recent history on initial component load
   useEffect(() => {
     let isMounted = true;
-    fetchActiveReallocations().then(list => {
-      if (isMounted && Array.isArray(list) && list.length > 0) {
-        setActiveFleet(list);
+    Promise.all([
+      fetchActiveReallocations(),
+      fetchReallocationHistory(20)
+    ]).then(([activeList, historyList]) => {
+      if (!isMounted) return;
+      const combinedMap = new Map();
+      (activeList || []).forEach(item => {
+        if (item && item.dispatch_id) combinedMap.set(item.dispatch_id, item);
+      });
+      (historyList || []).forEach(item => {
+        if (item && item.dispatch_id && !combinedMap.has(item.dispatch_id)) {
+          combinedMap.set(item.dispatch_id, item);
+        }
+      });
+      const merged = Array.from(combinedMap.values());
+      if (merged.length > 0) {
+        setActiveFleet(merged);
         if (!reallocationPlan) {
-          setReallocationPlan(list[0]);
+          const firstInTransit = merged.find(m => m.status !== 'DELIVERED');
+          setReallocationPlan(firstInTransit || merged[0]);
         }
       }
-    });
+    }).catch(err => console.warn("Initial fleet load notice:", err));
     return () => { isMounted = false; };
   }, []);
 
@@ -549,13 +565,25 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     }
   };
 
+  const isCorridorDelivered = (c) => {
+    if (!c) return false;
+    if (c.status === 'DELIVERED') return true;
+    const waypts = c.route_coordinates || [];
+    const curIdx = fleetIndices[c.dispatch_id] ?? 0;
+    return waypts.length > 0 && curIdx >= waypts.length - 1;
+  };
 
   const handleSimulateRoute = async (facilityId = "DH-VAR-001", medId = "PUB-MED-001") => {
     setLoadingRoute(true);
     const plan = await optimizeReallocationPlan(facilityId, medId, 25);
     if (plan) {
       setReallocationPlan(plan);
-      setActiveFleet(prev => [plan, ...prev.filter(p => p.dispatch_id !== plan.dispatch_id)]);
+      const targetId = plan.target_facility?.id || plan.target_facility_id;
+      // Replace any existing corridor to the exact same destination facility
+      setActiveFleet(prev => [
+        plan,
+        ...prev.filter(p => p.dispatch_id !== plan.dispatch_id && (p.target_facility?.id || p.target_facility_id) !== targetId)
+      ]);
       if (plan.dispatch_id) {
         setFleetIndices(prev => ({ ...prev, [plan.dispatch_id]: 0 }));
       }
@@ -568,7 +596,12 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     const record = await triggerAutoRelocationAgent();
     if (record) {
       setReallocationPlan(record);
-      setActiveFleet(prev => [record, ...prev.filter(p => p.dispatch_id !== record.dispatch_id)]);
+      const targetId = record.target_facility?.id || record.target_facility_id;
+      // Replace any existing corridor to the exact same destination facility
+      setActiveFleet(prev => [
+        record,
+        ...prev.filter(p => p.dispatch_id !== record.dispatch_id && (p.target_facility?.id || p.target_facility_id) !== targetId)
+      ]);
       if (record.dispatch_id) {
         setFleetIndices(prev => ({ ...prev, [record.dispatch_id]: 0 }));
       }
@@ -581,10 +614,21 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     try {
       const records = await dispatchFleet({ auto_multi: true, count: 3 });
       if (records && records.length > 0) {
-        // Merge with existing active fleet dispatches without erasing in-progress corridors
+        // Merge with existing active fleet dispatches without duplicate destination corridors
         setActiveFleet(prev => {
-          const map = new Map((prev || []).map(p => [p.dispatch_id, p]));
-          records.forEach(r => map.set(r.dispatch_id, r));
+          const map = new Map();
+          // Insert new records first
+          records.forEach(r => {
+            const tgtId = r.target_facility?.id || r.target_facility_id || r.dispatch_id;
+            map.set(tgtId, r);
+          });
+          // Keep previous records whose destination isn't overwritten
+          (prev || []).forEach(p => {
+            const tgtId = p.target_facility?.id || p.target_facility_id || p.dispatch_id;
+            if (!map.has(tgtId)) {
+              map.set(tgtId, p);
+            }
+          });
           return Array.from(map.values());
         });
         setReallocationPlan(records[0]);
@@ -680,6 +724,8 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   const warningCount = localFacilities.filter(f => f.status === 'Warning').length;
   const depotCount = localFacilities.filter(f => f.status === 'Regional Depot' || f.type === 'District Hospital').length;
   const optimalCount = localFacilities.filter(f => f.status === 'Optimal').length;
+  const inTransitCount = (activeFleet || []).filter(c => !isCorridorDelivered(c)).length;
+  const deliveredCount = (activeFleet || []).filter(c => isCorridorDelivered(c)).length;
 
   const getMarkerIcon = (facility) => {
     if (!customIcons) return undefined;
@@ -932,7 +978,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
           >
             <div className="relative flex items-center">
               <Truck size={13} className={showFleetPanel ? 'text-cyan-300' : 'text-cyan-400'} />
-              {activeFleet.length > 0 && (
+              {inTransitCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
@@ -940,9 +986,9 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               )}
             </div>
             <span>Fleet Convoys</span>
-            {activeFleet.length > 0 && (
+            {inTransitCount > 0 && (
               <span className="bg-cyan-500/20 text-cyan-300 font-mono text-[10px] px-1.5 py-0.5 rounded font-bold border border-cyan-500/30">
-                {activeFleet.length}
+                {inTransitCount}
               </span>
             )}
           </button>
@@ -1060,7 +1106,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
           >
             <div className="relative flex items-center">
               <Layers size={15} className="text-cyan-400 group-hover:scale-110 transition-transform" />
-              {activeFleet.length > 0 && (
+              {inTransitCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
@@ -1068,9 +1114,9 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               )}
             </div>
             <span className="text-xs font-bold hidden sm:inline">Fleet Convoys</span>
-            {activeFleet.length > 0 && (
+            {inTransitCount > 0 && (
               <span className="text-[10px] font-mono bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded-full font-bold">
-                {activeFleet.length}
+                {inTransitCount}
               </span>
             )}
           </button>
@@ -1199,26 +1245,30 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                 const remainingEta = isArr ? 0 : Math.max(1, Math.round(totalEta * (1 - (curIdx / Math.max(1, waypoints.length - 1)))));
                 const speedKmh = corridor.ai_average_speed_kmh || corridor.logistics_parameters?.ai_average_speed_kmh || 42.0;
 
+                const isAerialCorridor = vStyle.isAerial || corridor.is_aerial || corridor.is_drone || vType.toLowerCase().includes('drone');
+
                 return (
                   <React.Fragment key={dispId}>
-                    {/* Outer Casing / Road Edge Glow */}
+                    {/* Outer Casing / Air Glow */}
                     <Polyline
                       positions={waypoints}
                       pathOptions={{
                         color: vStyle.color,
-                        weight: 8,
-                        opacity: 0.3,
+                        weight: isAerialCorridor ? 6 : 8,
+                        opacity: isAerialCorridor ? 0.25 : 0.3,
+                        dashArray: isAerialCorridor ? '8, 8' : undefined,
                         lineCap: 'round',
                         lineJoin: 'round'
                       }}
                     />
-                    {/* Main Nav Corridor with vehicle-specific theme */}
+                    {/* Main Nav Corridor (Air Vector for Drone, Road Network for Ground Fleet) */}
                     <Polyline
                       positions={waypoints}
                       pathOptions={{
                         color: vStyle.color,
-                        weight: 4.5,
+                        weight: isAerialCorridor ? 3.5 : 4.5,
                         opacity: 0.9,
+                        dashArray: isAerialCorridor ? '12, 8' : undefined,
                         lineJoin: 'round',
                         lineCap: 'round',
                       }}
@@ -1227,10 +1277,10 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                     <Polyline
                       positions={waypoints}
                       pathOptions={{
-                        color: '#ffffff',
-                        weight: 2,
-                        opacity: 0.8,
-                        dashArray: vStyle.dash,
+                        color: isAerialCorridor ? '#e0f2fe' : '#ffffff',
+                        weight: isAerialCorridor ? 1.5 : 2,
+                        opacity: 0.85,
+                        dashArray: isAerialCorridor ? '4, 8' : vStyle.dash,
                       }}
                     />
 
@@ -1557,7 +1607,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                         fleetFilter === 'IN_TRANSIT' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      In-Transit ({activeFleet.filter(c => c.status !== 'DELIVERED').length})
+                      In-Transit ({inTransitCount})
                     </button>
                     <button
                       onClick={() => setFleetFilter('DELIVERED')}
@@ -1565,7 +1615,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                         fleetFilter === 'DELIVERED' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      Delivered ({activeFleet.filter(c => c.status === 'DELIVERED').length})
+                      Delivered ({deliveredCount})
                     </button>
                   </div>
                 </div>
@@ -1580,8 +1630,9 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pr-2">
               {activeFleet
                 .filter(item => {
-                  if (fleetFilter === 'IN_TRANSIT') return item.status !== 'DELIVERED';
-                  if (fleetFilter === 'DELIVERED') return item.status === 'DELIVERED';
+                  const arr = isCorridorDelivered(item);
+                  if (fleetFilter === 'IN_TRANSIT') return !arr;
+                  if (fleetFilter === 'DELIVERED') return arr;
                   return true;
                 })
                 .length === 0 ? (
@@ -1602,8 +1653,9 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               ) : (
                 activeFleet
                   .filter(item => {
-                    if (fleetFilter === 'IN_TRANSIT') return item.status !== 'DELIVERED';
-                    if (fleetFilter === 'DELIVERED') return item.status === 'DELIVERED';
+                    const arr = isCorridorDelivered(item);
+                    if (fleetFilter === 'IN_TRANSIT') return !arr;
+                    if (fleetFilter === 'DELIVERED') return arr;
                     return true;
                   })
                   .map((corridor, cIdx) => {
@@ -1678,9 +1730,17 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                             <Building2 size={12} className="text-slate-400 shrink-0" />
                             <span className="truncate text-[11px]">{donorName}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 pl-3 text-cyan-400 font-bold text-[10px]">
-                            <ArrowRight size={11} className="text-cyan-400 shrink-0" />
-                            <span>Dispatch Corridor</span>
+                          <div className={`flex items-center gap-1.5 pl-3 font-bold text-[10px] ${
+                            cStyle.isAerial || corridor.is_aerial || corridor.is_drone || vehType.toLowerCase().includes('drone')
+                              ? 'text-sky-300'
+                              : 'text-cyan-400'
+                          }`}>
+                            <ArrowRight size={11} className="shrink-0" />
+                            <span>{
+                              cStyle.isAerial || corridor.is_aerial || corridor.is_drone || vehType.toLowerCase().includes('drone')
+                                ? '✈ Direct Airspace Flight Corridor'
+                                : '🛣 Ground Road Transit Corridor'
+                            }</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-rose-300 font-medium">
                             <ShieldAlert size={12} className="text-rose-400 shrink-0" />

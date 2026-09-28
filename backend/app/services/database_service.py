@@ -359,8 +359,12 @@ class ReallocationDatabaseService:
             rec = self.get_reallocation(dispatch_id)
             if rec and new_status in ('DELIVERED', 'COMPLETED', 'CANCELLED'):
                 veh_id = rec.get("vehicle_id")
+                tgt = rec.get("target_facility", {})
+                target_lat = tgt.get("lat") or rec.get("target_lat")
+                target_lng = tgt.get("lng") or rec.get("target_lng")
+                target_fac_id = tgt.get("id") or rec.get("target_facility_id")
                 if veh_id:
-                    self.release_vehicle(veh_id)
+                    self.release_vehicle(veh_id, new_lat=target_lat, new_lng=target_lng, new_facility_id=target_fac_id)
             try:
                 firebase_service.write_data(f"reallocations/{dispatch_id}/status", new_status)
                 if rec:
@@ -427,14 +431,18 @@ class ReallocationDatabaseService:
             assigned = None
             if preferred_type and available:
                 pref = preferred_type.lower()
+                pref_words = [w for w in pref.replace('-', ' ').split() if len(w) > 2]
                 for v in available:
                     v_type = v.get("vehicle_type", "").lower()
                     v_name = v.get("vehicle_name", "").lower()
-                    if pref in v_type or pref in v_name:
+                    if pref in v_type or pref in v_name or v_type in pref:
+                        assigned = v
+                        break
+                    if any(w in v_type or w in v_name for w in pref_words):
                         assigned = v
                         break
 
-            if not assigned and available:
+            if not assigned and not preferred_type and available:
                 assigned = available[0]
 
             if assigned:
@@ -456,6 +464,9 @@ class ReallocationDatabaseService:
                 except Exception as fb_err:
                     print(f"[Firebase Vehicle Claim Notice]: {fb_err}")
 
+                is_d = "drone" in assigned.get("vehicle_type", "").lower() or "vtol" in assigned.get("vehicle_type", "").lower()
+                assigned["is_drone"] = is_d
+                assigned["is_aerial"] = is_d
                 return assigned
 
             # 2. Dynamic vehicle provisioning: Generate a dedicated vehicle tailored to preferred type
@@ -548,12 +559,22 @@ class ReallocationDatabaseService:
                 22.5937, 78.9629, fallback["capacity_units"], now_str
             ))
             conn.commit()
+            is_d = "drone" in fallback.get("vehicle_type", "").lower() or "vtol" in fallback.get("vehicle_type", "").lower()
+            fallback["is_drone"] = is_d
+            fallback["is_aerial"] = is_d
             return fallback
 
 
-    def release_vehicle(self, vehicle_id: str) -> bool:
+    def release_vehicle(
+        self,
+        vehicle_id: str,
+        new_lat: Optional[float] = None,
+        new_lng: Optional[float] = None,
+        new_facility_id: Optional[str] = None
+    ) -> bool:
         """
         Releases an in-transit vehicle back to AVAILABLE status upon delivery arrival.
+        Updates vehicle's current location and base facility to the delivery destination so it can be re-dispatched.
         Dual-syncs to Firebase RTDB.
         """
         if not vehicle_id:
@@ -561,10 +582,21 @@ class ReallocationDatabaseService:
         now_str = datetime.utcnow().isoformat() + "Z"
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE vehicle_fleet SET status = 'AVAILABLE', updated_at = ? WHERE vehicle_id = ?",
-                (now_str, vehicle_id)
-            )
+            if new_lat is not None and new_lng is not None:
+                cursor.execute("""
+                    UPDATE vehicle_fleet 
+                    SET status = 'AVAILABLE',
+                        current_lat = ?,
+                        current_lng = ?,
+                        base_facility_id = COALESCE(?, base_facility_id),
+                        updated_at = ?
+                    WHERE vehicle_id = ?
+                """, (new_lat, new_lng, new_facility_id, now_str, vehicle_id))
+            else:
+                cursor.execute(
+                    "UPDATE vehicle_fleet SET status = 'AVAILABLE', updated_at = ? WHERE vehicle_id = ?",
+                    (now_str, vehicle_id)
+                )
             conn.commit()
             updated = cursor.rowcount > 0
 
@@ -572,6 +604,11 @@ class ReallocationDatabaseService:
             try:
                 firebase_service.write_data(f"fleet/vehicles/{vehicle_id}/status", "AVAILABLE")
                 firebase_service.write_data(f"fleet/vehicles/{vehicle_id}/updated_at", now_str)
+                if new_lat is not None and new_lng is not None:
+                    firebase_service.write_data(f"fleet/vehicles/{vehicle_id}/current_lat", new_lat)
+                    firebase_service.write_data(f"fleet/vehicles/{vehicle_id}/current_lng", new_lng)
+                    if new_facility_id:
+                        firebase_service.write_data(f"fleet/vehicles/{vehicle_id}/base_facility_id", new_facility_id)
             except Exception as fb_err:
                 print(f"[Firebase Vehicle Release Notice]: {fb_err}")
 
@@ -683,6 +720,8 @@ class ReallocationDatabaseService:
                 "transport_mode": row["vehicle_type"]
             },
             # Top-level helper properties for seamless frontend consumption
+            "is_drone": "drone" in (row.get("vehicle_type") or "").lower() or "vtol" in (row.get("vehicle_type") or "").lower(),
+            "is_aerial": "drone" in (row.get("vehicle_type") or "").lower() or "vtol" in (row.get("vehicle_type") or "").lower(),
             "vehicle_id": row["vehicle_id"],
             "vehicle_type": row["vehicle_type"],
             "target_facility_name": row["target_facility_name"],

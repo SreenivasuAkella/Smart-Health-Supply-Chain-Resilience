@@ -190,7 +190,14 @@ def dispatch_multi_vehicle_fleet(req: FleetDispatchRequest):
     if not items_to_dispatch:
         # Auto-detect top deficits across the health network
         deficits = sentinel_agent.scan_for_stockout_risks()
-        seen_facs = set()
+        active_dispatches = reallocation_db.list_active_reallocations()
+        active_target_ids = {
+            (d.get("target_facility", {}).get("id") or d.get("target_facility_id"))
+            for d in active_dispatches
+            if d.get("status") not in ("DELIVERED", "COMPLETED", "CANCELLED")
+        }
+        # Strictly exclude facilities that already have an active inbound vehicle
+        seen_facs = set(active_target_ids)
         distinct_deficits = []
         for d in deficits:
             fid = d.get("facility_id")
@@ -226,38 +233,66 @@ def dispatch_multi_vehicle_fleet(req: FleetDispatchRequest):
             ("MED-CRYO-006", 50)
         ]
 
-        # Preferred vehicle types across different corridor profiles
-        preferred_types = ["Drone", "ILR", "Motorbike", "Cryo", "Electric", "Ambulance"]
+        # Match vehicles strictly by priority (RED emergency) and supply count
+        facs_map = {f["id"]: f for f in get_active_public_facilities()}
         for idx, def_item in enumerate(distinct_deficits):
-            pref_veh = preferred_types[idx % len(preferred_types)]
             med_tuple = essential_meds[idx % len(essential_meds)]
+            med_id = def_item.get("medicine_id") if def_item.get("medicine_id") != "PUB-MED-001" else med_tuple[0]
+            supply_qty = def_item.get("deficit_units") or med_tuple[1]
+            target_fac = facs_map.get(def_item.get("facility_id"), {})
+            is_red = target_fac.get("status") in ("Critical Deficit", "RED", "EMERGENCY") or idx == 0
+
+            # Priority & Supply Count Matrix:
+            # 1. RED Emergency + supply <= 150 -> Drone (Direct Air Corridor)
+            # 2. RED Emergency + supply > 150 -> Ambulance (High Capacity Emergency)
+            # 3. Cryo medicine (-20°C to -80°C) -> Cryo Van
+            # 4. Small cold chain (<= 80 units) -> Motorbike Ice-Carrier
+            # 5. Bulk cold chain (> 80 units) -> Solar ILR Van
+            if is_red and supply_qty <= 150:
+                pref_veh = "Drone"
+            elif is_red and supply_qty > 150:
+                pref_veh = "Ambulance"
+            elif "cryo" in med_id.lower():
+                pref_veh = "Cryo"
+            elif supply_qty <= 80:
+                pref_veh = "Motorbike"
+            else:
+                pref_veh = "ILR"
+
             items_to_dispatch.append(FleetDispatchItem(
                 target_facility_id=def_item.get("facility_id"),
-                medicine_id=def_item.get("medicine_id") if def_item.get("medicine_id") != "PUB-MED-001" else med_tuple[0],
-                required_quantity=def_item.get("deficit_units") or med_tuple[1],
+                medicine_id=med_id,
+                required_quantity=supply_qty,
                 preferred_vehicle_type=pref_veh
             ))
 
 
     for item in items_to_dispatch:
         try:
-            # Claim a specific vehicle for this corridor
+            # Claim a specific vehicle tailored to supply count and priority
             assigned_veh = reallocation_db.claim_vehicle(item.preferred_vehicle_type)
+            is_drone = "drone" in assigned_veh.get("vehicle_type", "").lower() or "vtol" in assigned_veh.get("vehicle_type", "").lower()
             
-            # Plan reallocation corridor
+            # Plan reallocation corridor (Direct flight corridor for Drone; road network for ground vehicles)
             plan_resp = generate_reallocation_plan(
                 target_facility_id=item.target_facility_id,
                 medicine_id=item.medicine_id,
-                required_quantity=item.required_quantity
+                required_quantity=item.required_quantity,
+                preferred_vehicle_type=assigned_veh.get("vehicle_type")
             )
             plan_data = plan_resp.get("data", plan_resp) if isinstance(plan_resp, dict) else plan_resp
             
-            # Attach assigned vehicle
+            # Attach assigned vehicle & aerial parameters
             plan_data["vehicle_details"] = assigned_veh
             plan_data["vehicle_id"] = assigned_veh.get("vehicle_id")
             plan_data["vehicle_type"] = assigned_veh.get("vehicle_type")
             plan_data["status"] = "IN_TRANSIT"
             plan_data["auto_triggered"] = True
+            plan_data["is_drone"] = is_drone
+            plan_data["is_aerial"] = is_drone
+            if is_drone:
+                plan_data["ai_average_speed_kmh"] = 80.0
+                plan_data["simulation_step_delay_ms"] = 160
 
             # Save to SQLite in-memory cache & dual-cloud (Firebase RTDB + BigQuery)
             saved = reallocation_db.save_reallocation(plan_data)

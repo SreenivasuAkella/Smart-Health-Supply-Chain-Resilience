@@ -205,14 +205,30 @@ class FleetRoutingAgent:
         donor_facility: Optional[Dict[str, Any]] = None,
         medicine: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Calculates road transit path and executes AI cold-chain logistics signoff."""
-        # 1. Tool execution: Route calculation (MCP Tool -> Agent)
+        """Calculates transit path (direct flight corridor for drones, road network for ground fleet) and executes AI cold-chain logistics signoff."""
+        target_status = (target_facility or {}).get("status", "Critical Deficit")
+        supply_count = (target_facility or {}).get("requested_quantity") or 25
+        is_red = target_status in ("Critical Deficit", "RED", "EMERGENCY")
+
+        # 1. Tool execution: Allocate vehicle strictly based on supply count and emergency priority
+        veh_res = self.registry.call_tool("allocate_medical_vehicle", {
+            "distance_km": 10.0,
+            "is_cold_chain": any(t in str(medicine_storage_temp) for t in ["2", "8", "−", "cryo", "freeze"]),
+            "supply_count": supply_count,
+            "priority": "CRITICAL" if is_red else "HIGH",
+            "destination_status": target_status
+        })
+        veh_data = veh_res["content"][0]["data"] if not veh_res.get("isError") else {}
+        is_drone = veh_data.get("is_drone", False) or "drone" in veh_data.get("vehicle_type", "").lower() or "vtol" in veh_data.get("vehicle_type", "").lower()
+
+        # 2. Tool execution: Route calculation (Direct airspace flight corridor for Drone; road navigation for ground vehicles)
         route_res = self.registry.call_tool("calculate_road_route_and_distance", {
             "origin_lat": origin_lat,
             "origin_lng": origin_lng,
             "dest_lat": dest_lat,
             "dest_lng": dest_lng,
-            "medicine_storage_temp": medicine_storage_temp
+            "medicine_storage_temp": medicine_storage_temp,
+            "is_drone": is_drone
         })
         if route_res.get("isError"):
             raise RuntimeError(f"Fleet Agent route tool failed: {route_res.get('error')}")
@@ -220,13 +236,6 @@ class FleetRoutingAgent:
         route_data = route_res["content"][0]["data"]
         dist_km = route_data["distance_km"]
         is_cold = route_data["is_cold_chain_required"]
-
-        # 2. Tool execution: Vehicle allocation (MCP Tool -> Agent)
-        veh_res = self.registry.call_tool("allocate_medical_vehicle", {
-            "distance_km": dist_km,
-            "is_cold_chain": is_cold
-        })
-        veh_data = veh_res["content"][0]["data"] if not veh_res.get("isError") else {}
 
         # 3. LLM Reasoning: Route & Cold-Chain Integrity (Agent -> Vertex AI)
         logistics_eval = self.llm.evaluate_fleet_logistics(
@@ -238,14 +247,16 @@ class FleetRoutingAgent:
         )
 
         # AI-analyzed transit velocity & timing parameters (zero hardcoding)
-        ai_eta = logistics_eval.get("ai_estimated_transit_minutes") or route_data.get("estimated_transit_minutes", 8)
-        ai_speed = logistics_eval.get("ai_average_speed_kmh") or 36.0
-        ai_step = logistics_eval.get("simulation_step_delay_ms") or 220
+        ai_eta = route_data.get("estimated_transit_minutes") if is_drone else (logistics_eval.get("ai_estimated_transit_minutes") or route_data.get("estimated_transit_minutes", 8))
+        ai_speed = 80.0 if is_drone else (logistics_eval.get("ai_average_speed_kmh") or 36.0)
+        ai_step = 160 if is_drone else (logistics_eval.get("simulation_step_delay_ms") or 220)
 
         route_data["estimated_transit_minutes"] = ai_eta
         route_data["estimated_transit_hours"] = round(ai_eta / 60.0, 1)
         route_data["ai_average_speed_kmh"] = ai_speed
         route_data["simulation_step_delay_ms"] = ai_step
+        route_data["is_drone"] = is_drone
+        route_data["is_aerial"] = is_drone
 
         # 4. Agent Decision Synthesis
         return {
@@ -1291,18 +1302,39 @@ class SupplyChainSupervisorAgent:
         active_facilities = get_active_public_facilities()
         active_medicines = generate_public_modeled_inventory({}, active_facilities)
 
-        # Dynamic Deficit & Entity Resolution (Zero Hardcoding)
+        # Dynamic Deficit & Entity Resolution (Zero Redundant Allocation)
         if not target_facility_id:
-            if chosen_deficit:
+            from .database_service import reallocation_db
+            active_dispatches = reallocation_db.list_active_reallocations()
+            active_target_ids = {
+                (d.get("target_facility", {}).get("id") or d.get("target_facility_id"))
+                for d in active_dispatches
+                if d.get("status") not in ("DELIVERED", "COMPLETED", "CANCELLED")
+            }
+
+            # Filter deficits whose destination is not already covered by an active convoy
+            unserved_deficits = [d for d in deficits if d.get("facility_id") not in active_target_ids]
+            
+            if unserved_deficits:
+                chosen_deficit = unserved_deficits[0]
                 target_facility_id = chosen_deficit["facility_id"]
-            elif active_facilities:
-                target_facility_id = active_facilities[0]["id"]
+            elif chosen_deficit and chosen_deficit["facility_id"] not in active_target_ids:
+                target_facility_id = chosen_deficit["facility_id"]
             else:
-                return {
-                    "status": "NETWORK_EQUILIBRIUM_OPTIMAL",
-                    "message": "AI Sentinel network audit complete: All registered healthcare facilities maintain adequate buffer inventory.",
-                    "execution_trace": [asdict(t) for t in execution_trace]
-                }
+                # Find candidate facility not already receiving an active delivery
+                unserved_facs = [f for f in active_facilities if f["id"] not in active_target_ids]
+                if unserved_facs:
+                    target_facility_id = unserved_facs[0]["id"]
+                elif chosen_deficit:
+                    target_facility_id = chosen_deficit["facility_id"]
+                elif active_facilities:
+                    target_facility_id = active_facilities[0]["id"]
+                else:
+                    return {
+                        "status": "NETWORK_EQUILIBRIUM_OPTIMAL",
+                        "message": "AI Sentinel network audit complete: All registered healthcare facilities maintain adequate buffer inventory.",
+                        "execution_trace": [asdict(t) for t in execution_trace]
+                    }
 
         if not medicine_id:
             # Check if this target facility has an active deficit in the Sentinel audit

@@ -16,7 +16,8 @@ def calculate_haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -
 def generate_reallocation_plan(
     target_facility_id: Optional[str] = None,
     medicine_id: Optional[str] = None,
-    required_quantity: Optional[int] = None
+    required_quantity: Optional[int] = None,
+    preferred_vehicle_type: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Autonomous Reallocation Optimizer:
@@ -103,43 +104,59 @@ def generate_reallocation_plan(
     # Sort candidate donors by distance
     candidate_donors.sort(key=lambda x: x["distance_km"])
     selected_donor = candidate_donors[0] if candidate_donors else None
-    
-    # Calculate real turn-by-turn road network route waypoints via OSRM / Google Maps network
+
+    # Determine vehicle type and routing based on priority and supply count
+    target_status = target_facility.get("status", "Normal")
+    is_red = target_status in ("Critical Deficit", "RED", "EMERGENCY")
+    pref = (preferred_vehicle_type or "").lower()
+    is_drone = ("drone" in pref or "vtol" in pref) or (is_red and required_quantity <= 150)
+
+    # Calculate turn-by-turn road route for ground vehicles OR direct airspace corridor for Drones
     route_waypoints = []
     actual_distance_km = selected_donor["distance_km"] if selected_donor else 0
     if selected_donor:
         from .mcp_server import tool_calculate_road_route_and_distance
-        road_calc = tool_calculate_road_route_and_distance(
+        route_calc = tool_calculate_road_route_and_distance(
             origin_lat=selected_donor["lat"],
             origin_lng=selected_donor["lng"],
             dest_lat=target_facility["lat"],
-            dest_lng=target_facility["lng"]
+            dest_lng=target_facility["lng"],
+            medicine_storage_temp=medicine.get("storageTemp", "2–8°C"),
+            is_drone=is_drone
         )
-        route_waypoints = road_calc.get("route_coordinates", [])
+        route_waypoints = route_calc.get("route_coordinates", [])
         if not route_waypoints:
             route_waypoints = [[selected_donor["lat"], selected_donor["lng"]], [target_facility["lat"], target_facility["lng"]]]
-        if road_calc.get("distance_km"):
-            actual_distance_km = road_calc["distance_km"]
+        if route_calc.get("distance_km"):
+            actual_distance_km = route_calc["distance_km"]
             selected_donor["distance_km"] = actual_distance_km
-            if road_calc.get("estimated_transit_minutes"):
-                selected_donor["estimated_transit_minutes"] = road_calc["estimated_transit_minutes"]
+            if route_calc.get("estimated_transit_minutes"):
+                selected_donor["estimated_transit_minutes"] = route_calc["estimated_transit_minutes"]
 
-    # Derive logistics parameters dynamically from medicine storage and distance
+    # Derive logistics parameters dynamically from vehicle profile, medicine storage, and distance
     storage_temp = medicine.get("storageTemp", "2–8°C")
     is_cold_chain = any(t in storage_temp for t in ["2", "8", "−", "cryo", "freeze"])
     distance_km = actual_distance_km
-    est_transit_hrs = round(distance_km / 36.0, 1) if distance_km else 0
-    holdover_hours = 72 if not is_cold_chain else (48 if distance_km < 100 else 24)
-    transport_mode = (
-        "Solar-Cooled Emergency Vaccine Van (SDD-ILR)" if is_cold_chain and distance_km > 50 else
-        ("Insulated Ice-Pack Carrier / Motorbike Courier" if is_cold_chain else
-         "Emergency Medical Courier (Non-Cold Chain)")
-    )
-    cold_box_spec = (
-        "WHO PQS E004/006 Ice-Lined Refrigerator Carrier (VVM compliant)" if is_cold_chain
-        else "Standard Secure Medicine Transport Box"
-    )
-    carbon_kg = round(0.089 * distance_km, 2) if distance_km else 0.0
+    
+    if is_drone:
+        transport_mode = "Autonomous Long-Range Medical eVTOL Drone (Direct Air Corridor)"
+        cold_box_spec = "Thermal Drone Payload Bay (2-8°C, FAA/DGCA UAS Certified)"
+        est_transit_hrs = round(distance_km / 80.0, 2) if distance_km else 0
+        holdover_hours = 6.0
+        carbon_kg = round(0.012 * distance_km, 2) if distance_km else 0.0
+    else:
+        est_transit_hrs = round(distance_km / 36.0, 1) if distance_km else 0
+        holdover_hours = 72 if not is_cold_chain else (48 if distance_km < 100 else 24)
+        transport_mode = (
+            "Solar-Cooled Emergency Vaccine Van (SDD-ILR)" if is_cold_chain and distance_km > 50 else
+            ("Insulated Ice-Pack Carrier / Motorbike Courier" if is_cold_chain else
+             "Emergency Medical Courier (Non-Cold Chain)")
+        )
+        cold_box_spec = (
+            "WHO PQS E004/006 Ice-Lined Refrigerator Carrier (VVM compliant)" if is_cold_chain
+            else "Standard Secure Medicine Transport Box"
+        )
+        carbon_kg = round(0.089 * distance_km, 2) if distance_km else 0.0
 
     from ..utils.response_helper import success_response
     unique_suffix = uuid.uuid4().hex[:6].upper()
