@@ -4,7 +4,7 @@ import {
   Database, Flame, Terminal, Play, RotateCcw, Copy, Check, 
   Download, Layers, Server, Activity, ArrowRight, Sparkles, 
   ExternalLink, Search, RefreshCw, AlertCircle, CheckCircle2,
-  HardDrive, Cpu, Table, Code2, Globe, ShieldCheck
+  HardDrive, Cpu, Table, Code2, Globe
 } from 'lucide-react';
 import { 
   fetchBigQueryMorbidity, 
@@ -226,120 +226,9 @@ export default function BigQueryFirebaseHub() {
         </div>
       )}
 
-      {/* Hero Header Card */}
-      <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-indigo-500/25 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 via-cyan-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="badge-pill-indigo">
-                <Database size={12} className="text-indigo-400" />
-                <span>Google BigQuery</span>
-              </span>
-              <span className="badge-pill-amber">
-                <Flame size={12} className="text-amber-400" />
-                <span>Firebase RTDB</span>
-              </span>
-              <span className="text-[10px] font-mono text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live Cloud Sync Active
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white mt-2 font-display">
-              Cloud Data Warehouse & Realtime Database Explorer
-            </h1>
-            <p className="text-xs text-slate-300 max-w-2xl mt-1 leading-relaxed">
-              Execute live analytical SQL queries over India&apos;s national public health data warehouse, examine partitioned BigQuery tables, and inspect low-latency Firebase Realtime Database telemetry streams.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={handleTriggerSync}
-              disabled={isSyncing}
-              className="btn-primary text-xs px-4 py-2 font-bold shadow-lg shadow-indigo-500/20 disabled:opacity-50"
-            >
-              <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
-              <span>{isSyncing ? "Syncing Pipeline..." : "Trigger Live Data Ingestion"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 4 Cloud Architecture Summary Stat Chips */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-800/80">
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-indigo-400 flex items-center gap-1.5 font-mono">
-                <Server size={14} /> BigQuery Dataset
-              </span>
-              <span className="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.2 rounded font-bold">
-                10M+ Rows
-              </span>
-            </div>
-            <div className="text-base font-extrabold text-white font-mono truncate" title="sanjeevani-health-resilience.health_surveillance_lake">
-              health_surveillance_lake
-            </div>
-            <div className="text-[10px] text-slate-400">
-              4 Partitioned tables • Serverless SQL
-            </div>
-          </div>
-
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5 font-mono">
-                <Flame size={14} /> Firebase RTDB
-              </span>
-              <span className="text-[10px] font-mono text-emerald-300 bg-emerald-500/10 px-1.5 py-0.2 rounded font-bold">
-                Connected
-              </span>
-            </div>
-            <div className="text-base font-extrabold text-white font-mono truncate">
-              asia-southeast1
-            </div>
-            <div className="text-[10px] text-slate-400">
-              ~12ms average stream latency
-            </div>
-          </div>
-
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-1.5 font-mono">
-                <Activity size={14} /> p95 Query Latency
-              </span>
-              <span className="text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-1.5 py-0.2 rounded font-bold">
-                Sub-200ms
-              </span>
-            </div>
-            <div className="text-2xl font-extrabold text-white font-display">
-              {queryStats.timeMs}ms
-            </div>
-            <div className="text-[10px] text-slate-400">
-              BI Engine Accelerated In-Memory
-            </div>
-          </div>
-
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5 font-mono">
-                <ShieldCheck size={14} /> Query Safety
-              </span>
-              <span className="text-[10px] font-mono text-emerald-300 bg-emerald-500/10 px-1.5 py-0.2 rounded font-bold">
-                Sandboxed
-              </span>
-            </div>
-            <div className="text-base font-extrabold text-white font-mono">
-              READ-ONLY SELECT
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Zero mutation risk • PII Redacted
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sub-Navigation Switcher */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+      {/* Sub-Navigation Switcher & Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2">
         <button
           onClick={() => setActiveTab('studio')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
@@ -376,6 +265,16 @@ export default function BigQueryFirebaseHub() {
           <span>Schema Catalog & Tables</span>
         </button>
       </div>
+
+      <button
+        onClick={handleTriggerSync}
+        disabled={isSyncing}
+        className="btn-primary text-xs px-3.5 py-1.5 font-bold shadow-lg shadow-indigo-500/20 disabled:opacity-50 flex items-center gap-2"
+      >
+        <RefreshCw size={13} className={isSyncing ? "animate-spin" : ""} />
+        <span>{isSyncing ? "Syncing..." : "Trigger Live Ingestion"}</span>
+      </button>
+    </div>
 
       {/* VIEW 1: BIGQUERY SQL STUDIO */}
       {activeTab === 'studio' && (
