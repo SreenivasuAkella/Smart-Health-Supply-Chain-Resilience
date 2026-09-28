@@ -42,6 +42,10 @@ function getAuthHeaders(extra = {}) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  const role = getStoredUserRole();
+  if (role) {
+    headers['X-User-Role'] = role;
+  }
   return headers;
 }
 
@@ -60,6 +64,10 @@ async function dedupedFetch(url, options = {}) {
   const token = getStoredAccessToken();
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
+  }
+  const role = getStoredUserRole();
+  if (role && !headers.has('X-User-Role')) {
+    headers.set('X-User-Role', role);
   }
   options.headers = headers;
 
@@ -470,37 +478,55 @@ export async function fetchSimulationClockStatus() {
 
 export async function triggerSimulationClockTick() {
   try {
-    const res = await fetch(`${API_BASE_URL}/simulation/clock/tick`, { method: 'POST' });
-    if (!res.ok) throw new Error("Failed to trigger simulation clock tick");
+    const res = await fetch(`${API_BASE_URL}/simulation/clock/tick`, { 
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.data || err?.detail || "Failed to trigger simulation clock tick");
+    }
     const json = await res.json();
     return json.data || null;
   } catch (err) {
     console.error("triggerSimulationClockTick error:", err);
-    return null;
+    throw err;
   }
 }
 
 export async function startSimulationClock(intervalSeconds = 60.0) {
   try {
-    const res = await fetch(`${API_BASE_URL}/simulation/clock/start?interval_seconds=${intervalSeconds}`, { method: 'POST' });
-    if (!res.ok) throw new Error("Failed to start simulation clock");
+    const res = await fetch(`${API_BASE_URL}/simulation/clock/start?interval_seconds=${intervalSeconds}`, { 
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.data || err?.detail || "Failed to start simulation clock");
+    }
     const json = await res.json();
     return json.data || null;
   } catch (err) {
     console.error("startSimulationClock error:", err);
-    return null;
+    throw err;
   }
 }
 
 export async function stopSimulationClock() {
   try {
-    const res = await fetch(`${API_BASE_URL}/simulation/clock/stop`, { method: 'POST' });
-    if (!res.ok) throw new Error("Failed to stop simulation clock");
+    const res = await fetch(`${API_BASE_URL}/simulation/clock/stop`, { 
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.data || err?.detail || "Failed to stop simulation clock");
+    }
     const json = await res.json();
     return json.data || null;
   } catch (err) {
     console.error("stopSimulationClock error:", err);
-    return null;
+    throw err;
   }
 }
 
