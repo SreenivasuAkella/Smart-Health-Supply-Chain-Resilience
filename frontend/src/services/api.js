@@ -466,7 +466,9 @@ export async function updateVehicleTelemetry(telemetry) {
 
 export async function fetchSimulationClockStatus() {
   try {
-    const res = await dedupedFetch(`${API_BASE_URL}/simulation/clock/status`);
+    const res = await dedupedFetch(`${API_BASE_URL}/simulation/clock/status`, {
+      headers: getAuthHeaders()
+    });
     if (!res.ok) throw new Error("Failed to fetch simulation clock status");
     const json = await res.json();
     return json.data || null;

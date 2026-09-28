@@ -175,12 +175,15 @@ export default function CrisisSandbox({ onNavigateToMap }) {
   const handleClockTick = async () => {
     setClockLoading(true);
     try {
-      await triggerClockTick();
-      const st = await fetchClockStatus();
-      if (st) setClockStatus(st);
-      // Re-evaluate current simulation if active
-      if (simulationResult) {
-        handleTriggerSimulation();
+      const res = await triggerClockTick();
+      if (res) {
+        setClockStatus(prev => ({
+          ...prev,
+          virtual_day: res.virtual_day,
+          is_running: res.is_running !== undefined ? res.is_running : prev?.is_running,
+          last_tick_timestamp: res.timestamp || new Date().toISOString(),
+          tick_interval_seconds: res.tick_interval_seconds || prev?.tick_interval_seconds || 60
+        }));
       }
     } catch (err) {
       console.error("Clock tick failed:", err);
@@ -191,16 +194,20 @@ export default function CrisisSandbox({ onNavigateToMap }) {
 
   // Handle Start / Pause Clock
   const handleToggleClock = async () => {
-    if (!clockStatus) return;
     setClockLoading(true);
     try {
-      if (clockStatus.is_running) {
-        await stopClock();
+      let res;
+      if (clockStatus?.is_running) {
+        res = await stopClock();
       } else {
-        await startClock(60.0);
+        res = await startClock(60.0);
       }
-      const st = await fetchClockStatus();
-      if (st) setClockStatus(st);
+      if (res) {
+        setClockStatus(res);
+      } else {
+        const st = await fetchClockStatus();
+        if (st) setClockStatus(st);
+      }
     } catch (err) {
       console.error("Clock toggle failed:", err);
     } finally {
