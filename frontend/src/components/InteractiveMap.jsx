@@ -553,6 +553,9 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
   // Filter facilities by state and status
   const filteredFacilities = localFacilities.filter(f => {
+    if (!f || typeof f.lat !== 'number' || typeof f.lng !== 'number' || isNaN(f.lat) || isNaN(f.lng)) {
+      return false;
+    }
     const matchState = selectedState === 'All' || f.state === selectedState;
     const matchStatus = statusFilter === 'All' || 
       (statusFilter === 'Critical Deficit' && f.status === 'Critical Deficit') ||

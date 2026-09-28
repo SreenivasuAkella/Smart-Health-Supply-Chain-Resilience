@@ -237,6 +237,14 @@ def update_stock(req: StockUpdateRequest):
         print(f"[Firebase Medicine Save Notice]: {fb_err}")
 
     # Persist locally to public medicines catalog file
+    try:
+        if PUBLIC_CATALOG_FILE:
+            os.makedirs(os.path.dirname(PUBLIC_CATALOG_FILE), exist_ok=True)
+            with open(PUBLIC_CATALOG_FILE, "w") as f:
+                json.dump(medicines, f, indent=2)
+    except Exception as local_err:
+        print(f"[Local Catalog Save Notice]: {local_err}")
+
     # Recalculate facility Days of Supply and Status dynamically
     facility_health_update = None
     try:

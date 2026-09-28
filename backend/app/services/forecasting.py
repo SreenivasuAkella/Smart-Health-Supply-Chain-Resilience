@@ -174,14 +174,17 @@ def compute_outbreak_predictions_internal(facilities: List[Dict[str, Any]]) -> D
             norm = med.get("nationalBufferNorm", 300)
             expected_min = max(5, int(norm * 0.05)) if "PHC" in fac_id else max(15, int(norm * 0.15))
             
-            # Dynamic epidemic multiplier
+            # Dynamic epidemic multiplier matching canonical NLEM generic names
             multiplier = 1.0
-            if "Dengue" in med["name"] or "Saline" in med["name"] or "ORS" in med["name"]:
+            med_upper = (med.get("name", "") + " " + med.get("generic_name", "")).upper()
+            if any(k in med_upper for k in ["DENGUE", "SALINE", "ORS", "PARACETAMOL", "SODIUM CHLORIDE"]):
                 multiplier = 1.0 + (dengue_risk_factor * 1.5)
-            elif "Anti-Snake" in med["name"]:
+            elif any(k in med_upper for k in ["SNAKE", "ANTIVENIN", "ANTIVENOM"]):
                 multiplier = 1.0 + (flood_risk_factor * 2.0)
-            elif "Artesunate" in med["name"] or "Malaria" in med["name"]:
+            elif any(k in med_upper for k in ["ARTESUNATE", "MALARIA", "CHLOROQUINE"]):
                 multiplier = 1.0 + (malaria_risk_factor * 1.8)
+            elif any(k in med_upper for k in ["INSULIN", "RABIES"]):
+                multiplier = 1.0 + (flood_risk_factor * 1.2)
                 
             adjusted_daily_burn_rate = round(max(0.5, (stock / 10.0) * multiplier), 2)
             days_of_stock_left = round(stock / adjusted_daily_burn_rate, 1) if adjusted_daily_burn_rate > 0 else 999

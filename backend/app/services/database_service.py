@@ -6,24 +6,36 @@ from typing import Dict, Any, List, Optional
 from .firebase_service import firebase_service
 from .bigquery_service import bigquery_service
 
-# In-Memory Shared Cache URI (Zero physical .db files created on disk)
-CACHE_URI = "file:realloc_cache?mode=memory&cache=shared"
+# Persistent SQLite Database Path with fast WAL journaling
+DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "reallocations.db")
+DB_PATH = os.getenv("SQLITE_DB_PATH", DEFAULT_DB_PATH)
+USE_MEMORY_DB = os.getenv("USE_MEMORY_DB", "false").strip().lower() in ("true", "1", "yes")
+
+CACHE_URI = "file:realloc_cache?mode=memory&cache=shared" if USE_MEMORY_DB else DB_PATH
 
 class ReallocationDatabaseService:
     """
-    High-Speed In-Memory Cache & Dual-Cloud Sync Service for Sanjeevani AI Reallocations.
-    Stores active state in RAM with zero disk footprints.
-    Persists audit ledgers to Google BigQuery and live state to Firebase RTDB.
+    High-Speed Local SQLite Persistence & Dual-Cloud Sync Service for Sanjeevani AI Reallocations.
+    Persists fleet dispatches and vehicle registry locally to data/reallocations.db,
+    while synchronizing audit ledgers to Google BigQuery and live state to Firebase RTDB.
     """
-    def __init__(self, cache_uri: str = CACHE_URI):
-        self.cache_uri = cache_uri
-        # Persistent anchor keeps the shared in-memory database alive in RAM for the process lifecycle
-        self._anchor = sqlite3.connect(self.cache_uri, uri=True, check_same_thread=False)
+    def __init__(self, db_target: str = CACHE_URI):
+        self.db_target = db_target
+        self.is_memory = USE_MEMORY_DB or ("mode=memory" in str(db_target))
+        if not self.is_memory and not str(db_target).startswith("file:"):
+            os.makedirs(os.path.dirname(os.path.abspath(db_target)), exist_ok=True)
+        # Persistent anchor
+        self._anchor = sqlite3.connect(self.db_target, uri=self.is_memory, check_same_thread=False)
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.cache_uri, uri=True, check_same_thread=False)
+        conn = sqlite3.connect(self.db_target, uri=self.is_memory, check_same_thread=False)
         conn.row_factory = sqlite3.Row
+        if not self.is_memory:
+            try:
+                conn.execute("PRAGMA journal_mode=WAL;")
+            except Exception:
+                pass
         return conn
 
     def _init_db(self):

@@ -187,15 +187,23 @@ def generate_public_modeled_inventory(district_vulnerabilities: Dict[str, Any], 
             bed_cap = fac.get("bedCapacity", 20)
             daily_footfall = fac.get("dailyPatientFootfall", 100)
             
+            dist = fac.get("district", "")
+            vuln_info = district_vulnerabilities.get(dist, {}) if isinstance(district_vulnerabilities, dict) else {}
+            rainfall = vuln_info.get("rainfallMm", 0.0)
+            humidity = vuln_info.get("humidityPct", 50.0)
+            is_surging_district = (rainfall > 35.0 or humidity > 80.0)
+
             if fac_type == "District Hospital":
                 # Regional Depot Buffer (Adequate / Surplus for redistribution)
                 stock_qty = max(80, int(bed_cap * (0.6 if is_cold else 1.8)))
             else:
                 # Primary Health Centre Frontline Stock
-                # Deterministic pattern: ~20% of PHCs face severe stock deficit (< 3 days supply)
-                # ~40% face warning levels, ~40% are optimal
+                # Integrates live district vulnerability: districts with active rain/humidity spikes deplete faster
                 stock_seed = (f_idx * 7 + d_idx * 13) % 100
-                if stock_seed < 22:
+                if is_surging_district and ("2°C" in drug.get("storageTemp", "") or "ANTIVENIN" in drug.get("generic_name", "").upper() or "ARTESUNATE" in drug.get("generic_name", "").upper()):
+                    # High environmental pressure depresses frontline buffer into critical deficit
+                    stock_qty = max(1, stock_seed % 4)
+                elif stock_seed < 22:
                     # Critical Stockout Deficit (e.g. 1 to 4 vials left)
                     stock_qty = max(1, stock_seed % 5)
                 elif stock_seed < 55:
