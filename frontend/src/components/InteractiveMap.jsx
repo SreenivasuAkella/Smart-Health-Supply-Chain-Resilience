@@ -183,6 +183,10 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
 
+  // Fleet Convoys Side Panel State
+  const [showFleetPanel, setShowFleetPanel] = useState(false);
+  const [fleetFilter, setFleetFilter] = useState('ALL');
+
   // Fullscreen Expansion State
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mapInstance, setMapInstance] = useState(null);
@@ -482,6 +486,8 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
       if (records && records.length > 0) {
         setActiveFleet(records);
         setReallocationPlan(records[0]);
+        setShowFleetPanel(true);
+        setShowHistory(false);
         const initialIndices = {};
         records.forEach(r => {
           initialIndices[r.dispatch_id] = 0;
@@ -497,6 +503,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
   const handleOpenHistory = async () => {
     setShowHistory(true);
+    setShowFleetPanel(false);
     setLoadingHistory(true);
     const list = await fetchReallocationHistory(50);
     setHistoryRecords(list || []);
@@ -510,6 +517,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
       setFleetIndices(prev => ({ ...prev, [item.dispatch_id]: 0 }));
     }
     setShowHistory(false);
+    setShowFleetPanel(true);
   };
 
   const handleMarkDelivered = async (dispatchId, targetFacIdOverride, donorFacIdOverride, qtyOverride) => {
@@ -792,10 +800,44 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
           {/* Database History Drawer Toggle */}
           <button
             onClick={handleOpenHistory}
-            className="bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
+            className={`border px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+              showHistory
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 ring-2 ring-cyan-500/30'
+                : 'bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-200'
+            }`}
           >
             <History size={13} className="text-cyan-400" />
             <span>DB Records</span>
+          </button>
+
+          {/* Fleet Convoys Side Panel Toggle */}
+          <button
+            onClick={() => {
+              setShowFleetPanel(prev => !prev);
+              setShowHistory(false);
+            }}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border cursor-pointer ${
+              showFleetPanel
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 ring-2 ring-cyan-500/30'
+                : 'bg-slate-900 hover:bg-slate-800 border-slate-700 hover:border-cyan-500/50 text-slate-200 hover:text-white'
+            }`}
+            title="Toggle Fleet Convoys Side Panel"
+          >
+            <div className="relative flex items-center">
+              <Truck size={13} className={showFleetPanel ? 'text-cyan-300' : 'text-cyan-400'} />
+              {activeFleet.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                </span>
+              )}
+            </div>
+            <span>Fleet Convoys</span>
+            {activeFleet.length > 0 && (
+              <span className="bg-cyan-500/20 text-cyan-300 font-mono text-[10px] px-1.5 py-0.5 rounded font-bold border border-cyan-500/30">
+                {activeFleet.length}
+              </span>
+            )}
           </button>
 
           {/* Fullscreen Expand Toggle Button */}
@@ -890,66 +932,43 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
         </div>
       )}
 
-      {/* Multi-Vehicle Fleet Corridoring Status Strip */}
-      {activeFleet && activeFleet.length > 0 && (
-        <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 backdrop-blur-md flex items-center justify-between flex-wrap gap-2.5 shadow-xl animate-fade-in">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-              <Layers size={13} className="text-cyan-400" />
-              Active Fleet Convoys: <span className="text-cyan-300 font-mono">{activeFleet.length} In-Transit</span>
-            </span>
-            <span className="text-[11px] text-slate-400 hidden md:inline">
-              &bull; Dual-Cloud Synced (Firebase RTDB + Google BigQuery)
-            </span>
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-0.5">
-            {activeFleet.map((corridor, cIdx) => {
-              const cStyle = getVehicleStyle(corridor.vehicle_details?.vehicle_type || corridor.vehicle_type, cIdx);
-              const waypts = corridor.route_coordinates || [];
-              const curIdx = fleetIndices[corridor.dispatch_id] ?? 0;
-              const isArr = corridor.status === 'DELIVERED' || (waypts.length > 0 && curIdx >= waypts.length - 1);
-              const vehName = corridor.vehicle_details?.vehicle_id || corridor.vehicle_id || `VEH-0${cIdx + 1}`;
-              const tgtName = corridor.target_facility?.name || corridor.target_facility_name || "Emergency Node";
-              const medName = corridor.medicine_details?.name || corridor.medicine_name || "Vital Drug";
-              const isSelected = reallocationPlan?.dispatch_id === corridor.dispatch_id;
-
-              return (
-                <div
-                  key={corridor.dispatch_id || cIdx}
-                  className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-2 transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'bg-slate-800 border-cyan-400 text-white shadow-md ring-1 ring-cyan-500/30' 
-                      : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-slate-700'
-                  }`}
-                  onClick={() => {
-                    setReallocationPlan(corridor);
-                    if (waypts.length > 0 && mapInstance) {
-                      const pos = waypts[Math.min(curIdx, waypts.length - 1)];
-                      mapInstance.flyTo(pos, 10, { duration: 1 });
-                    }
-                  }}
-                  title={`Track ${vehName} (${tgtName})`}
-                >
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isArr ? '#10b981' : cStyle.color }} />
-                  <span className="font-bold font-mono" style={{ color: cStyle.color }}>{vehName}</span>
-                  <span className="text-[11px] text-slate-300 truncate max-w-[110px]">{tgtName}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: `${isArr ? '#10b981' : cStyle.color}25`, color: isArr ? '#34d399' : cStyle.color }}>
-                    {isArr ? "DELIVERED" : medName.split(' ')[0]}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Main Map Canvas Area */}
       <div className={`glass-panel p-2 rounded-2xl border border-slate-800 relative overflow-hidden shadow-2xl transition-all ${
         isFullscreen ? 'flex-1 w-full min-h-0' : 'h-[600px]'
       }`}>
-        {/* Floating Quick Fullscreen / Exit Button on Map Top-Right */}
-        <div className="absolute top-3 right-3 z-[1000]">
+        {/* Floating Quick Action Controls on Map Top-Right */}
+        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-2">
+          {/* Quick Fleet Convoys Side Panel Toggle Button */}
+          <button
+            onClick={() => {
+              setShowFleetPanel(prev => !prev);
+              setShowHistory(false);
+            }}
+            className={`border px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl backdrop-blur-md shadow-2xl transition-all flex items-center gap-2 group hover:scale-105 active:scale-95 cursor-pointer ${
+              showFleetPanel
+                ? 'bg-cyan-950/90 text-cyan-300 border-cyan-500/80 shadow-cyan-500/20 ring-1 ring-cyan-500/30'
+                : 'bg-slate-900/90 hover:bg-slate-800/95 text-slate-200 hover:text-white border-slate-700/80 hover:border-cyan-500/70'
+            }`}
+            title={showFleetPanel ? "Close Fleet Panel" : "Open Fleet Convoys Side Panel"}
+          >
+            <div className="relative flex items-center">
+              <Layers size={15} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+              {activeFleet.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-bold hidden sm:inline">Fleet Convoys</span>
+            {activeFleet.length > 0 && (
+              <span className="text-[10px] font-mono bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded-full font-bold">
+                {activeFleet.length}
+              </span>
+            )}
+          </button>
+
+          {/* Floating Quick Fullscreen / Exit Button */}
           <button
             onClick={toggleFullscreen}
             className={`border px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl backdrop-blur-md shadow-2xl transition-all flex items-center gap-2 group hover:scale-105 active:scale-95 cursor-pointer ${
@@ -1367,6 +1386,281 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               >
                 Dismiss HUD
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Active Fleet Convoys Side Panel Drawer */}
+        {showFleetPanel && (
+          <div className="absolute inset-y-0 right-0 z-[1100] w-full sm:w-[420px] max-w-full glass-panel border-l border-cyan-500/40 bg-slate-950/95 shadow-2xl backdrop-blur-xl flex flex-col animate-slide-left">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 p-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center">
+                  <Truck size={17} className="text-cyan-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-white text-sm">Active Fleet Convoys</h4>
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Dual-Cloud Synced (Firebase + BigQuery)
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleDispatchFleet}
+                  disabled={dispatchingFleet}
+                  className="bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-[11px] font-bold px-2 py-1 rounded-lg transition-all flex items-center gap-1"
+                  title="Dispatch new fleet convoys"
+                >
+                  {dispatchingFleet ? <RefreshCw size={12} className="animate-spin" /> : <Bot size={12} />}
+                  <span>+3 More</span>
+                </button>
+                <button
+                  onClick={() => setShowFleetPanel(false)}
+                  className="text-slate-400 hover:text-white hover:bg-slate-800 p-1.5 rounded-lg transition-all"
+                  title="Close Side Panel"
+                >
+                  <X size={17} />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Stats & Filter Tabs */}
+            <div className="px-4 py-2.5 bg-slate-900/60 border-b border-slate-800/80 shrink-0 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 text-[11px]">Filter:</span>
+                  <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                    <button
+                      onClick={() => setFleetFilter('ALL')}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-all ${
+                        fleetFilter === 'ALL' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      All ({activeFleet.length})
+                    </button>
+                    <button
+                      onClick={() => setFleetFilter('IN_TRANSIT')}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-all ${
+                        fleetFilter === 'IN_TRANSIT' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      In-Transit ({activeFleet.filter(c => c.status !== 'DELIVERED').length})
+                    </button>
+                    <button
+                      onClick={() => setFleetFilter('DELIVERED')}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-all ${
+                        fleetFilter === 'DELIVERED' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Delivered ({activeFleet.filter(c => c.status === 'DELIVERED').length})
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-mono">LIVE RTDB</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable Convoy Cards */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 pr-2">
+              {activeFleet
+                .filter(item => {
+                  if (fleetFilter === 'IN_TRANSIT') return item.status !== 'DELIVERED';
+                  if (fleetFilter === 'DELIVERED') return item.status === 'DELIVERED';
+                  return true;
+                })
+                .length === 0 ? (
+                <div className="text-center py-16 space-y-3">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600">
+                    <Truck size={22} />
+                  </div>
+                  <p className="text-xs text-slate-400">No convoys match the current filter.</p>
+                  <button
+                    onClick={handleDispatchFleet}
+                    disabled={dispatchingFleet}
+                    className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg shadow-cyan-600/20 transition-all inline-flex items-center gap-1.5"
+                  >
+                    <Layers size={13} />
+                    <span>Launch AI Fleet (3 Convoys)</span>
+                  </button>
+                </div>
+              ) : (
+                activeFleet
+                  .filter(item => {
+                    if (fleetFilter === 'IN_TRANSIT') return item.status !== 'DELIVERED';
+                    if (fleetFilter === 'DELIVERED') return item.status === 'DELIVERED';
+                    return true;
+                  })
+                  .map((corridor, cIdx) => {
+                    const cStyle = getVehicleStyle(corridor.vehicle_details?.vehicle_type || corridor.vehicle_type, cIdx);
+                    const waypts = corridor.route_coordinates || [];
+                    const curIdx = fleetIndices[corridor.dispatch_id] ?? 0;
+                    const isArr = corridor.status === 'DELIVERED' || (waypts.length > 0 && curIdx >= waypts.length - 1);
+                    const vehName = corridor.vehicle_details?.vehicle_id || corridor.vehicle_id || `VEH-0${cIdx + 1}`;
+                    const vehType = corridor.vehicle_details?.vehicle_type || corridor.vehicle_type || cStyle.label;
+                    const donorName = corridor.donor_facility?.name || corridor.donor_facility_name || corridor.selected_donor?.name || "Surplus Depot";
+                    const tgtName = corridor.target_facility?.name || corridor.target_facility_name || "Critical Deficit Node";
+                    const medName = corridor.medicine_details?.name || corridor.medicine_name || "Emergency Medical Supplies";
+                    const medQty = corridor.medicine_details?.quantity || corridor.target_facility?.requested_quantity || corridor.quantity || 25;
+                    const isSelected = reallocationPlan?.dispatch_id === corridor.dispatch_id;
+                    const progressPct = isArr ? 100 : Math.min(99, Math.round(((curIdx + 1) / Math.max(waypts.length, 1)) * 100));
+
+                    return (
+                      <div
+                        key={corridor.dispatch_id || cIdx}
+                        className={`p-3.5 rounded-xl border transition-all space-y-3 cursor-pointer group ${
+                          isSelected
+                            ? 'bg-slate-900/95 border-cyan-400 ring-1 ring-cyan-500/40 shadow-xl'
+                            : 'bg-slate-900/70 hover:bg-slate-900 border-slate-800 hover:border-slate-700'
+                        }`}
+                        onClick={() => {
+                          setReallocationPlan(corridor);
+                          if (waypts.length > 0 && mapInstance) {
+                            const pos = waypts[Math.min(curIdx, waypts.length - 1)];
+                            mapInstance.flyTo(pos, 10, { duration: 1 });
+                          }
+                        }}
+                      >
+                        {/* Vehicle Top Row */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: isArr ? '#10b981' : cStyle.color }}
+                            />
+                            <div>
+                              <span className="font-mono font-bold text-xs" style={{ color: cStyle.color }}>
+                                {vehName}
+                              </span>
+                              <span className="text-[10px] text-slate-400 ml-1.5 hidden sm:inline">
+                                &bull; {vehType}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                            isArr
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                          }`}>
+                            {isArr ? (
+                              <>
+                                <CheckCircle2 size={11} className="text-emerald-400" />
+                                <span>DELIVERED</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                                <span>IN-TRANSIT</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Route Path (Origin -> Target) */}
+                        <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800/80 text-xs space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-slate-300">
+                            <Building2 size={12} className="text-slate-400 shrink-0" />
+                            <span className="truncate text-[11px]">{donorName}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 pl-3 text-cyan-400 font-bold text-[10px]">
+                            <ArrowRight size={11} className="text-cyan-400 shrink-0" />
+                            <span>Dispatch Corridor</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-rose-300 font-medium">
+                            <ShieldAlert size={12} className="text-rose-400 shrink-0" />
+                            <span className="truncate text-[11px] text-white">{tgtName}</span>
+                          </div>
+                        </div>
+
+                        {/* Medicine & Cargo Spec */}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <div className="text-slate-300 flex items-center gap-1">
+                            <span className="text-slate-400">Drug:</span>
+                            <span className="font-semibold text-white">{medName}</span>
+                            <span className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-1.5 py-0.2 rounded font-mono">
+                              {medQty} units
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {corridor.estimated_distance_km ? `${corridor.estimated_distance_km} km` : ''}
+                          </span>
+                        </div>
+
+                        {/* Progress Track */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>Progress</span>
+                            <span className="font-mono text-cyan-300 font-bold">
+                              {isArr ? '100% Completed' : `${progressPct}% (Step ${curIdx + 1}/${waypts.length || 1})`}
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                            <div
+                              className={`h-full transition-all duration-300 ${
+                                isArr ? 'bg-emerald-500' : 'bg-gradient-to-r from-cyan-500 to-indigo-500'
+                              }`}
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 pt-1 border-t border-slate-800/80">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReallocationPlan(corridor);
+                              if (waypts.length > 0 && mapInstance) {
+                                const pos = waypts[Math.min(curIdx, waypts.length - 1)];
+                                mapInstance.flyTo(pos, 10, { duration: 1 });
+                              }
+                            }}
+                            className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold py-1.5 px-2.5 rounded-lg transition-all flex items-center justify-center gap-1 group-hover:border-cyan-500/50"
+                          >
+                            <Navigation size={12} className="text-cyan-400" />
+                            <span>Track on Map</span>
+                          </button>
+
+                          {!isArr ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkDelivered(corridor.dispatch_id);
+                              }}
+                              className="bg-emerald-600/90 hover:bg-emerald-500 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1 shrink-0"
+                            >
+                              <CheckCircle2 size={12} />
+                              <span>Mark Delivered</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReallocationPlan(corridor);
+                                setFleetIndices(prev => ({ ...prev, [corridor.dispatch_id]: 0 }));
+                              }}
+                              className="bg-indigo-600/80 hover:bg-indigo-500 text-white text-[11px] font-semibold py-1.5 px-3 rounded-lg transition-all flex items-center gap-1 shrink-0"
+                            >
+                              <RotateCcw size={12} />
+                              <span>Replay</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
             </div>
           </div>
         )}
