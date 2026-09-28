@@ -504,6 +504,12 @@ export async function stopSimulationClock() {
   }
 }
 
+export const fetchClockStatus = fetchSimulationClockStatus;
+export const triggerClockTick = triggerSimulationClockTick;
+export const startClock = startSimulationClock;
+export const stopClock = stopSimulationClock;
+
+
 
 export async function analyzeMedicineImage(imageInput, mimeType = "image/jpeg", apiKey = "", userContextHint = "") {
   try {
@@ -864,17 +870,43 @@ export async function fetchCopilotSessionDetail(sessionId) {
   }
 }
 
-export async function runCrisisSimulation(crisisType = "MONSOON_FLOOD_ISOLATION", targetFacility = "DH-VAR-001", severity = "HIGH") {
+export async function fetchSimulationScenarios() {
   try {
-    const res = await dedupedFetch(`${API_BASE_URL}/simulation/crisis-sandbox`, {
+    const res = await dedupedFetch(`${API_BASE_URL}/simulation/scenarios`);
+    if (!res.ok) throw new Error("Failed to fetch simulation scenarios");
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) {
+    console.warn("fetchSimulationScenarios error:", err);
+    return [];
+  }
+}
+
+export async function runCrisisSimulation(params = {}) {
+  let bodyPayload = {};
+  if (typeof params === 'object' && params !== null && !Array.isArray(params)) {
+    const { crisisType, targetFacilityId, severity, burnMultiplier, scenarioType } = params;
+    bodyPayload = {
+      crisis_type: crisisType || scenarioType || "FLOOD_INUNDATION",
+      target_facility_id: targetFacilityId || null,
+      severity: severity || "HIGH",
+      burn_rate_multiplier: burnMultiplier || null,
+      grid_failure: true
+    };
+  } else {
+    bodyPayload = {
+      crisis_type: arguments[0] || "MONSOON_FLOOD_ISOLATION",
+      target_facility_id: arguments[1] || null,
+      severity: arguments[2] || "HIGH",
+      grid_failure: true
+    };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/simulation/crisis-sandbox`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        crisis_type: crisisType,
-        target_facility_id: targetFacility,
-        severity: severity,
-        grid_failure: true
-      })
+      headers: getAuthHeaders(),
+      body: JSON.stringify(bodyPayload)
     });
     if (!res.ok) throw new Error("Simulation failed");
     const json = await res.json();
@@ -886,6 +918,27 @@ export async function runCrisisSimulation(crisisType = "MONSOON_FLOOD_ISOLATION"
 }
 
 export const triggerCrisisScenario = runCrisisSimulation;
+
+export async function executeDrillMitigation({ targetFacilityId, medicineId, quantity = 25, crisisType }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/simulation/dispatch-mitigation`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        target_facility_id: targetFacilityId,
+        medicine_id: medicineId || null,
+        quantity: quantity || 25,
+        crisis_type: crisisType || null
+      })
+    });
+    if (!res.ok) throw new Error("Drill mitigation dispatch failed");
+    const json = await res.json();
+    return json.data || json;
+  } catch (err) {
+    console.error("executeDrillMitigation error:", err);
+    return null;
+  }
+}
 
 export async function updateStockLedger(medicineId, facilityId, changeQty = 10, reason = "ADJUSTMENT", extraData = {}) {
   try {
