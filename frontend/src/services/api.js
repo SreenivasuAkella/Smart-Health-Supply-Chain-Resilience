@@ -412,6 +412,50 @@ export async function updateReallocationStatus(dispatchId, newStatus) {
   }
 }
 
+export async function fetchActiveReallocations() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reallocation/active`);
+    if (!res.ok) throw new Error("Failed to fetch active reallocations");
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) {
+    console.warn("fetchActiveReallocations notice:", err);
+    return [];
+  }
+}
+
+export async function dispatchFleet(payload = { auto_multi: true, count: 3 }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reallocation/dispatch-fleet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("Failed to dispatch fleet");
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) {
+    console.error("dispatchFleet error:", err);
+    return [];
+  }
+}
+
+export async function updateVehicleTelemetry(telemetry) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reallocation/telemetry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(telemetry)
+    });
+    if (!res.ok) throw new Error("Failed to send vehicle telemetry");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.warn("updateVehicleTelemetry notice:", err);
+    return null;
+  }
+}
+
 export async function fetchSimulationClockStatus() {
   try {
     const res = await dedupedFetch(`${API_BASE_URL}/simulation/clock/status`);

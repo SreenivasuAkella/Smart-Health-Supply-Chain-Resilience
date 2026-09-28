@@ -11,7 +11,9 @@ import {
   optimizeReallocationPlan, 
   triggerAutoRelocationAgent, 
   fetchReallocationHistory, 
-  updateReallocationStatus 
+  updateReallocationStatus,
+  fetchActiveReallocations,
+  dispatchFleet 
 } from '../services/api';
 
 // Dynamic import of Leaflet components with SSR disabled
@@ -66,6 +68,89 @@ const MapResizer = dynamic(
   { ssr: false }
 );
 
+export const getVehicleStyle = (vehicleType = '', index = 0) => {
+  const v = (vehicleType || '').toLowerCase();
+  if (v.includes('drone')) {
+    return {
+      color: '#06b6d4',
+      border: '#22d3ee',
+      dash: '4, 8',
+      label: 'Autonomous Medical Drone',
+      iconSvg: (stroke) => `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      `
+    };
+  }
+  if (v.includes('bike') || v.includes('moto')) {
+    return {
+      color: '#f59e0b',
+      border: '#fbbf24',
+      dash: '6, 10',
+      label: 'Rapid Motorbike Carrier',
+      iconSvg: (stroke) => `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18.5" cy="17.5" r="3.5"/>
+          <circle cx="5.5" cy="17.5" r="3.5"/>
+          <circle cx="15" cy="5" r="1"/>
+          <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
+        </svg>
+      `
+    };
+  }
+  if (v.includes('cryo')) {
+    return {
+      color: '#a855f7',
+      border: '#c084fc',
+      dash: '8, 12',
+      label: 'Deep-Cold Cryo Carrier',
+      iconSvg: (stroke) => `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="2" x2="12" y2="22"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="m20 16-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4"/>
+        </svg>
+      `
+    };
+  }
+  if (v.includes('elec')) {
+    return {
+      color: '#38bdf8',
+      border: '#7dd3fc',
+      dash: '7, 11',
+      label: 'Electric Medical Courier',
+      iconSvg: (stroke) => `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      `
+    };
+  }
+  const palette = [
+    { color: '#10b981', border: '#34d399' },
+    { color: '#06b6d4', border: '#22d3ee' },
+    { color: '#f59e0b', border: '#fbbf24' },
+    { color: '#8b5cf6', border: '#a78bfa' }
+  ];
+  const choice = palette[index % palette.length];
+  return {
+    color: choice.color,
+    border: choice.border,
+    dash: '8, 12',
+    label: 'Solar-Cooled Vaccine Van',
+    iconSvg: (stroke) => `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 17h4V5H2v12h3"/>
+        <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h2"/>
+        <circle cx="7.5" cy="17.5" r="2.5"/>
+        <circle cx="17.5" cy="17.5" r="2.5"/>
+      </svg>
+    `
+  };
+};
+
 export default function InteractiveMap({ isLoading = false, facilities = [], activeReallocation, onSelectFacility }) {
   const [localFacilities, setLocalFacilities] = useState(facilities || []);
 
@@ -85,8 +170,12 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   const [customIcons, setCustomIcons] = useState(null);
   const [vehicleIcon, setVehicleIcon] = useState(null);
   const [vehicleIndex, setVehicleIndex] = useState(0);
+  const [activeFleet, setActiveFleet] = useState([]);
+  const [fleetIndices, setFleetIndices] = useState({});
+  const [dispatchingFleet, setDispatchingFleet] = useState(false);
   const lastActiveDispatchIdRef = useRef(null);
   const deliveredDispatchesRef = useRef(new Set());
+  const leafletRef = useRef(null);
   
   // History Drawer State
   const [showHistory, setShowHistory] = useState(false);
@@ -161,14 +250,33 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     };
   }, [isFullscreen, mapInstance]);
 
+  // Fetch active multi-vehicle fleet on initial component load
+  useEffect(() => {
+    let isMounted = true;
+    fetchActiveReallocations().then(list => {
+      if (isMounted && Array.isArray(list) && list.length > 0) {
+        setActiveFleet(list);
+        if (!reallocationPlan) {
+          setReallocationPlan(list[0]);
+        }
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   // Sync external activeReallocation prop whenever updated (e.g. from SSE stream)
   useEffect(() => {
     if (activeReallocation) {
       const isNewDispatch = activeReallocation.dispatch_id && activeReallocation.dispatch_id !== lastActiveDispatchIdRef.current;
       setReallocationPlan(activeReallocation);
+      setActiveFleet(prev => {
+        const exists = prev.some(p => p.dispatch_id === activeReallocation.dispatch_id);
+        return exists ? prev.map(p => p.dispatch_id === activeReallocation.dispatch_id ? activeReallocation : p) : [activeReallocation, ...prev];
+      });
       if (isNewDispatch) {
         lastActiveDispatchIdRef.current = activeReallocation.dispatch_id;
         setVehicleIndex(0);
+        setFleetIndices(prev => ({ ...prev, [activeReallocation.dispatch_id]: 0 }));
       }
     }
   }, [activeReallocation]);
@@ -196,6 +304,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     setIsClient(true);
     if (typeof window !== 'undefined') {
       const L = require('leaflet');
+      leafletRef.current = L;
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -256,67 +365,88 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     }
   }, []);
 
-  // Turn-by-turn Google Maps-style road navigation: moves from Donor to PHC and stops at destination
+  // Dynamic icon generator tailored to vehicle type & arrival state
+  const getDynamicVehicleIcon = (vStyle, arrived = false) => {
+    if (!leafletRef.current) return vehicleIcon?.inTransit;
+    const themeColor = arrived ? '#10b981' : (vStyle?.color || '#06b6d4');
+    const strokeColor = arrived ? '#34d399' : '#ffffff';
+    return leafletRef.current.divIcon({
+      className: 'vehicle-marker',
+      html: `
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;">
+          ${!arrived ? `<div style="position: absolute; width: 34px; height: 34px; border-radius: 50%; background: ${themeColor}40; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : `<div style="position: absolute; width: 34px; height: 34px; border-radius: 50%; background: rgba(16, 185, 129, 0.25);"></div>`}
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: #0f172a; border: 2px solid ${themeColor}; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px ${themeColor};">
+            ${vStyle?.iconSvg ? vStyle.iconSvg(strokeColor) : ''}
+          </div>
+        </div>
+      `,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+  };
+
+  // Turn-by-turn road navigation for all active fleet corridors simultaneously
   useEffect(() => {
-    if (!reallocationPlan?.route_coordinates || reallocationPlan.route_coordinates.length < 2) {
-      setVehicleIndex(0);
-      return;
+    const corridors = [...activeFleet];
+    if (reallocationPlan && !corridors.some(c => c.dispatch_id === reallocationPlan.dispatch_id)) {
+      corridors.push(reallocationPlan);
     }
-    const count = reallocationPlan.route_coordinates.length;
-    const dispId = reallocationPlan?.dispatch_id;
+    if (corridors.length === 0) return;
 
-    // If already arrived/delivered, stay at destination instead of looping back to start
-    if (dispId && (deliveredDispatchesRef.current.has(dispId) || reallocationPlan.status === 'DELIVERED')) {
-      setVehicleIndex(count - 1);
-      return;
-    }
+    const intervals = [];
 
-    setVehicleIndex(0);
+    corridors.forEach((plan, pIdx) => {
+      const waypoints = plan.route_coordinates || [];
+      if (waypoints.length < 2) return;
+      const count = waypoints.length;
+      const dispId = plan.dispatch_id || `CORRIDOR-${pIdx}`;
 
-    // Dynamic pacing derived from AI Fleet Routing assessment
-    const aiStepDelay = reallocationPlan?.logistics_parameters?.simulation_step_delay_ms
-      || reallocationPlan?.simulation_step_delay_ms
-      || Math.max(150, Math.min(500, Math.round(18000 / count)));
+      if (plan.status === 'DELIVERED' || deliveredDispatchesRef.current.has(dispId)) {
+        setFleetIndices(prev => ({ ...prev, [dispId]: count - 1 }));
+        return;
+      }
 
-    const interval = setInterval(() => {
-      setVehicleIndex(prev => {
-        if (prev < count - 1) {
-          const nextIdx = prev + 1;
-          // When vehicle arrives at destination, automatically complete delivery handshake!
-          if (nextIdx >= count - 1) {
-            if (dispId && !deliveredDispatchesRef.current.has(dispId)) {
-              deliveredDispatchesRef.current.add(dispId);
-              handleMarkDelivered(dispId);
+      const aiStepDelay = plan.logistics_parameters?.simulation_step_delay_ms
+        || plan.simulation_step_delay_ms
+        || Math.max(160, Math.min(480, Math.round(18000 / count)));
+
+      const interval = setInterval(() => {
+        setFleetIndices(prev => {
+          const cur = prev[dispId] ?? 0;
+          if (cur < count - 1) {
+            const nextIdx = cur + 1;
+            if (nextIdx >= count - 1) {
+              if (!deliveredDispatchesRef.current.has(dispId)) {
+                deliveredDispatchesRef.current.add(dispId);
+                const targetId = plan.target_facility?.id || plan.target_facility_id;
+                const donorId = plan.selected_donor?.facility_id || plan.donor_facility_id;
+                const qty = Number(plan.quantity || plan.target_facility?.requested_quantity || 25);
+                handleMarkDelivered(dispId, targetId, donorId, qty);
+              }
             }
+            return { ...prev, [dispId]: nextIdx };
           }
-          return nextIdx;
-        }
-        clearInterval(interval);
-        return count - 1; // Terminates at destination PHC without looping back
-      });
-    }, aiStepDelay);
+          clearInterval(interval);
+          return { ...prev, [dispId]: count - 1 };
+        });
+      }, aiStepDelay);
 
-    return () => clearInterval(interval);
-  }, [reallocationPlan?.dispatch_id]);
+      intervals.push(interval);
+    });
+
+    return () => {
+      intervals.forEach(inv => clearInterval(inv));
+    };
+  }, [activeFleet, reallocationPlan?.dispatch_id]);
 
   const handleReplayTransit = () => {
     if (!reallocationPlan?.route_coordinates || reallocationPlan.route_coordinates.length < 2) return;
-    const count = reallocationPlan.route_coordinates.length;
+    const dispId = reallocationPlan.dispatch_id;
+    if (dispId) {
+      deliveredDispatchesRef.current.delete(dispId);
+      setFleetIndices(prev => ({ ...prev, [dispId]: 0 }));
+    }
     setVehicleIndex(0);
-
-    const aiStepDelay = reallocationPlan?.logistics_parameters?.simulation_step_delay_ms
-      || reallocationPlan?.simulation_step_delay_ms
-      || Math.max(150, Math.min(500, Math.round(18000 / count)));
-
-    const interval = setInterval(() => {
-      setVehicleIndex(prev => {
-        if (prev < count - 1) {
-          return prev + 1;
-        }
-        clearInterval(interval);
-        return count - 1;
-      });
-    }, aiStepDelay);
   };
 
   const handleSimulateRoute = async (facilityId = "DH-VAR-001", medId = "PUB-MED-001") => {
@@ -324,7 +454,10 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     const plan = await optimizeReallocationPlan(facilityId, medId, 25);
     if (plan) {
       setReallocationPlan(plan);
-      setVehicleIndex(0);
+      setActiveFleet(prev => [plan, ...prev.filter(p => p.dispatch_id !== plan.dispatch_id)]);
+      if (plan.dispatch_id) {
+        setFleetIndices(prev => ({ ...prev, [plan.dispatch_id]: 0 }));
+      }
     }
     setLoadingRoute(false);
   };
@@ -334,9 +467,32 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     const record = await triggerAutoRelocationAgent();
     if (record) {
       setReallocationPlan(record);
-      setVehicleIndex(0);
+      setActiveFleet(prev => [record, ...prev.filter(p => p.dispatch_id !== record.dispatch_id)]);
+      if (record.dispatch_id) {
+        setFleetIndices(prev => ({ ...prev, [record.dispatch_id]: 0 }));
+      }
     }
     setTriggeringAI(false);
+  };
+
+  const handleDispatchFleet = async () => {
+    setDispatchingFleet(true);
+    try {
+      const records = await dispatchFleet({ auto_multi: true, count: 3 });
+      if (records && records.length > 0) {
+        setActiveFleet(records);
+        setReallocationPlan(records[0]);
+        const initialIndices = {};
+        records.forEach(r => {
+          initialIndices[r.dispatch_id] = 0;
+          deliveredDispatchesRef.current.delete(r.dispatch_id);
+        });
+        setFleetIndices(initialIndices);
+      }
+    } catch (err) {
+      console.error("handleDispatchFleet error:", err);
+    }
+    setDispatchingFleet(false);
   };
 
   const handleOpenHistory = async () => {
@@ -349,20 +505,25 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
   const handleSelectHistoryItem = (item) => {
     setReallocationPlan(item);
-    setVehicleIndex(0);
+    setActiveFleet(prev => [item, ...prev.filter(p => p.dispatch_id !== item.dispatch_id)]);
+    if (item.dispatch_id) {
+      setFleetIndices(prev => ({ ...prev, [item.dispatch_id]: 0 }));
+    }
     setShowHistory(false);
   };
 
-  const handleMarkDelivered = async (dispatchId) => {
+  const handleMarkDelivered = async (dispatchId, targetFacIdOverride, donorFacIdOverride, qtyOverride) => {
     if (!dispatchId) return;
     const res = await updateReallocationStatus(dispatchId, "DELIVERED");
     if (res) {
-      setReallocationPlan(prev => prev ? { ...prev, status: "DELIVERED" } : null);
+      setReallocationPlan(prev => (prev && prev.dispatch_id === dispatchId) ? { ...prev, status: "DELIVERED" } : prev);
+      setActiveFleet(prev => prev.map(p => p.dispatch_id === dispatchId ? { ...p, status: "DELIVERED" } : p));
 
       // Complete two-node delivery handshake: flip target facility pin from Red to Green!
-      const targetId = reallocationPlan?.target_facility?.id || reallocationPlan?.target_facility_id;
-      const donorId = reallocationPlan?.selected_donor?.facility_id || reallocationPlan?.donor_facility_id;
-      const qty = Number(reallocationPlan?.quantity || reallocationPlan?.target_facility?.requested_quantity || 25);
+      const dispRecord = activeFleet.find(p => p.dispatch_id === dispatchId) || reallocationPlan;
+      const targetId = targetFacIdOverride || dispRecord?.target_facility?.id || dispRecord?.target_facility_id;
+      const donorId = donorFacIdOverride || dispRecord?.selected_donor?.facility_id || dispRecord?.donor_facility_id;
+      const qty = Number(qtyOverride || dispRecord?.quantity || dispRecord?.target_facility?.requested_quantity || 25);
 
       setLocalFacilities(prevList => prevList.map(fac => {
         if (fac.id === targetId) {
@@ -614,6 +775,17 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
             <span>{triggeringAI ? "AI Scanning..." : "Auto-Relocate (AI)"}</span>
           </button>
 
+          {/* Autonomous Multi-Vehicle Fleet Corridoring Action Button */}
+          <button
+            onClick={handleDispatchFleet}
+            disabled={dispatchingFleet}
+            className="bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-lg shadow-cyan-600/20 transition-all flex items-center gap-1.5 disabled:opacity-50"
+            title="Dispatch 3 concurrent vehicles (eVTOL Drone, Solar Van, Motorbike) across critical facilities"
+          >
+            {dispatchingFleet ? <RefreshCw size={13} className="animate-spin" /> : <Layers size={14} className="text-cyan-200" />}
+            <span>{dispatchingFleet ? "Launching Fleet..." : "Launch Fleet (3 Convoys)"}</span>
+          </button>
+
           {/* Database History Drawer Toggle */}
           <button
             onClick={handleOpenHistory}
@@ -712,6 +884,60 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
             <p className="text-xl font-black text-white mt-1">{optimalCount}</p>
             <p className="text-[10px] text-slate-400 mt-0.5">&gt; 14 days stock resilience</p>
           </button>
+        </div>
+      )}
+
+      {/* Multi-Vehicle Fleet Corridoring Status Strip */}
+      {activeFleet && activeFleet.length > 0 && (
+        <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 backdrop-blur-md flex items-center justify-between flex-wrap gap-2.5 shadow-xl animate-fade-in">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <Layers size={13} className="text-cyan-400" />
+              Active Fleet Convoys: <span className="text-cyan-300 font-mono">{activeFleet.length} In-Transit</span>
+            </span>
+            <span className="text-[11px] text-slate-400 hidden md:inline">
+              &bull; Dual-Cloud Synced (Firebase RTDB + Google BigQuery)
+            </span>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-0.5">
+            {activeFleet.map((corridor, cIdx) => {
+              const cStyle = getVehicleStyle(corridor.vehicle_details?.vehicle_type || corridor.vehicle_type, cIdx);
+              const waypts = corridor.route_coordinates || [];
+              const curIdx = fleetIndices[corridor.dispatch_id] ?? 0;
+              const isArr = corridor.status === 'DELIVERED' || (waypts.length > 0 && curIdx >= waypts.length - 1);
+              const vehName = corridor.vehicle_details?.vehicle_id || corridor.vehicle_id || `VEH-0${cIdx + 1}`;
+              const tgtName = corridor.target_facility?.name || corridor.target_facility_name || "Emergency Node";
+              const medName = corridor.medicine_details?.name || corridor.medicine_name || "Vital Drug";
+              const isSelected = reallocationPlan?.dispatch_id === corridor.dispatch_id;
+
+              return (
+                <div
+                  key={corridor.dispatch_id || cIdx}
+                  className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'bg-slate-800 border-cyan-400 text-white shadow-md ring-1 ring-cyan-500/30' 
+                      : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-slate-700'
+                  }`}
+                  onClick={() => {
+                    setReallocationPlan(corridor);
+                    if (waypts.length > 0 && mapInstance) {
+                      const pos = waypts[Math.min(curIdx, waypts.length - 1)];
+                      mapInstance.flyTo(pos, 10, { duration: 1 });
+                    }
+                  }}
+                  title={`Track ${vehName} (${tgtName})`}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isArr ? '#10b981' : cStyle.color }} />
+                  <span className="font-bold font-mono" style={{ color: cStyle.color }}>{vehName}</span>
+                  <span className="text-[11px] text-slate-300 truncate max-w-[110px]">{tgtName}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: `${isArr ? '#10b981' : cStyle.color}25`, color: isArr ? '#34d399' : cStyle.color }}>
+                    {isArr ? "DELIVERED" : medName.split(' ')[0]}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -819,70 +1045,102 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               </Marker>
             ))}
 
-            {/* Render Road Corridor Polyline - Google Maps Navigation Style */}
-            {reallocationPlan && routeWaypoints.length > 0 && (
-              <>
-                {/* Outer casing / road edge shadow */}
-                <Polyline
-                  positions={routeWaypoints}
-                  pathOptions={{
-                    color: '#0f172a',
-                    weight: 8,
-                    opacity: 0.7,
-                    lineCap: 'round',
-                    lineJoin: 'round'
-                  }}
-                />
-                {/* Main navigation corridor (Google Maps blue road route) */}
-                <Polyline
-                  positions={routeWaypoints}
-                  pathOptions={{
-                    color: '#0284c7',
-                    weight: 5,
-                    opacity: 0.9,
-                    lineJoin: 'round',
-                    lineCap: 'round',
-                  }}
-                />
-                <Polyline
-                  positions={routeWaypoints}
-                  pathOptions={{
-                    color: '#38bdf8',
-                    weight: 2,
-                    opacity: 0.7,
-                    dashArray: '8, 12',
-                  }}
-                />
-              </>
-            )}
+            {/* Render Multi-Vehicle Fleet Corridors and Real-Time Moving Carriers */}
+            {(() => {
+              const corridorsToRender = [...activeFleet];
+              if (reallocationPlan && !corridorsToRender.some(c => c.dispatch_id === reallocationPlan.dispatch_id)) {
+                corridorsToRender.push(reallocationPlan);
+              }
 
-            {/* Render Live Vehicle Marker along route */}
-            {vehicleCoord && vehicleIcon && (
-              <Marker 
-                position={vehicleCoord} 
-                icon={isArrived ? (vehicleIcon.arrived || vehicleIcon) : (vehicleIcon.inTransit || vehicleIcon)}
-              >
-                <Popup className="custom-leaflet-popup">
-                  <div className="p-2 space-y-1.5 text-xs text-slate-100 min-w-[200px]">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-1">
-                      <span className="font-bold text-cyan-400 flex items-center gap-1">
-                        <Truck size={13} /> {isArrived ? "Delivered at Destination" : "Active Dispatch Carrier"}
-                      </span>
-                      <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-mono px-1.5 py-0.5 rounded">
-                        {aiSpeedKmh} km/h (AI)
-                      </span>
-                    </div>
-                    <p className="font-semibold text-white">{vehicleType}</p>
-                    <p className="text-[11px] text-slate-400">Reg: <span className="text-slate-200 font-mono">{registrationNo}</span></p>
-                    <p className="text-[11px] text-slate-400">Driver: <span className="text-white">{driverName}</span> ({driverContact})</p>
-                    <div className="pt-1 border-t border-slate-800 text-[11px] flex justify-between">
-                      <span className="text-emerald-400 font-bold">Cargo: 3.4°C Safe</span>
-                      <span className="text-cyan-300 font-bold">{isArrived ? "Arrived at PHC" : `ETA: ~${remainingEtaMins}m`}</span>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
+              return corridorsToRender.map((corridor, cIdx) => {
+                const waypoints = corridor.route_coordinates || [];
+                if (waypoints.length < 2) return null;
+
+                const dispId = corridor.dispatch_id || `CORRIDOR-${cIdx}`;
+                const vStyle = getVehicleStyle(corridor.vehicle_details?.vehicle_type || corridor.vehicle_type, cIdx);
+                const curIdx = fleetIndices[dispId] ?? (corridor.status === 'DELIVERED' ? waypoints.length - 1 : 0);
+                const isArr = corridor.status === 'DELIVERED' || curIdx >= waypoints.length - 1;
+                const vCoord = waypoints[Math.min(curIdx, waypoints.length - 1)];
+
+                const vType = corridor.vehicle_details?.vehicle_type || corridor.vehicle_type || vStyle.label;
+                const regNo = corridor.vehicle_details?.vehicle_id || corridor.vehicle_details?.registration_no || `VEH-0${cIdx + 1}`;
+                const drvName = corridor.vehicle_details?.driver_name || "Autonomous AI Mesh";
+                const drvContact = corridor.vehicle_details?.driver_contact || "+91 1800-MED-FLEET";
+                const medName = corridor.medicine_details?.name || corridor.medicine_name || "Emergency Medical Consumable";
+                const tgtName = corridor.target_facility?.name || corridor.target_facility_name || "Target Health Node";
+                const totalEta = corridor.estimated_transit_minutes || corridor.logistics_parameters?.estimated_transit_minutes || 25;
+                const remainingEta = isArr ? 0 : Math.max(1, Math.round(totalEta * (1 - (curIdx / Math.max(1, waypoints.length - 1)))));
+                const speedKmh = corridor.ai_average_speed_kmh || corridor.logistics_parameters?.ai_average_speed_kmh || 42.0;
+
+                return (
+                  <React.Fragment key={dispId}>
+                    {/* Outer Casing / Road Edge Glow */}
+                    <Polyline
+                      positions={waypoints}
+                      pathOptions={{
+                        color: vStyle.color,
+                        weight: 8,
+                        opacity: 0.3,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                      }}
+                    />
+                    {/* Main Nav Corridor with vehicle-specific theme */}
+                    <Polyline
+                      positions={waypoints}
+                      pathOptions={{
+                        color: vStyle.color,
+                        weight: 4.5,
+                        opacity: 0.9,
+                        lineJoin: 'round',
+                        lineCap: 'round',
+                      }}
+                    />
+                    {/* Dashed High-Speed Trajectory Ribbon */}
+                    <Polyline
+                      positions={waypoints}
+                      pathOptions={{
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 0.8,
+                        dashArray: vStyle.dash,
+                      }}
+                    />
+
+                    {/* Live Moving Vehicle Marker */}
+                    {vCoord && (
+                      <Marker 
+                        position={vCoord} 
+                        icon={getDynamicVehicleIcon(vStyle, isArr)}
+                      >
+                        <Popup className="custom-leaflet-popup">
+                          <div className="p-2 space-y-1.5 text-xs text-slate-100 min-w-[210px]">
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-1">
+                              <span className="font-bold flex items-center gap-1" style={{ color: vStyle.color }}>
+                                <Truck size={13} /> {isArr ? "Destination Restocked" : regNo}
+                              </span>
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: `${vStyle.color}25`, color: vStyle.color }}>
+                                {isArr ? "DELIVERED" : `${speedKmh} km/h (AI)`}
+                              </span>
+                            </div>
+                            <p className="font-semibold text-white">{vType}</p>
+                            <p className="text-[11px] text-slate-300">Target: <strong className="text-white">{tgtName}</strong></p>
+                            <p className="text-[11px] text-slate-300">Cargo: <span className="text-cyan-300 font-semibold">{medName}</span> ({corridor.target_facility?.requested_quantity || corridor.quantity || 25}u)</p>
+                            <p className="text-[10px] text-slate-400">Driver: {drvName} ({drvContact})</p>
+                            <div className="pt-1 border-t border-slate-800 text-[11px] flex justify-between">
+                              <span className="text-emerald-400 font-bold">Cold-Chain: 2-8°C Safe</span>
+                              <span className="font-bold" style={{ color: isArr ? '#10b981' : vStyle.color }}>
+                                {isArr ? "Delivered at PHC" : `ETA: ~${remainingEta}m`}
+                              </span>
+                            </div>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )}
+                  </React.Fragment>
+                );
+              });
+            })()}
           </MapContainer>
         ) : (
           <div className="h-full flex items-center justify-center text-slate-500 text-sm">

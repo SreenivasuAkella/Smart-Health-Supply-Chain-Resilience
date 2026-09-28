@@ -405,4 +405,51 @@ class BigQueryHealthWarehouse:
         res = self.execute_custom_sql(sql)
         return res.get("data", [])
 
+    def _ensure_fleet_telemetry_table(self):
+        """Ensures the fleet_telemetry_logs BigQuery table exists."""
+        if not self.client:
+            return
+        table_id = f"{self.project_id}.{self.dataset_id}.fleet_telemetry_logs"
+        try:
+            from google.cloud import bigquery
+            schema = [
+                bigquery.SchemaField("vehicle_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("timestamp", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("dispatch_id", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("current_lat", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("current_lng", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("speed_kmh", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("temperature_c", "FLOAT", mode="NULLABLE"),
+                bigquery.SchemaField("cold_chain_status", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("battery_or_fuel_pct", "INTEGER", mode="NULLABLE")
+            ]
+            table = bigquery.Table(table_id, schema=schema)
+            self.client.create_table(table, exists_ok=True)
+        except Exception as e:
+            print(f"[BigQuery Fleet Telemetry Table Notice]: {e}")
+
+    def insert_fleet_telemetry(self, telemetry_data: Dict[str, Any]):
+        """Asynchronously writes a fleet GPS & temperature audit record to BigQuery."""
+        if not self.client:
+            return
+        def _bg_telemetry():
+            try:
+                table_id = f"{self.project_id}.{self.dataset_id}.fleet_telemetry_logs"
+                row = {
+                    "vehicle_id": str(telemetry_data.get("vehicle_id", "")),
+                    "timestamp": str(telemetry_data.get("timestamp", datetime.utcnow().isoformat() + "Z")),
+                    "dispatch_id": str(telemetry_data.get("dispatch_id", "")),
+                    "current_lat": float(telemetry_data.get("lat") or telemetry_data.get("current_lat") or 0.0),
+                    "current_lng": float(telemetry_data.get("lng") or telemetry_data.get("current_lng") or 0.0),
+                    "speed_kmh": float(telemetry_data.get("speed_kmh", 42.0)),
+                    "temperature_c": float(telemetry_data.get("temperature_c", 4.2)),
+                    "cold_chain_status": str(telemetry_data.get("cold_chain_status", "OPTIMAL (2-8°C)")),
+                    "battery_or_fuel_pct": int(telemetry_data.get("battery_or_fuel_pct", 88))
+                }
+                job = self.client.load_table_from_json([row], table_id)
+                job.result(timeout=10)
+            except Exception as e:
+                print(f"[BigQuery Fleet Telemetry Notice]: {e}")
+        self._executor.submit(_bg_telemetry)
+
 bigquery_service = BigQueryHealthWarehouse()
