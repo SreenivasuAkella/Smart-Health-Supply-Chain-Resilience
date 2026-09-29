@@ -375,7 +375,7 @@ export async function triggerAutoRelocationAgent() {
   }
 }
 
-export async function fetchReallocationHistory(limit = 50, status = "ALL", search = "") {
+export async function fetchReallocationHistory(limit = 1000, status = "ALL", search = "") {
   try {
     const params = new URLSearchParams({
       limit: String(limit),

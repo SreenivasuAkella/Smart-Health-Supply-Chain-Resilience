@@ -396,7 +396,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     let isMounted = true;
     Promise.all([
       fetchActiveReallocations(),
-      fetchReallocationHistory(20)
+      fetchReallocationHistory(1000)
     ]).then(([activeList, historyList]) => {
       if (!isMounted) return;
       const combinedMap = new Map();
@@ -601,20 +601,24 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
   // Continuous patient consumption decay engine:
   // Models real-world OPD outpatient footfall and clinical medicine burn rate over time
-  // Prevents static state where all dots turn green forever; sustains dynamic supply-demand equilibrium
+  // Maintains a dynamic supply-demand equilibrium so red deficit dots never fully vanish
   useEffect(() => {
     const decayInterval = setInterval(() => {
       setLocalFacilities(prevList => {
         let changed = false;
         const now = Date.now();
+        const criticalCount = prevList.filter(f => f.status === 'Critical Deficit').length;
+        // Keep a sustained baseline of ~25-35 emergency stockout nodes for active fleet resilience
+        const needMoreCritical = criticalCount < 28;
+
         const updated = prevList.map(fac => {
           // District Hospitals and Regional Depots maintain bulk statutory central reserves
           if (fac.status === 'Regional Depot' || fac.type === 'District Hospital') {
             return fac;
           }
 
-          // If facility was just replenished within the last 35 seconds, respect the delivery grace window
-          if (fac._justDelivered && fac._deliveredAt && (now - fac._deliveredAt < 35000)) {
+          // If facility was just replenished within the last 18 seconds, respect the delivery grace window
+          if (fac._justDelivered && fac._deliveredAt && (now - fac._deliveredAt < 18000)) {
             return fac;
           }
 
@@ -623,9 +627,13 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
           // Daily patient footfall drives the clinical consumption decay
           const footfall = Number(fac.dailyPatientFootfall || 45);
-          // Realistic decay rate: ~0.04 to 0.08 days of supply consumed per 12-second cycle
-          const decayStep = Math.round((Math.max(15, footfall) / 600.0) * 100) / 1000;
-          const nextDos = Math.max(0.8, Math.round((currentDos - decayStep) * 10) / 10);
+          // Increased burn rate: ~0.15 to 0.35 days of supply consumed per 5-second cycle
+          let burnStep = Math.max(0.15, Math.round(((footfall / 150.0) * 0.25) * 10) / 10);
+          if (needMoreCritical && fac.status === 'Warning' && currentDos <= 4.8) {
+            burnStep += 0.2; // Clinical surge pushes vulnerable warnings into deficit so red dots stay active
+          }
+
+          const nextDos = Math.max(0.8, Math.round((currentDos - burnStep) * 10) / 10);
 
           if (nextDos === currentDos) return fac;
           changed = true;
@@ -646,7 +654,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
         return changed ? updated : prevList;
       });
-    }, 12000); // 12-second operational decay cycle
+    }, 5000); // 5-second accelerated operational decay cycle to sustain active red dots
 
     return () => clearInterval(decayInterval);
   }, []);
@@ -797,11 +805,12 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
           // > 7.0 days = Optimal Buffer (Green)
           // 3.1 to 7.0 days = Warning Buffer (Yellow)
           // <= 3.0 days = Critical Deficit (Red)
-          const newStatus = restoredDos > 7.0 ? "Optimal" : (restoredDos > 3.0 ? "Warning" : "Critical Deficit");
+          const cappedDos = Math.min(9.5, Math.max(currentDos + 2.5, restoredDos));
+          const newStatus = cappedDos > 7.0 ? "Optimal" : (cappedDos > 3.0 ? "Warning" : "Critical Deficit");
           return {
             ...fac,
             status: newStatus,
-            medicine_days_of_supply: Math.min(18.0, Math.max(currentDos + 2.5, restoredDos)),
+            medicine_days_of_supply: cappedDos,
             _justDelivered: true,
             _deliveredAt: Date.now()
           };
@@ -1402,11 +1411,19 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               </Marker>
             ))}
 
-            {/* Render Multi-Vehicle Fleet Corridors and Real-Time Moving Carriers */}
+            {/* Render Multi-Vehicle Fleet Corridors and Real-Time Moving Carriers (Showing Latest 25) */}
             {(() => {
-              const corridorsToRender = [...activeFleet];
+              // Sort fleet by newest timestamp first
+              const sortedFleet = [...activeFleet].sort((a, b) => {
+                const tA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+                const tB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+                return tB - tA;
+              });
+
+              // Show 25 latest missions on the map (20-30 range) while full list stays in drawer
+              let corridorsToRender = sortedFleet.slice(0, 25);
               if (reallocationPlan && !corridorsToRender.some(c => c.dispatch_id === reallocationPlan.dispatch_id)) {
-                corridorsToRender.push(reallocationPlan);
+                corridorsToRender = [reallocationPlan, ...corridorsToRender.slice(0, 24)];
               }
 
               return corridorsToRender.map((corridor, cIdx) => {
@@ -1838,9 +1855,14 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-emerald-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="font-mono">LIVE RTDB</span>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className="text-[9px] font-mono text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800/40 font-medium">
+                    Map: Latest 25
+                  </span>
+                  <div className="flex items-center gap-1.5 text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-mono">LIVE RTDB</span>
+                  </div>
                 </div>
               </div>
             </div>
