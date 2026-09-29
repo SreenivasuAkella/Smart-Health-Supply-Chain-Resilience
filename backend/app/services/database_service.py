@@ -2,6 +2,7 @@ import sqlite3
 import os
 import json
 import random
+import time
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from .firebase_service import firebase_service
@@ -27,6 +28,7 @@ class ReallocationDatabaseService:
             os.makedirs(os.path.dirname(os.path.abspath(db_target)), exist_ok=True)
         # Persistent anchor
         self._anchor = sqlite3.connect(self.db_target, uri=self.is_memory, check_same_thread=False)
+        self._last_telemetry_bq_time = {}
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -738,9 +740,13 @@ class ReallocationDatabaseService:
         except Exception:
             pass
 
-        # BigQuery compliance audit
+        # BigQuery compliance audit (throttled to at most once every 30s per vehicle)
         try:
-            bigquery_service.insert_fleet_telemetry(telemetry_payload)
+            now_ts = time.time()
+            last_sent = self._last_telemetry_bq_time.get(vehicle_id, 0)
+            if (now_ts - last_sent) >= 30:
+                self._last_telemetry_bq_time[vehicle_id] = now_ts
+                bigquery_service.insert_fleet_telemetry(telemetry_payload)
         except Exception:
             pass
 
