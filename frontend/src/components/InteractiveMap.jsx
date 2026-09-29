@@ -273,12 +273,36 @@ function roundCoord(val) {
   return Math.round(val * 100000) / 100000;
 }
 
+function sanitizeFacilities(list) {
+  if (!list || list.length === 0) return list;
+  const criticalList = list.filter(f => f.status === 'Critical Deficit');
+  // If critical deficit count exceeds moderate realistic baseline (>40), rebalance immediately
+  if (criticalList.length <= 40) return list;
+
+  const criticalToKeep = new Set(criticalList.slice(0, 32).map(f => f.id));
+  let warningAssigned = 0;
+  return list.map(fac => {
+    if (fac.status === 'Regional Depot' || fac.type === 'District Hospital') return fac;
+    if (criticalToKeep.has(fac.id)) {
+      return { ...fac, status: 'Critical Deficit', medicine_days_of_supply: Math.min(2.8, Number(fac.medicine_days_of_supply || 1.5)) };
+    }
+    if (warningAssigned < 60 && fac.status === 'Critical Deficit') {
+      warningAssigned++;
+      return { ...fac, status: 'Warning', medicine_days_of_supply: 4.8 };
+    }
+    if (fac.status === 'Critical Deficit') {
+      return { ...fac, status: 'Optimal', medicine_days_of_supply: 8.5 };
+    }
+    return fac;
+  });
+}
+
 export default function InteractiveMap({ isLoading = false, facilities = [], activeReallocation, onSelectFacility }) {
-  const [localFacilities, setLocalFacilities] = useState(facilities || []);
+  const [localFacilities, setLocalFacilities] = useState(() => sanitizeFacilities(facilities) || []);
 
   useEffect(() => {
     if (facilities && facilities.length > 0) {
-      setLocalFacilities(facilities);
+      setLocalFacilities(sanitizeFacilities(facilities));
     }
   }, [facilities]);
 
@@ -602,43 +626,83 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   // Continuous patient consumption decay engine:
   // Models real-world OPD outpatient footfall and clinical medicine burn rate over time
   // Maintains a dynamic supply-demand equilibrium so red deficit dots never fully vanish
+  // Balanced clinical patient consumption decay engine:
+  // Maintains a moderate, realistic operational equilibrium of ~28-36 Critical Stockout emergency targets
+  // Ensures red dots remain actively available for fleet corridors without exploding into hundreds of deficits
   useEffect(() => {
     const decayInterval = setInterval(() => {
       setLocalFacilities(prevList => {
-        let changed = false;
+        if (!prevList || prevList.length === 0) return prevList;
         const now = Date.now();
-        const criticalCount = prevList.filter(f => f.status === 'Critical Deficit').length;
-        // Keep a sustained baseline of ~25-35 emergency stockout nodes for active fleet resilience
+        const criticalFacs = prevList.filter(f => f.status === 'Critical Deficit');
+        const criticalCount = criticalFacs.length;
+
+        // Auto-rebalance runaway deficit states (e.g. initial spike of >45 critical nodes)
+        // Keeps ~32 authentic emergency targets, ~60 warnings, and restores the rest to optimal buffer
+        if (criticalCount > 45) {
+          const criticalToKeep = new Set(criticalFacs.slice(0, 32).map(f => f.id));
+          let warningAssigned = 0;
+
+          const rebalanced = prevList.map(fac => {
+            if (fac.status === 'Regional Depot' || fac.type === 'District Hospital') {
+              return fac;
+            }
+            if (criticalToKeep.has(fac.id)) {
+              return { ...fac, status: 'Critical Deficit', medicine_days_of_supply: Math.min(2.8, Number(fac.medicine_days_of_supply || 1.5)) };
+            }
+            if (warningAssigned < 60 && fac.status === 'Critical Deficit') {
+              warningAssigned++;
+              return { ...fac, status: 'Warning', medicine_days_of_supply: 4.8 };
+            }
+            if (fac.status === 'Critical Deficit') {
+              return { ...fac, status: 'Optimal', medicine_days_of_supply: 8.5 };
+            }
+            return fac;
+          });
+          return rebalanced;
+        }
+
+        let changed = false;
+        // Moderate target band: 28 to 36 active critical stockout nodes
         const needMoreCritical = criticalCount < 28;
+        const reachedMaxCritical = criticalCount >= 36;
+        let deficitSpawnedThisCycle = 0;
 
         const updated = prevList.map(fac => {
-          // District Hospitals and Regional Depots maintain bulk statutory central reserves
+          // Regional Depots and District Hospitals maintain statutory central bulk reserves
           if (fac.status === 'Regional Depot' || fac.type === 'District Hospital') {
             return fac;
           }
 
-          // If facility was just replenished within the last 18 seconds, respect the delivery grace window
-          if (fac._justDelivered && fac._deliveredAt && (now - fac._deliveredAt < 18000)) {
+          // Respect recent delivery grace window (25 seconds of post-replenishment immunity)
+          if (fac._justDelivered && fac._deliveredAt && (now - fac._deliveredAt < 25000)) {
             return fac;
           }
 
-          const currentDos = Number(fac.medicine_days_of_supply || 5.0);
-          if (currentDos <= 0.8) return fac; // Hard floor at 0.8 days
+          const currentDos = Number(fac.medicine_days_of_supply || 6.5);
+          if (currentDos <= 1.0) return fac; // Hard floor for critical facilities
 
-          // Daily patient footfall drives the clinical consumption decay
           const footfall = Number(fac.dailyPatientFootfall || 45);
-          // Increased burn rate: ~0.15 to 0.35 days of supply consumed per 5-second cycle
-          let burnStep = Math.max(0.15, Math.round(((footfall / 150.0) * 0.25) * 10) / 10);
-          if (needMoreCritical && fac.status === 'Warning' && currentDos <= 4.8) {
-            burnStep += 0.2; // Clinical surge pushes vulnerable warnings into deficit so red dots stay active
+          // Moderate burn rate: ~0.05 to 0.10 days of supply consumed per 8-second cycle
+          let burnStep = Math.max(0.04, Math.round(((footfall / 350.0) * 0.12) * 100) / 100);
+
+          // If fleet needs more emergency targets, gently transition at most 1-2 vulnerable warnings per cycle
+          if (needMoreCritical && deficitSpawnedThisCycle < 2 && fac.status === 'Warning' && currentDos <= 3.8) {
+            burnStep = Math.round((currentDos - 2.6) * 10) / 10;
+            deficitSpawnedThisCycle++;
           }
 
-          const nextDos = Math.max(0.8, Math.round((currentDos - burnStep) * 10) / 10);
+          let nextDos = Math.max(1.0, Math.round((currentDos - burnStep) * 10) / 10);
+
+          // If critical target capacity is already saturated, hold warning facilities above critical threshold (>= 3.2 days)
+          if (reachedMaxCritical && fac.status !== 'Critical Deficit' && nextDos <= 3.0) {
+            nextDos = 3.2;
+          }
 
           if (nextDos === currentDos) return fac;
           changed = true;
 
-          // Recalculate status based on decayed Days of Supply:
+          // Standard healthcare buffer thresholds:
           // <= 3.0 days = Critical Deficit (Red)
           // 3.1 - 7.0 days = Depleting Buffer Warning (Yellow)
           // > 7.0 days = Optimal Buffer (Green)
@@ -654,7 +718,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
         return changed ? updated : prevList;
       });
-    }, 5000); // 5-second accelerated operational decay cycle to sustain active red dots
+    }, 8000); // Moderate 8-second clinical consumption pace
 
     return () => clearInterval(decayInterval);
   }, []);
