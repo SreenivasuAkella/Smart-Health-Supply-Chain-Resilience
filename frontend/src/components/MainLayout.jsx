@@ -20,6 +20,7 @@ import GoogleTechArchitectureModal from './GoogleTechArchitectureModal';
 import PlatformGuideModal from './PlatformGuideModal';
 import ApiKeyModal from './ApiKeyModal';
 import RoleRestrictedGuard from './RoleRestrictedGuard';
+import AppTour from './AppTour';
 import { useAuth } from '../context/AuthContext';
 import { hasTabAccess } from '../utils/rbac';
 import { 
@@ -91,8 +92,24 @@ export default function MainLayout({ initialTab }) {
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [sseConnected, setSseConnected] = useState(false);
+
+  const handleStartTour = () => {
+    setIsGuideModalOpen(false);
+    setIsTechModalOpen(false);
+    setIsCopilotOpen(false);
+    setIsKeyModalOpen(false);
+    if (activeTab !== 'overview') {
+      navigateToTab('overview');
+    }
+    setIsTourOpen(true);
+  };
+
+  const handleCloseTour = () => {
+    setIsTourOpen(false);
+  };
 
   // Global keybinding: press '?' to trigger interactive guide
   useEffect(() => {
@@ -333,6 +350,7 @@ export default function MainLayout({ initialTab }) {
         setMobileOpen={setIsMobileOpen}
         onOpenTechModal={() => setIsTechModalOpen(true)}
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
+        onStartTour={handleStartTour}
       />
 
       {/* Main Content Area */}
@@ -348,6 +366,7 @@ export default function MainLayout({ initialTab }) {
           onOpenMobileMenu={() => setIsMobileOpen(true)}
           onOpenGuideModal={() => setIsGuideModalOpen(true)}
           onOpenTechModal={() => setIsTechModalOpen(true)}
+          onStartTour={handleStartTour}
         />
 
         {/* Tab Viewport */}
@@ -371,6 +390,7 @@ export default function MainLayout({ initialTab }) {
                   onTriggerReallocation={handleTriggerReallocation}
                   onOpenCopilot={handleOpenCopilot}
                   onOpenGuideModal={() => setIsGuideModalOpen(true)}
+                  onStartTour={handleStartTour}
                 />
               )}
 
@@ -479,6 +499,7 @@ export default function MainLayout({ initialTab }) {
         isOpen={isGuideModalOpen}
         onClose={() => setIsGuideModalOpen(false)}
         onNavigate={navigateToTab}
+        onStartTour={handleStartTour}
       />
 
       <GoogleTechArchitectureModal
@@ -491,6 +512,14 @@ export default function MainLayout({ initialTab }) {
         onClose={() => setIsKeyModalOpen(false)}
         apiKey={geminiApiKey}
         onSaveKey={handleSaveApiKey}
+      />
+
+      {/* Interactive App Tour with High-Precision Spotlights & z-index Layering */}
+      <AppTour
+        isOpen={isTourOpen}
+        onClose={handleCloseTour}
+        activeTab={activeTab}
+        onNavigate={navigateToTab}
       />
     </div>
   );

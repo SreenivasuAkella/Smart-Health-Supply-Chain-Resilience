@@ -17,7 +17,8 @@ export default function OverviewDashboard({
   onNavigate, 
   onTriggerReallocation,
   onOpenCopilot,
-  onOpenGuideModal 
+  onOpenGuideModal,
+  onStartTour
 }) {
   const [alertSearch, setAlertSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -158,7 +159,7 @@ export default function OverviewDashboard({
     <div className="space-y-6 animate-fade-in">
 
       {/* 2. FOUR HIGH-IMPACT METRIC CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div id="tour-kpi-metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Resilience Index */}
         <div className="glass-panel p-4 sm:p-5 rounded-2xl border border-emerald-500/30 hover:border-emerald-500/50 transition-all space-y-3 group">
           <div className="flex items-center justify-between">
@@ -264,7 +265,7 @@ export default function OverviewDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT 7 COLS: EARLY WARNING TRIAGE HOTSPOTS (Zero Clutter, Action Oriented) */}
-        <div className="lg:col-span-7 glass-panel p-5 sm:p-6 space-y-4 rounded-2xl border border-slate-800/80">
+        <div id="tour-alert-stream" className="lg:col-span-7 glass-panel p-5 sm:p-6 space-y-4 rounded-2xl border border-slate-800/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
             <div>
               <div className="flex items-center gap-2">
@@ -474,7 +475,7 @@ export default function OverviewDashboard({
         <div className="lg:col-span-5 space-y-5">
           
           {/* Action Center: Top 3 High-Impact Steps */}
-          <div className="glass-panel p-5 space-y-3.5 rounded-2xl border border-cyan-500/25">
+          <div id="tour-action-center" className="glass-panel p-5 space-y-3.5 rounded-2xl border border-cyan-500/25">
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Zap className="text-amber-400" size={17} />
@@ -538,7 +539,7 @@ export default function OverviewDashboard({
           </div>
 
           {/* Cold-Chain IoT Live Watchdog Card */}
-          <div className="glass-panel p-5 space-y-3.5 rounded-2xl border border-slate-800/80">
+          <div id="tour-coldchain-card" className="glass-panel p-5 space-y-3.5 rounded-2xl border border-slate-800/80">
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ThermometerSnowflake className="text-cyan-400" size={17} />

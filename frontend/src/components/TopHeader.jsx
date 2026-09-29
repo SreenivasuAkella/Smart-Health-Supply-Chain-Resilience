@@ -27,7 +27,8 @@ export default function TopHeader({
   activeTab,
   onOpenMobileMenu,
   onOpenGuideModal,
-  onOpenTechModal
+  onOpenTechModal,
+  onStartTour
 }) {
   const { user } = useAuth();
 
@@ -69,8 +70,17 @@ export default function TopHeader({
           </div>
         </div>
 
-        {/* Right: Guide & Arch Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: Guide, Arch & Tour Buttons */}
+        <div id="tour-header-controls" className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={onStartTour}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500/20 via-sky-500/20 to-indigo-500/20 hover:from-cyan-500/30 hover:to-indigo-500/30 border border-cyan-400/40 text-cyan-200 text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-sm hover:shadow-cyan-500/20 group"
+            title="Start Interactive App Tour"
+          >
+            <Sparkles size={14} className="text-cyan-400 group-hover:scale-125 transition-transform" />
+            <span>Tour</span>
+          </button>
+
           <button
             onClick={onOpenGuideModal}
             className="flex items-center gap-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-sm group"

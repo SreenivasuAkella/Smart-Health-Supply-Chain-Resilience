@@ -6,7 +6,7 @@ import {
   BookOpen, Compass, ShieldCheck, Cpu, Database, AlertTriangle, Layers
 } from 'lucide-react';
 
-export default function PlatformGuideModal({ isOpen, onClose, onNavigate }) {
+export default function PlatformGuideModal({ isOpen, onClose, onNavigate, onStartTour }) {
   const [activeGuideTab, setActiveGuideTab] = useState('workflow'); // 'workflow' | 'modules' | 'glossary'
 
   if (!isOpen) return null;
@@ -356,17 +356,29 @@ export default function PlatformGuideModal({ isOpen, onClose, onNavigate }) {
         )}
 
         {/* Modal Footer */}
-        <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+        <div className="pt-3 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs text-slate-400">
           <span className="flex items-center gap-1.5">
             <ShieldCheck size={14} className="text-emerald-400" />
             <span>Self-Guiding Operational Health OS</span>
           </span>
-          <button
-            onClick={onClose}
-            className="btn-primary text-xs px-4 py-1.5 font-bold"
-          >
-            Got It, Proceed to Dashboard
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onClose();
+                if (onStartTour) onStartTour();
+              }}
+              className="btn-secondary text-xs px-3 py-1.5 font-bold text-cyan-300 hover:text-white border-cyan-500/40 hover:border-cyan-400 flex items-center gap-1.5"
+            >
+              <Sparkles size={13} className="text-cyan-400" />
+              <span>Take Interactive Tour</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="btn-primary text-xs px-4 py-1.5 font-bold"
+            >
+              Proceed to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -583,7 +583,7 @@ export default function VoiceCopilotModal({
         ========================================================================
       */}
       {activeTab !== 'voice' && (
-        <div className="fixed bottom-6 right-6 z-40">
+        <div id="tour-copilot-launcher" className="fixed bottom-6 right-6 z-40">
           <button
             onClick={onToggle || (() => (isOpen ? onClose?.() : null))}
             className={`

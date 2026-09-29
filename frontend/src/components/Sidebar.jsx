@@ -34,7 +34,8 @@ export default function Sidebar({
   setIsCollapsed,
   mobileOpen,
   setMobileOpen,
-  onOpenGuideModal
+  onOpenGuideModal,
+  onStartTour
 }) {
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -149,7 +150,7 @@ export default function Sidebar({
         </div>
 
         {/* Navigation Categories */}
-        <div className={`flex-1 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-3'} py-3.5 space-y-4 scrollbar-thin`}>
+        <div id="tour-sidebar-nav" className={`flex-1 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-3'} py-3.5 space-y-4 scrollbar-thin`}>
           {navCategories.map((category, catIdx) => (
             <div key={catIdx} className="space-y-1">
               {!isCollapsed ? (
@@ -168,6 +169,7 @@ export default function Sidebar({
                 return (
                   <Link
                     key={item.id}
+                    id={`tour-nav-${item.id}`}
                     href={targetPath}
                     onClick={() => {
                       setActiveTab(item.id);
