@@ -25,42 +25,60 @@ class FirebaseSyncService:
         self.database_url = (FIREBASE_DATABASE_URL or "").rstrip("/")
         self.api_key = FIREBASE_API_KEY
         self._cached_telemetry: Dict[str, Any] = {}
-        self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="firebase_sync")
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="firebase_sync")
+        self._pending_tasks = 0
+        self._lock = threading.Lock()
+        
+        # Reusable OAuth token cache
+        self._cached_auth_token: Optional[str] = None
+        self._token_expiry_ts: float = 0.0
+        self._creds_obj = None
+
+    def _get_creds_object(self):
+        if self._creds_obj is not None:
+            return self._creds_obj
+        try:
+            from google.oauth2 import service_account
+            scopes = [
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/firebase.database",
+                "https://www.googleapis.com/auth/cloud-platform"
+            ]
+            if GCP_SERVICE_ACCOUNT_JSON:
+                sa_info = json.loads(GCP_SERVICE_ACCOUNT_JSON)
+                self._creds_obj = service_account.Credentials.from_service_account_info(sa_info, scopes=scopes)
+            elif GOOGLE_APPLICATION_CREDENTIALS and os.path.exists(GOOGLE_APPLICATION_CREDENTIALS):
+                self._creds_obj = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS, scopes=scopes)
+        except Exception as e:
+            print(f"[Firebase OAuth Init Notice]: {e}")
+        return self._creds_obj
 
     def _get_auth_headers(self) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
-        try:
-            from google.oauth2 import service_account
-            import google.auth.transport.requests
+        now = time.time()
+        # Return cached valid token (leave 5-minute safety window)
+        if self._cached_auth_token and (now < self._token_expiry_ts - 300):
+            headers["Authorization"] = f"Bearer {self._cached_auth_token}"
+            return headers
 
-            creds = None
-            if GCP_SERVICE_ACCOUNT_JSON:
-                sa_info = json.loads(GCP_SERVICE_ACCOUNT_JSON)
-                creds = service_account.Credentials.from_service_account_info(
-                    sa_info,
-                    scopes=[
-                        "https://www.googleapis.com/auth/userinfo.email",
-                        "https://www.googleapis.com/auth/firebase.database",
-                        "https://www.googleapis.com/auth/cloud-platform"
-                    ]
-                )
-            elif GOOGLE_APPLICATION_CREDENTIALS and os.path.exists(GOOGLE_APPLICATION_CREDENTIALS):
-                creds = service_account.Credentials.from_service_account_file(
-                    GOOGLE_APPLICATION_CREDENTIALS,
-                    scopes=[
-                        "https://www.googleapis.com/auth/userinfo.email",
-                        "https://www.googleapis.com/auth/firebase.database",
-                        "https://www.googleapis.com/auth/cloud-platform"
-                    ]
-                )
+        with self._lock:
+            if self._cached_auth_token and (now < self._token_expiry_ts - 300):
+                headers["Authorization"] = f"Bearer {self._cached_auth_token}"
+                return headers
 
+            creds = self._get_creds_object()
             if creds:
-                auth_req = google.auth.transport.requests.Request()
-                creds.refresh(auth_req)
-                if creds.token:
-                    headers["Authorization"] = f"Bearer {creds.token}"
-        except Exception:
-            pass
+                try:
+                    import google.auth.transport.requests
+                    auth_req = google.auth.transport.requests.Request()
+                    creds.refresh(auth_req)
+                    if creds.token:
+                        self._cached_auth_token = creds.token
+                        # Standard Google OAuth tokens are valid for 3600 seconds
+                        self._token_expiry_ts = now + 3500
+                        headers["Authorization"] = f"Bearer {self._cached_auth_token}"
+                except Exception as e:
+                    print(f"[Firebase Token Refresh Notice]: {e}")
         return headers
 
     def _sync_remote_worker(self, endpoint: str, payload_bytes: bytes):
@@ -68,36 +86,42 @@ class FirebaseSyncService:
         try:
             headers = self._get_auth_headers()
             req = urllib.request.Request(endpoint, data=payload_bytes, headers=headers, method="PUT")
-            with urllib.request.urlopen(req, timeout=3) as res:
-                if res.status in (200, 204):
-                    return
+            with urllib.request.urlopen(req, timeout=2.0) as res:
+                pass
         except Exception:
             pass
-
-        try:
-            req = urllib.request.Request(endpoint, data=payload_bytes, headers={"Content-Type": "application/json"}, method="PUT")
-            with urllib.request.urlopen(req, timeout=3) as res:
-                if res.status in (200, 204):
-                    return
-        except Exception:
-            pass
+        finally:
+            with self._lock:
+                self._pending_tasks = max(0, self._pending_tasks - 1)
 
     def write_data(self, path: str, data: Any) -> Dict[str, Any]:
         """
         Writes data to in-memory cache instantly and dispatches remote RTDB sync in the background.
         """
         clean_path = path.strip("/")
-        # 1. Update in-memory cache immediately (< 0.1ms)
+        # 1. Update in-memory cache immediately (< 0.1ms) with bounded size
         self._cached_telemetry[clean_path] = data
+        if len(self._cached_telemetry) > 100:
+            # Evict older half of entries to keep memory strictly capped
+            keys_to_remove = list(self._cached_telemetry.keys())[:30]
+            for k in keys_to_remove:
+                self._cached_telemetry.pop(k, None)
 
-        # 2. Async background dispatch if database_url configured
+        # 2. Async background dispatch if database_url configured and queue is healthy
         if self.database_url:
-            endpoint = f"{self.database_url}/{clean_path}.json"
-            try:
-                payload_bytes = json.dumps(data).encode("utf-8")
-                self._executor.submit(self._sync_remote_worker, endpoint, payload_bytes)
-            except Exception:
-                pass
+            with self._lock:
+                should_submit = self._pending_tasks < 20
+                if should_submit:
+                    self._pending_tasks += 1
+
+            if should_submit:
+                endpoint = f"{self.database_url}/{clean_path}.json"
+                try:
+                    payload_bytes = json.dumps(data).encode("utf-8")
+                    self._executor.submit(self._sync_remote_worker, endpoint, payload_bytes)
+                except Exception:
+                    with self._lock:
+                        self._pending_tasks = max(0, self._pending_tasks - 1)
 
         return {
             "status": "SYNCED_FAST_MEMORY",

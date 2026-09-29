@@ -24,6 +24,33 @@ app.add_middleware(
 
 
 import gc
+import ctypes
+import threading
+import time
+
+try:
+    _LIBC = ctypes.CDLL("libc.so.6")
+except Exception:
+    _LIBC = None
+
+def _trim_system_memory():
+    """Forces glibc and Python runtime to release all free heap memory back to the operating system."""
+    try:
+        gc.collect(1)
+        gc.collect(2)
+        if _LIBC and hasattr(_LIBC, "malloc_trim"):
+            _LIBC.malloc_trim(0)
+    except Exception:
+        pass
+
+def _memory_reaper_loop():
+    """Background daemon ensuring memory usage remains well below 180MB on Render 512MB free tier."""
+    while True:
+        time.sleep(30)
+        _trim_system_memory()
+
+_reaper_thread = threading.Thread(target=_memory_reaper_loop, daemon=True, name="mem_reaper")
+_reaper_thread.start()
 
 _REQUEST_COUNTER = 0
 
@@ -32,9 +59,9 @@ async def memory_management_middleware(request: Request, call_next):
     global _REQUEST_COUNTER
     response = await call_next(request)
     _REQUEST_COUNTER += 1
-    # Periodically collect garbage every 50 requests to prevent Python heap growth on Render free tier
-    if _REQUEST_COUNTER % 50 == 0:
-        gc.collect()
+    # Periodically collect garbage and trim glibc arenas every 15 requests
+    if _REQUEST_COUNTER % 15 == 0:
+        _trim_system_memory()
     return response
 
 from starlette.exceptions import HTTPException as StarletteHTTPException

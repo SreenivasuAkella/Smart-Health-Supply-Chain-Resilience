@@ -2,7 +2,8 @@ import json
 import math
 import os
 import random
-from typing import Dict, Any, List
+import time
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from .firebase_service import firebase_service
@@ -73,12 +74,23 @@ def _build_sensor_nodes_from_registry() -> list:
         return []
 
 
+_STREAM_CACHE: Optional[Dict[str, Any]] = None
+_STREAM_CACHE_TS: float = 0.0
+_LAST_FIREBASE_TELEMETRY_SYNC: float = 0.0
+
 def get_live_telemetry_stream() -> Dict[str, Any]:
     """
     Returns live digital twin of cold storage units across Indian health facilities.
     Sensor nodes built dynamically from the live facility registry.
-    Synchronizes with Firebase Realtime Database and live IMD ambient meteorological feeds from BigQuery.
+    Caches results for 6s and throttles Firebase RTDB synchronization to every 30s.
     """
+    global _STREAM_CACHE, _STREAM_CACHE_TS, _LAST_FIREBASE_TELEMETRY_SYNC
+    now_ts = time.time()
+    if _STREAM_CACHE is not None and (now_ts - _STREAM_CACHE_TS < 6.0):
+        return _STREAM_CACHE
+
+    should_sync_firebase = (now_ts - _LAST_FIREBASE_TELEMETRY_SYNC >= 30.0)
+
     # 1. Attempt to read live sensors from Firebase Realtime DB
     firebase_live = firebase_service.read_data("telemetry/live")
 
@@ -148,8 +160,9 @@ def get_live_telemetry_stream() -> Dict[str, Any]:
         }
         enhanced_telemetry.append(entry)
 
-        # Push to Firebase Realtime DB
-        firebase_service.publish_iot_telemetry(sensor_id, live_temp, computed_mkt)
+        # Push to Firebase Realtime DB (throttled to at most once per 30s)
+        if should_sync_firebase:
+            firebase_service.publish_iot_telemetry(sensor_id, live_temp, computed_mkt)
 
         if is_breach:
             excursion_alerts.append({
@@ -163,11 +176,14 @@ def get_live_telemetry_stream() -> Dict[str, Any]:
                 "alertTimestamp": datetime.utcnow().isoformat() + "Z"
             })
 
-    # Sync alerts to Firebase
-    if excursion_alerts:
+    # Sync alerts to Firebase only when throttled window fires
+    if excursion_alerts and should_sync_firebase:
         firebase_service.write_data("telemetry/alerts", excursion_alerts)
 
-    return {
+    if should_sync_firebase:
+        _LAST_FIREBASE_TELEMETRY_SYNC = now_ts
+
+    result_payload = {
         "digital_twin_protocol": "Firebase Realtime DB + IMD Weather Feed + Live Facility Registry",
         "firebase_sync_status": "CONNECTED_TO_FIREBASE_RTDB" if firebase_service.database_url else "LOCAL_CACHE",
         "sensor_nodes_source": "Live NMC/DGHS Facility Registry (dynamically generated)",
@@ -176,3 +192,7 @@ def get_live_telemetry_stream() -> Dict[str, Any]:
         "alerts": excursion_alerts,
         "sensors": enhanced_telemetry
     }
+
+    _STREAM_CACHE = result_payload
+    _STREAM_CACHE_TS = now_ts
+    return result_payload

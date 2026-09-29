@@ -226,6 +226,9 @@ class BigQueryHealthWarehouse:
             return
 
         with self._lock:
+            if getattr(self, "_is_flushing", False):
+                return
+            self._is_flushing = True
             realloc_items = list(self._reallocation_batch)
             self._reallocation_batch.clear()
             asha_items = list(self._asha_batch)
@@ -234,24 +237,28 @@ class BigQueryHealthWarehouse:
             self._telemetry_batch.clear()
             self._last_flush_time = time.time()
 
-        if realloc_items:
-            self._load_batch_with_quota_protection(
-                realloc_items, 
-                "reallocation_events", 
-                self._get_reallocation_schema()
-            )
-        if asha_items:
-            self._load_batch_with_quota_protection(
-                asha_items, 
-                "asha_copilot_conversations", 
-                self._get_asha_schema()
-            )
-        if telemetry_items:
-            self._load_batch_with_quota_protection(
-                telemetry_items, 
-                "fleet_telemetry_logs", 
-                self._get_telemetry_schema()
-            )
+        try:
+            if realloc_items:
+                self._load_batch_with_quota_protection(
+                    realloc_items, 
+                    "reallocation_events", 
+                    self._get_reallocation_schema()
+                )
+            if asha_items:
+                self._load_batch_with_quota_protection(
+                    asha_items, 
+                    "asha_copilot_conversations", 
+                    self._get_asha_schema()
+                )
+            if telemetry_items:
+                self._load_batch_with_quota_protection(
+                    telemetry_items, 
+                    "fleet_telemetry_logs", 
+                    self._get_telemetry_schema()
+                )
+        finally:
+            with self._lock:
+                self._is_flushing = False
 
     def query_morbidity_and_drug_velocity(self, district: Optional[str] = None, search: Optional[str] = None) -> Dict[str, Any]:
         """

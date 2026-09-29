@@ -188,12 +188,10 @@ class SimulationClockService:
 
             # 4. Offload Firebase persistence to a background thread only if previous sync finished
             if self._sync_thread is None or not self._sync_thread.is_alive():
-                import copy
-                fac_snapshot = copy.deepcopy(facilities)
-                med_snapshot = copy.deepcopy(medicines)
+                # Avoid copy.deepcopy overhead: pass direct references and let write_data serialize
                 self._sync_thread = threading.Thread(
                     target=self._async_persist_to_firebase,
-                    args=(fac_snapshot, med_snapshot),
+                    args=(facilities, medicines),
                     daemon=True
                 )
                 self._sync_thread.start()

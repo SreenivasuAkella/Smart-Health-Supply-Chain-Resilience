@@ -55,8 +55,15 @@ async def _get_medicines(facilities: list) -> list:
     return _medicines_cache
 
 
+_REALLOC_RUNNING = False
+_GLOBAL_LAST_REALLOC_TIME = 0.0
+
 def _run_reallocation_sync(facility_id: str, medicine_id: Optional[str]) -> Optional[dict]:
-    """Runs reallocation pipeline synchronously — called via executor."""
+    """Runs reallocation pipeline synchronously — single global run across all SSE connections."""
+    global _REALLOC_RUNNING, _GLOBAL_LAST_REALLOC_TIME
+    if _REALLOC_RUNNING:
+        return None
+    _REALLOC_RUNNING = True
     try:
         from ..services.ai_agents_service import run_auto_relocation_pipeline
         plan = run_auto_relocation_pipeline(
@@ -64,10 +71,13 @@ def _run_reallocation_sync(facility_id: str, medicine_id: Optional[str]) -> Opti
             medicine_id=medicine_id,
             auto_triggered=True
         )
+        _GLOBAL_LAST_REALLOC_TIME = time.time()
         if plan and plan.get("selected_donor"):
             return plan
     except Exception:
         pass
+    finally:
+        _REALLOC_RUNNING = False
     return None
 
 
@@ -170,7 +180,8 @@ async def event_generator(request: Request):
 
                 # ── 4. Auto-reallocation — run in executor, non-blocking ────
                 if (
-                    now_ts - last_reallocation_time >= REALLOCATION_COOLDOWN_SECONDS
+                    not _REALLOC_RUNNING
+                    and (now_ts - _GLOBAL_LAST_REALLOC_TIME >= REALLOCATION_COOLDOWN_SECONDS)
                     and (_realloc_task is None or _realloc_task.done())
                 ):
                     fac_id = alert_fac.get("id")
