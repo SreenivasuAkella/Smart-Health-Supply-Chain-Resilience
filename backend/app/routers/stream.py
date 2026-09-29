@@ -203,7 +203,7 @@ async def event_generator(request: Request):
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
             await asyncio.sleep(0)
 
-        await asyncio.sleep(3.5)
+        await asyncio.sleep(8.0)
 
 
 @router.get("/events")

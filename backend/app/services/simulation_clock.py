@@ -30,6 +30,8 @@ class SimulationClockService:
         self._cached_facilities: Optional[List[Dict[str, Any]]] = None
         self._cached_medicines: Optional[List[Dict[str, Any]]] = None
         self._is_ticking = False
+        self._sync_thread: Optional[threading.Thread] = None
+        self._sentinel_thread: Optional[threading.Thread] = None
 
     def _ensure_data_loaded(self):
         """Ensures facilities and medicines are loaded into in-memory cache."""
@@ -184,26 +186,32 @@ class SimulationClockService:
                             inv[hosp_id] = inv.get(hosp_id, 80) + 150
                             med["currentTotal"] = sum(inv.values())
 
-            # 4. Offload Firebase persistence to a background thread
-            import copy
-            fac_snapshot = copy.deepcopy(facilities)
-            med_snapshot = copy.deepcopy(medicines)
-            threading.Thread(
-                target=self._async_persist_to_firebase,
-                args=(fac_snapshot, med_snapshot),
-                daemon=True
-            ).start()
+            # 4. Offload Firebase persistence to a background thread only if previous sync finished
+            if self._sync_thread is None or not self._sync_thread.is_alive():
+                import copy
+                fac_snapshot = copy.deepcopy(facilities)
+                med_snapshot = copy.deepcopy(medicines)
+                self._sync_thread = threading.Thread(
+                    target=self._async_persist_to_firebase,
+                    args=(fac_snapshot, med_snapshot),
+                    daemon=True
+                )
+                self._sync_thread.start()
 
-            # 5. Offload AI Sentinel Auto-Reallocations to a background thread
+            # 5. Offload AI Sentinel Auto-Reallocations to a background thread only if previous run finished
             queued_dispatches = []
-            if newly_critical_facilities:
+            if newly_critical_facilities and (self._sentinel_thread is None or not self._sentinel_thread.is_alive()):
                 targets_to_reallocate = newly_critical_facilities[:2]
                 queued_dispatches = [f.get("id") for f in targets_to_reallocate]
-                threading.Thread(
+                self._sentinel_thread = threading.Thread(
                     target=self._async_run_sentinel_dispatches,
                     args=(targets_to_reallocate,),
                     daemon=True
-                ).start()
+                )
+                self._sentinel_thread.start()
+
+            import gc
+            gc.collect()
 
             elapsed_ms = round((time.time() - start_time) * 1000, 2)
             print(f"[Simulation Clock]: Day {self.virtual_day} tick completed in {elapsed_ms}ms (Decayed: {decayed_count}, Critical: {len(newly_critical_facilities)})")

@@ -281,13 +281,23 @@ def load_copilot_sessions_from_db() -> Dict[str, Dict[str, Any]]:
 
 
 def save_copilot_sessions_to_db(sessions: Dict[str, Dict[str, Any]]):
-    """Persists sessions to local disk file."""
+    """Persists sessions to local disk file, keeping only recent sessions and stripping heavy media."""
+    global _SESSIONS_CACHE
     try:
         os.makedirs(os.path.dirname(SESSIONS_FILE), exist_ok=True)
-        # Keep recent 100 sessions on disk
-        trimmed = dict(sorted(sessions.items(), key=lambda kv: kv[1].get("updated_at", ""), reverse=True)[:100])
+        # Keep recent 25 sessions on disk and in memory
+        trimmed = dict(sorted(sessions.items(), key=lambda kv: kv[1].get("updated_at", ""), reverse=True)[:25])
+        # Strip any large image base64 strings from messages to preserve low memory footprint
+        for sess in trimmed.values():
+            if "messages" in sess and isinstance(sess["messages"], list):
+                sess["messages"] = sess["messages"][-15:]
+                for m in sess["messages"]:
+                    if "image_base64" in m:
+                        m["image_base64"] = None
         with open(SESSIONS_FILE, "w") as f:
             json.dump(trimmed, f, indent=2)
+        # Keep in-memory cache bounded
+        _SESSIONS_CACHE = trimmed
     except Exception as e:
         print(f"[Save copilot sessions error]: {e}")
 
@@ -403,15 +413,18 @@ def process_copilot_chat(
         "language_code": language_code,
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "has_image": bool(image_base64),
-        "image_base64": image_base64 if image_base64 else None,
         "vision_result": vision_result
     }
     session["messages"].append(user_msg)
+    if len(session["messages"]) > 20:
+        session["messages"] = session["messages"][-20:]
     if conversation_history:
         existing_ids = {m.get("id") for m in session["messages"]}
         for h in conversation_history:
             if h.get("id") not in existing_ids:
                 session["messages"].append(h)
+        if len(session["messages"]) > 20:
+            session["messages"] = session["messages"][-20:]
 
     # 1. Execute agentic multi-turn pipeline with dynamic tool selection & clarification
     agent_result = None

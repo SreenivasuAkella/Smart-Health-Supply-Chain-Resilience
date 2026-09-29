@@ -23,6 +23,20 @@ app.add_middleware(
 )
 
 
+import gc
+
+_REQUEST_COUNTER = 0
+
+@app.middleware("http")
+async def memory_management_middleware(request: Request, call_next):
+    global _REQUEST_COUNTER
+    response = await call_next(request)
+    _REQUEST_COUNTER += 1
+    # Periodically collect garbage every 50 requests to prevent Python heap growth on Render free tier
+    if _REQUEST_COUNTER % 50 == 0:
+        gc.collect()
+    return response
+
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # Global Exception Handlers enforcing standardized API format
