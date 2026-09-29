@@ -432,6 +432,18 @@ export async function fetchActiveReallocations() {
   }
 }
 
+export async function fetchReallocationMetrics() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reallocation/metrics`);
+    if (!res.ok) throw new Error("Failed to fetch reallocation metrics");
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.warn("fetchReallocationMetrics notice:", err);
+    return null;
+  }
+}
+
 export async function dispatchFleet(payload = { auto_multi: true, count: 3 }) {
   try {
     const res = await fetch(`${API_BASE_URL}/reallocation/dispatch-fleet`, {

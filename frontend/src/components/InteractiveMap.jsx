@@ -5,7 +5,7 @@ import {
   MapPin, Navigation, Truck, RefreshCw, Layers, ShieldCheck, 
   AlertCircle, Building2, Phone, Sparkles, ShieldAlert, AlertTriangle, 
   CheckCircle2, Bot, History, X, Clock, ArrowRight, Gauge, Thermometer,
-  RotateCcw, Maximize2, Minimize2
+  RotateCcw, Maximize2, Minimize2, Database
 } from 'lucide-react';
 import { 
   optimizeReallocationPlan, 
@@ -13,6 +13,7 @@ import {
   fetchReallocationHistory, 
   updateReallocationStatus,
   fetchActiveReallocations,
+  fetchReallocationMetrics,
   dispatchFleet 
 } from '../services/api';
 
@@ -302,11 +303,26 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   const [showHistory, setShowHistory] = useState(false);
   const [historyRecords, setHistoryRecords] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState('ALL');
   const [showTrace, setShowTrace] = useState(false);
 
   // Fleet Convoys Side Panel State
   const [showFleetPanel, setShowFleetPanel] = useState(false);
   const [fleetFilter, setFleetFilter] = useState('ALL');
+  const [reallocationStats, setReallocationStats] = useState(null);
+
+  const refreshStats = async () => {
+    try {
+      const s = await fetchReallocationMetrics();
+      if (s) setReallocationStats(s);
+    } catch {}
+  };
+
+  useEffect(() => {
+    refreshStats();
+    const interval = setInterval(refreshStats, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Fullscreen Expansion State
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -578,10 +594,62 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
         return hasChanges ? next : prev;
       });
-    }, 280);
+    }, 1200); // 1.2s per waypoint step for realistic operational velocity (18-25s per mission)
 
     return () => clearInterval(timer);
   }, [activeFleet]);
+
+  // Continuous patient consumption decay engine:
+  // Models real-world OPD outpatient footfall and clinical medicine burn rate over time
+  // Prevents static state where all dots turn green forever; sustains dynamic supply-demand equilibrium
+  useEffect(() => {
+    const decayInterval = setInterval(() => {
+      setLocalFacilities(prevList => {
+        let changed = false;
+        const now = Date.now();
+        const updated = prevList.map(fac => {
+          // District Hospitals and Regional Depots maintain bulk statutory central reserves
+          if (fac.status === 'Regional Depot' || fac.type === 'District Hospital') {
+            return fac;
+          }
+
+          // If facility was just replenished within the last 35 seconds, respect the delivery grace window
+          if (fac._justDelivered && fac._deliveredAt && (now - fac._deliveredAt < 35000)) {
+            return fac;
+          }
+
+          const currentDos = Number(fac.medicine_days_of_supply || 5.0);
+          if (currentDos <= 0.8) return fac; // Hard floor at 0.8 days
+
+          // Daily patient footfall drives the clinical consumption decay
+          const footfall = Number(fac.dailyPatientFootfall || 45);
+          // Realistic decay rate: ~0.04 to 0.08 days of supply consumed per 12-second cycle
+          const decayStep = Math.round((Math.max(15, footfall) / 600.0) * 100) / 1000;
+          const nextDos = Math.max(0.8, Math.round((currentDos - decayStep) * 10) / 10);
+
+          if (nextDos === currentDos) return fac;
+          changed = true;
+
+          // Recalculate status based on decayed Days of Supply:
+          // <= 3.0 days = Critical Deficit (Red)
+          // 3.1 - 7.0 days = Depleting Buffer Warning (Yellow)
+          // > 7.0 days = Optimal Buffer (Green)
+          const newStatus = nextDos <= 3.0 ? "Critical Deficit" : (nextDos <= 7.0 ? "Warning" : "Optimal");
+
+          return {
+            ...fac,
+            medicine_days_of_supply: nextDos,
+            status: newStatus,
+            _justDelivered: false
+          };
+        });
+
+        return changed ? updated : prevList;
+      });
+    }, 12000); // 12-second operational decay cycle
+
+    return () => clearInterval(decayInterval);
+  }, []);
 
   const handleReplayTransit = (corridorToReplay) => {
     const plan = corridorToReplay || reallocationPlan;
@@ -679,11 +747,13 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   };
 
 
-  const handleOpenHistory = async () => {
+  const handleOpenHistory = async (statusOverride) => {
     setShowHistory(true);
     setShowFleetPanel(false);
     setLoadingHistory(true);
-    const list = await fetchReallocationHistory(50);
+    refreshStats();
+    const filterToUse = statusOverride !== undefined ? statusOverride : historyFilter;
+    const list = await fetchReallocationHistory(100, filterToUse === 'ALL' ? undefined : filterToUse);
     setHistoryRecords(list || []);
     setLoadingHistory(false);
   };
@@ -704,6 +774,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     if (res) {
       setReallocationPlan(prev => (prev && prev.dispatch_id === dispatchId) ? { ...prev, status: "DELIVERED" } : prev);
       setActiveFleet(prev => prev.map(p => p.dispatch_id === dispatchId ? { ...p, status: "DELIVERED" } : p));
+      refreshStats();
 
       // Complete two-node delivery handshake: flip target facility pin from Red to Green!
       const dispRecord = activeFleet.find(p => p.dispatch_id === dispatchId) || reallocationPlan;
@@ -717,12 +788,22 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                          (targetName && fac.name && (fac.name.toLowerCase() === targetName.toLowerCase() || fac.name.toLowerCase().includes(targetName.toLowerCase())));
         if (isTarget) {
           const currentDos = Number(fac.medicine_days_of_supply || 1.5);
-          const restoredDos = Math.round((currentDos + (qty / 2.0)) * 10) / 10;
+          // Realistic consumption burn rate calculation (~3.5 to 5.0 units/day)
+          const burnRate = Number(fac.effective_burn_rate || 4.2);
+          const addedDos = Math.round((qty / burnRate) * 10) / 10;
+          const restoredDos = Math.round((currentDos + addedDos) * 10) / 10;
+
+          // Classify according to standard healthcare resilience thresholds:
+          // > 7.0 days = Optimal Buffer (Green)
+          // 3.1 to 7.0 days = Warning Buffer (Yellow)
+          // <= 3.0 days = Critical Deficit (Red)
+          const newStatus = restoredDos > 7.0 ? "Optimal" : (restoredDos > 3.0 ? "Warning" : "Critical Deficit");
           return {
             ...fac,
-            status: "Optimal",
-            medicine_days_of_supply: Math.max(14.0, restoredDos),
-            _justDelivered: true
+            status: newStatus,
+            medicine_days_of_supply: Math.min(18.0, Math.max(currentDos + 2.5, restoredDos)),
+            _justDelivered: true,
+            _deliveredAt: Date.now()
           };
         }
         if (donorId && fac.id === donorId) {
@@ -735,8 +816,8 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
         return fac;
       }));
 
-      // Autonomous Multi-Transport Chaining: After 2.5s, pick the next Critical Deficit facility
-      // and launch the next transit so red dots systematically turn green across India!
+      // Autonomous Multi-Transport Chaining: After 10s operational turnaround & inspection window,
+      // pick the next Critical Deficit facility and launch the next transit at realistic pace
       setTimeout(async () => {
         try {
           setLocalFacilities(currentList => {
@@ -782,12 +863,15 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
                   deliveredDispatchesRef.current.delete(nextPlan.dispatch_id);
 
+                  // Keep delivered transit in cumulative activeFleet so full count of all missions is preserved!
                   setActiveFleet(prev => [
                     nextPlan,
-                    ...prev.filter(p => p.dispatch_id !== dispatchId && p.dispatch_id !== nextPlan.dispatch_id)
+                    ...prev.map(p => p.dispatch_id === dispatchId ? { ...p, status: "DELIVERED" } : p)
+                      .filter(p => p.dispatch_id !== nextPlan.dispatch_id)
                   ]);
                   setReallocationPlan(nextPlan);
                   setFleetIndices(prev => ({ ...prev, [nextPlan.dispatch_id]: 0 }));
+                  refreshStats();
                 }
               }).catch(err => console.debug("Auto-chain dispatch error:", err));
             }
@@ -797,7 +881,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
         } catch (chainErr) {
           console.debug("Auto-chain next transit error:", chainErr);
         }
-      }, 2500);
+      }, 10000); // 10-second operational turnaround & reloading window
     }
   };
 
@@ -1685,6 +1769,43 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               </div>
             </div>
 
+            {/* Database Master Ledger Lifetime Count Banner */}
+            <div className="px-4 py-2.5 bg-gradient-to-r from-slate-950 via-slate-900 to-cyan-950/40 border-b border-cyan-500/20 shrink-0">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Database size={12} className="text-cyan-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                    Database Master Ledger
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] font-mono text-cyan-300 bg-cyan-950/70 px-1.5 py-0.5 rounded border border-cyan-800/40">
+                    SQLite + BigQuery + Firebase
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <div className="p-1 rounded-lg bg-slate-950/80 border border-slate-800/80">
+                  <p className="text-[9px] text-slate-400">Total Transits</p>
+                  <p className="text-xs font-bold font-mono text-cyan-300">
+                    {reallocationStats?.total_transits || activeFleet.length}
+                  </p>
+                </div>
+                <div className="p-1 rounded-lg bg-slate-950/80 border border-slate-800/80">
+                  <p className="text-[9px] text-slate-400">Delivered</p>
+                  <p className="text-xs font-bold font-mono text-emerald-400">
+                    {reallocationStats?.delivered_transits || deliveredCount}
+                  </p>
+                </div>
+                <div className="p-1 rounded-lg bg-slate-950/80 border border-slate-800/80">
+                  <p className="text-[9px] text-slate-400">Rebalanced</p>
+                  <p className="text-xs font-bold font-mono text-purple-400">
+                    {(reallocationStats?.total_units_rebalanced || 0).toLocaleString()} <span className="text-[8px] font-normal text-slate-400">u</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Quick Stats & Filter Tabs */}
             <div className="px-4 py-2.5 bg-slate-900/60 border-b border-slate-800/80 shrink-0 space-y-2">
               <div className="flex items-center justify-between text-xs">
@@ -1933,20 +2054,72 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
           <div className="absolute inset-y-0 right-0 z-[1100] w-full sm:w-96 glass-panel border-l border-cyan-500/40 bg-slate-950/98 shadow-2xl p-4 flex flex-col animate-slide-left">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <History size={16} className="text-cyan-400" />
-                <h4 className="font-bold text-white text-sm">Reallocation Database Ledger</h4>
+                <Database size={16} className="text-cyan-400" />
+                <div>
+                  <h4 className="font-bold text-white text-sm">Reallocation Database Ledger</h4>
+                  <p className="text-[10px] text-slate-400">
+                    Full count of all transits from initial stage
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowHistory(false)}
                 className="text-slate-400 hover:text-white p-1"
+                title="Close Ledger"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <p className="text-[11px] text-slate-400 mt-2 mb-3">
-              Persistent records retrieved from SQLite &amp; Firebase dual-synced database.
-            </p>
+            {/* Lifetime Database Stats Banner */}
+            <div className="my-2.5 p-2 rounded-xl bg-slate-900/90 border border-cyan-500/30">
+              <div className="flex items-center justify-between text-[10px] mb-1.5 font-mono">
+                <span className="text-slate-300 font-bold">LIFETIME TRANSIT AUDIT</span>
+                <span className="text-emerald-400 flex items-center gap-1 text-[9px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  PERSISTENT SQLITE + BQ
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1 text-center text-xs">
+                <div className="p-1 bg-slate-950/80 rounded border border-slate-800">
+                  <div className="text-[8px] text-slate-400 uppercase">Total</div>
+                  <div className="font-bold font-mono text-cyan-400 text-xs">{reallocationStats?.total_transits || historyRecords.length}</div>
+                </div>
+                <div className="p-1 bg-slate-950/80 rounded border border-slate-800">
+                  <div className="text-[8px] text-slate-400 uppercase">Delivered</div>
+                  <div className="font-bold font-mono text-emerald-400 text-xs">{reallocationStats?.delivered_transits || 0}</div>
+                </div>
+                <div className="p-1 bg-slate-950/80 rounded border border-slate-800">
+                  <div className="text-[8px] text-slate-400 uppercase">Active</div>
+                  <div className="font-bold font-mono text-amber-400 text-xs">{reallocationStats?.in_transit_transits || 0}</div>
+                </div>
+                <div className="p-1 bg-slate-950/80 rounded border border-slate-800">
+                  <div className="text-[8px] text-slate-400 uppercase">Units</div>
+                  <div className="font-bold font-mono text-purple-400 text-xs">{(reallocationStats?.total_units_rebalanced || 0).toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter buttons in History Drawer */}
+            <div className="flex items-center justify-between mb-2 text-xs">
+              <span className="text-slate-400 text-[10px]">Filter:</span>
+              <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                {['ALL', 'DELIVERED', 'IN_TRANSIT'].map(f => (
+                  <button
+                    key={f}
+                    onClick={() => {
+                      setHistoryFilter(f);
+                      handleOpenHistory(f);
+                    }}
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-md transition-all ${
+                      historyFilter === f ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {f === 'ALL' ? `All (${reallocationStats?.total_transits || historyRecords.length})` : (f === 'DELIVERED' ? `Delivered (${reallocationStats?.delivered_transits || 0})` : `In-Transit (${reallocationStats?.in_transit_transits || 0})`)}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
               {loadingHistory ? (

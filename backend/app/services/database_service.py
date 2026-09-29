@@ -364,6 +364,18 @@ class ReallocationDatabaseService:
             conn.commit()
             updated = cursor.rowcount > 0
 
+        if not updated:
+            # If not yet in local SQLite table, pull from Firebase RTDB and upsert
+            try:
+                fb_rec = firebase_service.read_data(f"reallocations/{dispatch_id}")
+                if fb_rec and isinstance(fb_rec, dict):
+                    fb_rec["status"] = new_status
+                    fb_rec["updated_at"] = now_str
+                    self.save_reallocation(fb_rec)
+                    updated = True
+            except Exception:
+                pass
+
         if updated:
             rec = self.get_reallocation(dispatch_id)
             if rec and new_status in ('DELIVERED', 'COMPLETED', 'CANCELLED'):
@@ -401,6 +413,41 @@ class ReallocationDatabaseService:
                 item.pop("driver_contact", None)
                 fleet.append(item)
             return fleet
+
+    def get_reallocation_stats(self) -> Dict[str, Any]:
+        """
+        Calculates aggregate statistics across all historical and active transits in the database.
+        Returns total transits created, delivered, in-transit, units rebalanced, and distance covered.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_transits,
+                    SUM(CASE WHEN status LIKE '%DELIVERED%' OR status LIKE '%COMPLETED%' THEN 1 ELSE 0 END) as delivered_transits,
+                    SUM(CASE WHEN status LIKE '%TRANSIT%' OR status LIKE '%EN ROUTE%' OR status LIKE '%APPROVED%' THEN 1 ELSE 0 END) as in_transit_transits,
+                    COALESCE(SUM(quantity), 0) as total_units_rebalanced,
+                    COALESCE(ROUND(SUM(distance_km), 1), 0.0) as total_distance_km,
+                    SUM(CASE WHEN vehicle_id LIKE '%DRONE%' OR vehicle_type LIKE '%Drone%' OR vehicle_type LIKE '%VTOL%' THEN 1 ELSE 0 END) as drone_transits,
+                    SUM(CASE WHEN vehicle_id NOT LIKE '%DRONE%' AND vehicle_type NOT LIKE '%Drone%' AND vehicle_type NOT LIKE '%VTOL%' THEN 1 ELSE 0 END) as ground_transits
+                FROM reallocations
+            """)
+            row = cursor.fetchone()
+            stats = {
+                "total_transits": row[0] or 0,
+                "delivered_transits": row[1] or 0,
+                "in_transit_transits": row[2] or 0,
+                "total_units_rebalanced": row[3] or 0,
+                "total_distance_km": row[4] or 0.0,
+                "drone_transits": row[5] or 0,
+                "ground_transits": row[6] or 0
+            }
+            # Sync to Firebase under reallocations/stats
+            try:
+                firebase_service.write_data("reallocations/stats", stats)
+            except Exception:
+                pass
+            return stats
 
     def list_active_reallocations(self) -> List[Dict[str, Any]]:
         """Returns all reallocations that are currently active (not DELIVERED, COMPLETED, or CANCELLED)."""
