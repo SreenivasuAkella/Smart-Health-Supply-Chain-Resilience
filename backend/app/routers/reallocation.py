@@ -131,7 +131,7 @@ def run_autonomous_relocation():
 
 @router.get("/history")
 def get_reallocation_history(
-    limit: int = Query(100, ge=1, le=1000, description="Max records to retrieve"),
+    limit: int = Query(50, ge=1, description="Max records to retrieve (clamped to 75 internally)"),
     status: Optional[str] = Query(None, description="Filter by status (e.g. APPROVED, IN_TRANSIT, DELIVERED)"),
     search: Optional[str] = Query(None, description="Search by facility, dispatch ID, or drug"),
     source: Optional[str] = Query("sqlite", description="Storage source: 'sqlite' (local cache) or 'bigquery' (national audit warehouse)")
@@ -376,10 +376,8 @@ def update_status(dispatch_id: str, req: StatusUpdateRequest):
 
     # Sync status transition to Firebase Realtime DB & BigQuery national audit log
     try:
-        firebase_service.write_data(f"reallocations/{dispatch_id}/status", req.status)
         if record:
             firebase_service.write_data(f"reallocations/{dispatch_id}", record)
-            firebase_service.write_data("reallocations/latest", record)
             bigquery_service.insert_reallocation_event(record)
     except Exception as fb_err:
         print(f"[Firebase Status Sync Notice]: {fb_err}")

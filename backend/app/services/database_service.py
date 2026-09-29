@@ -332,6 +332,7 @@ class ReallocationDatabaseService:
 
     def list_reallocations(self, limit: int = 50, status: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
         """Lists reallocations ordered by newest first with optional status or text filters."""
+        safe_limit = max(1, min(int(limit), 75))
         query = "SELECT * FROM reallocations"
         params = []
         where_clauses = []
@@ -349,7 +350,7 @@ class ReallocationDatabaseService:
             query += " WHERE " + " AND ".join(where_clauses)
 
         query += " ORDER BY created_at DESC LIMIT ?"
-        params.append(limit)
+        params.append(safe_limit)
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -444,11 +445,6 @@ class ReallocationDatabaseService:
                 "drone_transits": row[5] or 0,
                 "ground_transits": row[6] or 0
             }
-            # Sync to Firebase under reallocations/stats
-            try:
-                firebase_service.write_data("reallocations/stats", stats)
-            except Exception:
-                pass
             return stats
 
     def list_active_reallocations(self) -> List[Dict[str, Any]]:

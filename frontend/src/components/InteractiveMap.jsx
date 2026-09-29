@@ -420,7 +420,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     let isMounted = true;
     Promise.all([
       fetchActiveReallocations(),
-      fetchReallocationHistory(1000)
+      fetchReallocationHistory(50)
     ]).then(([activeList, historyList]) => {
       if (!isMounted) return;
       const combinedMap = new Map();
