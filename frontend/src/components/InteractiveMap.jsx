@@ -241,6 +241,36 @@ export const getVehicleStyle = (vehicleType = '', index = 0) => {
   };
 };
 
+export function getCorridorWaypoints(corridor) {
+  if (!corridor) return [];
+  const raw = corridor.route_coordinates || [];
+  if (raw.length < 2) return raw;
+
+  const vType = (corridor.vehicle_details?.vehicle_type || corridor.vehicle_type || '').toLowerCase();
+  const vId = (corridor.vehicle_details?.vehicle_id || corridor.vehicle_id || '').toLowerCase();
+  const isDrone = corridor.is_aerial || corridor.is_drone || vType.includes('drone') || vType.includes('vtol') || vId.includes('drone');
+
+  // Drones fly direct as the crow flies across 3D airspace (never along winding road networks)
+  if (isDrone && raw.length > 20) {
+    const origin = raw[0];
+    const dest = raw[raw.length - 1];
+    const numPts = 18;
+    const directPts = [];
+    for (let i = 0; i < numPts; i++) {
+      const frac = i / (numPts - 1);
+      directPts.push([
+        roundCoord(origin[0] + (dest[0] - origin[0]) * frac),
+        roundCoord(origin[1] + (dest[1] - origin[1]) * frac)
+      ]);
+    }
+    return directPts;
+  }
+  return raw;
+}
+
+function roundCoord(val) {
+  return Math.round(val * 100000) / 100000;
+}
 
 export default function InteractiveMap({ isLoading = false, facilities = [], activeReallocation, onSelectFacility }) {
   const [localFacilities, setLocalFacilities] = useState(facilities || []);
@@ -514,7 +544,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
         activeFleet.forEach(plan => {
           const dispId = plan.dispatch_id;
           if (!dispId) return;
-          const waypoints = plan.route_coordinates || [];
+          const waypoints = getCorridorWaypoints(plan);
           if (waypoints.length < 2) return;
           const count = waypoints.length;
 
@@ -555,7 +585,8 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
 
   const handleReplayTransit = (corridorToReplay) => {
     const plan = corridorToReplay || reallocationPlan;
-    if (!plan?.route_coordinates || plan.route_coordinates.length < 2) return;
+    const waypoints = getCorridorWaypoints(plan);
+    if (!waypoints || waypoints.length < 2) return;
     const dispId = plan.dispatch_id;
     if (dispId) {
       deliveredDispatchesRef.current.delete(dispId);
@@ -568,7 +599,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
   const isCorridorDelivered = (c) => {
     if (!c) return false;
     if (c.status === 'DELIVERED') return true;
-    const waypts = c.route_coordinates || [];
+    const waypts = getCorridorWaypoints(c);
     const curIdx = fleetIndices[c.dispatch_id] ?? 0;
     return waypts.length > 0 && curIdx >= waypts.length - 1;
   };
@@ -677,11 +708,14 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
       // Complete two-node delivery handshake: flip target facility pin from Red to Green!
       const dispRecord = activeFleet.find(p => p.dispatch_id === dispatchId) || reallocationPlan;
       const targetId = targetFacIdOverride || dispRecord?.target_facility?.id || dispRecord?.target_facility_id;
+      const targetName = dispRecord?.target_facility?.name || dispRecord?.target_facility_name;
       const donorId = donorFacIdOverride || dispRecord?.selected_donor?.facility_id || dispRecord?.donor_facility_id;
       const qty = Number(qtyOverride || dispRecord?.quantity || dispRecord?.target_facility?.requested_quantity || 25);
 
       setLocalFacilities(prevList => prevList.map(fac => {
-        if (fac.id === targetId) {
+        const isTarget = (targetId && (fac.id === targetId || fac.id.includes(targetId) || targetId.includes(fac.id))) ||
+                         (targetName && fac.name && (fac.name.toLowerCase() === targetName.toLowerCase() || fac.name.toLowerCase().includes(targetName.toLowerCase())));
+        if (isTarget) {
           const currentDos = Number(fac.medicine_days_of_supply || 1.5);
           const restoredDos = Math.round((currentDos + (qty / 2.0)) * 10) / 10;
           return {
@@ -691,7 +725,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
             _justDelivered: true
           };
         }
-        if (fac.id === donorId) {
+        if (donorId && fac.id === donorId) {
           const currentDos = Number(fac.medicine_days_of_supply || 18.5);
           return {
             ...fac,
@@ -700,6 +734,70 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
         }
         return fac;
       }));
+
+      // Autonomous Multi-Transport Chaining: After 2.5s, pick the next Critical Deficit facility
+      // and launch the next transit so red dots systematically turn green across India!
+      setTimeout(async () => {
+        try {
+          setLocalFacilities(currentList => {
+            const activeTargets = new Set(
+              (activeFleet || [])
+                .filter(p => p.status !== 'DELIVERED')
+                .map(p => p.target_facility?.id || p.target_facility_id)
+            );
+            if (targetId) activeTargets.add(targetId);
+
+            // Find the next critical deficit facility requiring emergency dispatch
+            const nextDeficit = currentList.find(f => 
+              f.status === 'Critical Deficit' && !activeTargets.has(f.id)
+            );
+
+            if (nextDeficit) {
+              const assignedVehType = dispRecord?.vehicle_details?.vehicle_type || dispRecord?.vehicle_type || "Autonomous Medical Drone";
+              const isDroneVeh = assignedVehType.toLowerCase().includes('drone') || assignedVehType.toLowerCase().includes('vtol');
+              const medToDispatch = isDroneVeh ? "PUB-MED-002" : "PUB-MED-001";
+
+              optimizeReallocationPlan(nextDeficit.id, medToDispatch, 25).then(nextPlan => {
+                if (nextPlan && nextPlan.dispatch_id) {
+                  const assignedVeh = dispRecord?.vehicle_details || {
+                    vehicle_id: `VEH-CHAIN-${Math.floor(Math.random() * 900 + 100)}`,
+                    vehicle_type: assignedVehType
+                  };
+                  nextPlan.vehicle_details = assignedVeh;
+                  nextPlan.vehicle_id = assignedVeh.vehicle_id;
+                  nextPlan.vehicle_type = assignedVeh.vehicle_type;
+                  nextPlan.is_drone = isDroneVeh;
+                  nextPlan.is_aerial = isDroneVeh;
+                  nextPlan.status = "IN_TRANSIT";
+
+                  // If it's a drone, guarantee the corridor waypoints are direct airspace flight points
+                  if (isDroneVeh && nextPlan.route_coordinates && nextPlan.route_coordinates.length > 20) {
+                    const orig = nextPlan.route_coordinates[0];
+                    const dst = nextPlan.route_coordinates[nextPlan.route_coordinates.length - 1];
+                    nextPlan.route_coordinates = Array.from({ length: 18 }, (_, i) => [
+                      orig[0] + (dst[0] - orig[0]) * (i / 17),
+                      orig[1] + (dst[1] - orig[1]) * (i / 17)
+                    ]);
+                  }
+
+                  deliveredDispatchesRef.current.delete(nextPlan.dispatch_id);
+
+                  setActiveFleet(prev => [
+                    nextPlan,
+                    ...prev.filter(p => p.dispatch_id !== dispatchId && p.dispatch_id !== nextPlan.dispatch_id)
+                  ]);
+                  setReallocationPlan(nextPlan);
+                  setFleetIndices(prev => ({ ...prev, [nextPlan.dispatch_id]: 0 }));
+                }
+              }).catch(err => console.debug("Auto-chain dispatch error:", err));
+            }
+
+            return currentList;
+          });
+        } catch (chainErr) {
+          console.debug("Auto-chain next transit error:", chainErr);
+        }
+      }, 2500);
     }
   };
 
@@ -753,7 +851,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
     || reallocationPlan?.ai_average_speed_kmh 
     || Math.round(distanceKm / (Math.max(1, etaMins) / 60.0));
 
-  const routeWaypoints = reallocationPlan?.route_coordinates || [];
+  const routeWaypoints = getCorridorWaypoints(reallocationPlan);
   const waypointsCount = routeWaypoints.length;
   const curPlanDispId = reallocationPlan?.dispatch_id;
   const activePlanIndex = (curPlanDispId && fleetIndices[curPlanDispId] !== undefined)
@@ -1228,7 +1326,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
               }
 
               return corridorsToRender.map((corridor, cIdx) => {
-                const waypoints = corridor.route_coordinates || [];
+                const waypoints = getCorridorWaypoints(corridor);
                 if (waypoints.length < 2) return null;
 
                 const dispId = corridor.dispatch_id || `CORRIDOR-${cIdx}`;
@@ -1660,7 +1758,7 @@ export default function InteractiveMap({ isLoading = false, facilities = [], act
                   })
                   .map((corridor, cIdx) => {
                     const cStyle = getVehicleStyle(corridor.vehicle_details?.vehicle_type || corridor.vehicle_type, cIdx);
-                    const waypts = corridor.route_coordinates || [];
+                    const waypts = getCorridorWaypoints(corridor);
                     const curIdx = fleetIndices[corridor.dispatch_id] ?? 0;
                     const isArr = corridor.status === 'DELIVERED' || (waypts.length > 0 && curIdx >= waypts.length - 1);
                     const vehName = corridor.vehicle_details?.vehicle_id || corridor.vehicle_id || `VEH-0${cIdx + 1}`;

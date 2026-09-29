@@ -141,7 +141,7 @@ export default function OverviewDashboard({
   if ((isDataLoading || parentLoading) && facilities.length === 0) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div id="tour-kpi-metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3">
               <div className="skeleton w-32 h-4 rounded-md" />

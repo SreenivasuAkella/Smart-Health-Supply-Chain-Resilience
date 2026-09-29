@@ -386,17 +386,29 @@ def update_status(dispatch_id: str, req: StatusUpdateRequest):
                 fb_facs = firebase_service.read_data("inventory/facilities")
                 all_facs = fb_facs if (fb_facs and isinstance(fb_facs, list)) else get_active_public_facilities()
                 
-                target_fac = next((f for f in all_facs if f.get("id") == target_fac_id), None)
+                target_fac = next((f for f in all_facs if f.get("id") == target_fac_id or f.get("name") == record.get("target_facility_name")), None)
                 if target_fac:
-                    health = compute_facility_days_of_supply(target_fac, fb_meds or [])
-                    target_fac["status"] = health["status"]
-                    target_fac["medicine_days_of_supply"] = health["medicine_days_of_supply"]
+                    restored_dos = max(14.0, float(target_fac.get("medicine_days_of_supply", 1.5)) + (qty / 2.0))
+                    target_fac["status"] = "Optimal"
+                    target_fac["medicine_days_of_supply"] = round(restored_dos, 1)
                     target_update = {
-                        "facility_id": target_fac_id,
-                        "status": health["status"],
-                        "medicine_days_of_supply": health["medicine_days_of_supply"]
+                        "facility_id": target_fac.get("id", target_fac_id),
+                        "status": "Optimal",
+                        "medicine_days_of_supply": round(restored_dos, 1)
                     }
                     firebase_service.write_data("inventory/facilities", all_facs)
+                    
+                    # Update local in-memory caches
+                    try:
+                        from ..services import facility_data_service
+                        if facility_data_service._ACTIVE_FACILITIES_CACHE:
+                            for cached_f in facility_data_service._ACTIVE_FACILITIES_CACHE:
+                                if cached_f.get("id") == target_fac.get("id"):
+                                    cached_f["status"] = "Optimal"
+                                    cached_f["medicine_days_of_supply"] = round(restored_dos, 1)
+                                    break
+                    except Exception:
+                        pass
         except Exception as delivery_err:
             print(f"[Delivery Stock Inflow Handshake Notice]: {delivery_err}")
 

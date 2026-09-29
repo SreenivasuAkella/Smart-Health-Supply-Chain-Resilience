@@ -76,9 +76,12 @@ scratch/
 tmp/
 .temp/
 *.db
+*.db*
 *.db-journal
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
-**/reallocations.db
-backend/app/data/*.db
+**/reallocations.db*
+backend/app/data/*.db*
 

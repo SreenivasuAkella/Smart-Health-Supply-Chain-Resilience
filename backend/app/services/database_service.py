@@ -231,6 +231,15 @@ class ReallocationDatabaseService:
         vehicle = record.get("vehicle_details", {})
 
         route_coords = record.get("route_coordinates", [])
+        v_type = str(record.get("vehicle_type") or vehicle.get("vehicle_type") or "").lower()
+        v_id = str(record.get("vehicle_id") or vehicle.get("vehicle_id") or "").lower()
+        is_drone_rec = record.get("is_drone") or record.get("is_aerial") or "drone" in v_type or "vtol" in v_type or "drone" in v_id
+        if is_drone_rec and isinstance(route_coords, list) and len(route_coords) > 20:
+            origin = route_coords[0]
+            dest = route_coords[-1]
+            num_pts = 15
+            route_coords = [[round(origin[0] + (dest[0] - origin[0]) * i / 14.0, 6), round(origin[1] + (dest[1] - origin[1]) * i / 14.0, 6)] for i in range(num_pts)]
+            record["route_coordinates"] = route_coords
         route_coords_json = json.dumps(route_coords) if isinstance(route_coords, list) else str(route_coords)
 
         with self._get_connection() as conn:

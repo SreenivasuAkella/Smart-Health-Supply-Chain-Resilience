@@ -101,15 +101,60 @@ export default function MainLayout({ initialTab }) {
     setIsTechModalOpen(false);
     setIsCopilotOpen(false);
     setIsKeyModalOpen(false);
-    if (activeTab !== 'overview') {
-      navigateToTab('overview');
+
+    // If currently on another tab, store flag and navigate to Command Center with ?tour=true
+    if (activeTab !== 'overview' || (pathname && pathname !== '/' && pathname !== '/overview')) {
+      try {
+        sessionStorage.setItem('sanjeevani_auto_start_tour', 'true');
+        localStorage.setItem('sanjeevani_auto_start_tour', 'true');
+      } catch {}
+      router.push('/?tour=true', { scroll: false });
+      return;
     }
+
+    // Already on Command Center: immediately open tour
     setIsTourOpen(true);
   };
 
   const handleCloseTour = () => {
+    try {
+      sessionStorage.removeItem('sanjeevani_auto_start_tour');
+      localStorage.removeItem('sanjeevani_auto_start_tour');
+    } catch {}
     setIsTourOpen(false);
   };
+
+  // Auto-start tour if requested from another tab (via storage flag or URL query param)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Only trigger tour start when we are on the Command Center ('overview')
+    const isOverview = activeTab === 'overview' || pathname === '/' || pathname === '/overview';
+    if (!isOverview) return;
+
+    try {
+      const sFlag = sessionStorage.getItem('sanjeevani_auto_start_tour');
+      const lFlag = localStorage.getItem('sanjeevani_auto_start_tour');
+      const urlParams = new URLSearchParams(window.location.search);
+      const tourQuery = urlParams.get('tour');
+
+      if (sFlag === 'true' || lFlag === 'true' || tourQuery === 'true') {
+        sessionStorage.removeItem('sanjeevani_auto_start_tour');
+        localStorage.removeItem('sanjeevani_auto_start_tour');
+
+        if (tourQuery === 'true') {
+          window.history.replaceState({}, '', '/');
+        }
+
+        const timer = setTimeout(() => {
+          setIsTourOpen(true);
+        }, 120);
+        return () => clearTimeout(timer);
+      }
+    } catch (e) {
+      console.error('Auto-tour check error:', e);
+    }
+  }, [pathname, activeTab]);
 
   // Global keybinding: press '?' to trigger interactive guide
   useEffect(() => {

@@ -296,7 +296,7 @@ export default function AppTour({
 
   // Recalculate target element position & popover position
   const updatePosition = useCallback(() => {
-    if (!isOpen || !currentStep) return;
+    if (!isOpen || !currentStep) return false;
 
     const selector = currentStep.targetSelector;
     const element = selector ? document.querySelector(selector) : null;
@@ -304,29 +304,34 @@ export default function AppTour({
     if (!element) {
       setIsElementVisible(false);
       setTargetRect(null);
-      // Fallback: center in viewport
+      // Fallback: center in viewport until target mounts
       setPopoverPos({
         top: window.innerHeight / 2,
         left: window.innerWidth / 2,
         placement: 'center'
       });
-      return;
+      return false;
     }
 
     // If inside the sidebar, ensure sidebar container scrolls to it smoothly
     const sidebarNav = document.getElementById('tour-sidebar-nav');
+    const headerEl = document.querySelector('header');
+    const headerHeight = headerEl ? headerEl.offsetHeight : 68;
+    const isHeaderElement = headerEl && headerEl.contains(element);
+
     if (sidebarNav && sidebarNav.contains(element)) {
       element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
+    } else if (!isHeaderElement) {
       const rect = element.getBoundingClientRect();
-      const isInView = (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= window.innerHeight &&
-        rect.right <= window.innerWidth
-      );
-      if (!isInView) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      const isObscuredByHeader = rect.top < headerHeight + 14;
+      const isBelowFold = rect.bottom > window.innerHeight;
+
+      if (isObscuredByHeader || isBelowFold) {
+        const targetScrollY = window.scrollY + rect.top - headerHeight - 20;
+        window.scrollTo({
+          top: Math.max(0, targetScrollY),
+          behavior: 'smooth'
+        });
       }
     }
 
@@ -336,17 +341,20 @@ export default function AppTour({
     if (rect.width === 0 || rect.height === 0) {
       setIsElementVisible(false);
       setTargetRect(null);
+      // Fallback: center in viewport
       setPopoverPos({
         top: window.innerHeight / 2,
         left: window.innerWidth / 2,
         placement: 'center'
       });
-      return;
+      return false;
     }
 
     const padding = 8;
+    // Strict Header Boundary: Spotlight and cutout for page elements must NEVER overlap the sticky top header
+    const minTop = isHeaderElement ? 0 : headerHeight + 4;
     const computedTarget = {
-      top: Math.max(0, rect.top - padding),
+      top: Math.max(minTop, rect.top - padding),
       left: Math.max(0, rect.left - padding),
       width: rect.width + padding * 2,
       height: rect.height + padding * 2,
@@ -428,16 +436,26 @@ export default function AppTour({
     top = Math.max(margin, Math.min(top, maxTop));
 
     setPopoverPos({ top, left, placement: chosenPlacement });
+    return true;
   }, [isOpen, currentStep]);
 
-  // Keep position synchronized on scroll, resize, and step change
+  // Keep position synchronized on scroll, resize, step change, and tab transitions
   useEffect(() => {
     if (!isOpen) return;
 
-    // Small delay to ensure any layout transition settles
-    const timer = setTimeout(() => {
-      updatePosition();
-    }, 100);
+    // Active polling loop: checks every 60ms up to 40 times (~2.4s) until target mounts in DOM
+    let attempts = 0;
+    const maxAttempts = 40;
+    const pollInterval = setInterval(() => {
+      attempts++;
+      const found = updatePosition();
+      if (found || attempts >= maxAttempts) {
+        clearInterval(pollInterval);
+      }
+    }, 60);
+
+    // Initial immediate invocation
+    updatePosition();
 
     const handleScrollOrResize = () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
@@ -448,12 +466,12 @@ export default function AppTour({
     window.addEventListener('scroll', handleScrollOrResize, true);
 
     return () => {
-      clearTimeout(timer);
+      clearInterval(pollInterval);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       window.removeEventListener('resize', handleScrollOrResize);
       window.removeEventListener('scroll', handleScrollOrResize, true);
     };
-  }, [isOpen, currentStepIndex, updatePosition]);
+  }, [isOpen, currentStepIndex, activeTab, updatePosition]);
 
   // Keyboard navigation: Arrows & Escape
   useEffect(() => {
