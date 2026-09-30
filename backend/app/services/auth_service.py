@@ -252,6 +252,46 @@ class AuthService:
         # Return safe profile (exclude password hash)
         return self._safe_user_dict(user_record)
 
+    def reset_password(self, email: str, new_password: str) -> Dict[str, Any]:
+        """
+        Resets user password in-memory and in Firebase Realtime Database (auth/users/{user_id}).
+        Caller MUST verify the Base64 Admin Secret key prior to invoking.
+        Also invalidates any active refresh tokens for the user in auth/refresh_tokens to enforce security.
+        """
+        clean_email = email.strip().lower()
+        user = self.find_user_by_email(clean_email)
+        if not user:
+            raise ValueError(f"No registered account found with email '{clean_email}'.")
+
+        pwd_hash = hash_password(new_password)
+        user_id = user["user_id"]
+        user["password_hash"] = pwd_hash
+        now_iso = datetime.utcnow().isoformat() + "Z"
+        user["password_updated_at"] = now_iso
+
+        # Update in-memory index
+        self._users[user_id] = user
+
+        # Update Firebase RTDB directly
+        try:
+            firebase_service.write_data(f"auth/users/{user_id}/password_hash", pwd_hash)
+            firebase_service.write_data(f"auth/users/{user_id}/password_updated_at", now_iso)
+        except Exception as e:
+            print(f"[Auth Service] Firebase password update warning: {e}")
+
+        # Invalidate active refresh tokens for this user
+        for jti, tok in list(self._refresh_tokens.items()):
+            if tok.get("user_id") == user_id or tok.get("email", "").lower() == clean_email:
+                tok["revoked"] = True
+                tok["revoked_at"] = now_iso
+                try:
+                    firebase_service.write_data(f"auth/refresh_tokens/{jti}/revoked", True)
+                except Exception:
+                    pass
+
+        return self._safe_user_dict(user)
+
+
     def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
         """Validates email and password, updating last_login timestamp."""
         user = self.find_user_by_email(email)

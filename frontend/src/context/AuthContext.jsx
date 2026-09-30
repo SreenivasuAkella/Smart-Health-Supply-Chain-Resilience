@@ -5,7 +5,8 @@ import {
   refreshTokensApi, 
   logoutApi, 
   fetchCurrentUserApi,
-  provisionUserApi 
+  provisionUserApi,
+  forgotPasswordApi 
 } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -176,6 +177,11 @@ export function AuthProvider({ children }) {
     return await provisionUserApi(base64Secret, userData);
   };
 
+  // Reset account password using sovereign Base64 Secret Key
+  const resetPassword = async (email, newPassword, base64Secret) => {
+    return await forgotPasswordApi(email, newPassword, base64Secret);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -190,7 +196,8 @@ export function AuthProvider({ children }) {
         login,
         logout,
         refreshSession,
-        provisionUser
+        provisionUser,
+        resetPassword
       }}
     >
       {children}

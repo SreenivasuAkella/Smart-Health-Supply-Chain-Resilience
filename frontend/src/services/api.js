@@ -1554,6 +1554,41 @@ export async function provisionUserApi(base64Secret, userData) {
   };
 }
 
+export async function forgotPasswordApi(email, newPassword, base64Secret) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (base64Secret) {
+    headers['X-Admin-Secret'] = base64Secret;
+  }
+  const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      email,
+      new_password: newPassword,
+      base64_secret: base64Secret
+    })
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    let errorMsg = 'Failed to reset password. Verify your Base64 secret and email.';
+    if (json?.data && typeof json.data === 'string') {
+      errorMsg = json.data;
+    } else if (json?.detail && typeof json.detail === 'string') {
+      errorMsg = json.detail;
+    } else if (json?.status?.message && typeof json.status.message === 'string') {
+      errorMsg = json.status.message;
+    }
+    return { status: 'error', error: errorMsg, detail: errorMsg };
+  }
+  const payload = json.data || json;
+  return {
+    status: 'success',
+    message: payload.message || 'Password successfully reset.',
+    user: payload.user
+  };
+}
+
+
 export async function listRegisteredUsersApi(base64Secret, accessToken) {
   const headers = { 'Content-Type': 'application/json' };
   if (base64Secret) headers['X-Admin-Secret'] = base64Secret;

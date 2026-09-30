@@ -36,6 +36,13 @@ class RegisterUserRequest(BaseModel):
     assigned_district: Optional[str] = Field(None, description="Assigned administrative district")
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., description="Registered healthcare personnel email address")
+    new_password: str = Field(..., min_length=6, description="New security password (minimum 6 characters)")
+    base64_secret: Optional[str] = Field(None, description="Base64 Admin Master Secret Key for authorized reset")
+
+
+
 # --- Dependency: Current Authenticated User ---
 
 async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer)) -> Dict[str, Any]:
@@ -207,6 +214,68 @@ async def get_me(current_user: Dict[str, Any] = Depends(get_current_user)):
             "message": "Success"
         }
     }
+
+
+@router.post("/forgot-password", summary="Reset account password using Base64 Secret Key")
+@router.post("/reset-password", summary="Reset account password using Base64 Secret Key (alias)")
+async def forgot_password_endpoint(
+    body: ForgotPasswordRequest,
+    x_admin_secret: Optional[str] = Header(None, alias="X-Admin-Secret"),
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+):
+    """
+    SECURE PASSWORD RESET ENDPOINT.
+    Allows resetting user password ONLY when authorized by the sovereign Base64 Secret Key.
+    The secret key can be supplied via:
+      - Request body field: `base64_secret`
+      - Header `X-Admin-Secret: <base64_secret>`
+      - Header `Authorization: Bearer <base64_secret>`
+    """
+    candidate_secret = body.base64_secret or x_admin_secret
+
+    if not candidate_secret and authorization:
+        parts = authorization.split(" ")
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            candidate_secret = parts[1]
+
+    # Strictly verify Base64 Secret Key
+    if not candidate_secret or not auth_service.verify_admin_secret(candidate_secret):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Invalid or missing Base64 Secret Key. Password reset requires sovereign Base64 authorization."
+        )
+
+    clean_email = body.email.strip().lower()
+    if not clean_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Official email address is required."
+        )
+
+    if len(body.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long."
+        )
+
+    try:
+        user = auth_service.reset_password(email=clean_email, new_password=body.new_password)
+        return {
+            "data": {
+                "message": f"Password for '{clean_email}' successfully reset in Firebase tables.",
+                "user": user
+            },
+            "status": {
+                "code": 2000,
+                "message": "Success"
+            }
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
 
 
 def get_cached_india_geography() -> Dict[str, List[str]]:

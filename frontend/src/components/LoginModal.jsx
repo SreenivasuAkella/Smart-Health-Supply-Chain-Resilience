@@ -50,9 +50,9 @@ const DEMO_PERSONAS = [
 ];
 
 export default function LoginModal({ isOpen, onClose, isMandatory = false }) {
-  const { login, provisionUser, isLoading: authLoading } = useAuth();
+  const { login, provisionUser, resetPassword, isLoading: authLoading } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('signin'); // 'signin' | 'provision'
+  const [activeTab, setActiveTab] = useState('signin'); // 'signin' | 'forgot' | 'provision'
   
   // Database Geography Data
   const [geoData, setGeoData] = useState({ states: [], districts_by_state: {} });
@@ -65,9 +65,20 @@ export default function LoginModal({ isOpen, onClose, isMandatory = false }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Admin Provisioning State
-  const envSecretKey = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_ADMIN_SECRET_KEY_B64) || '';
-  const [provSecret, setProvSecret] = useState(envSecretKey);
+  // Forgot Password State (Authorized via Base64 Secret Key only - NOT prefilled)
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSecret, setForgotSecret] = useState('');
+  const [showForgotSecret, setShowForgotSecret] = useState(false);
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [showForgotConfirmPassword, setShowForgotConfirmPassword] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState('');
+  const [forgotError, setForgotError] = useState('');
+
+  // Admin Provisioning State - strictly NOT auto-filled
+  const [provSecret, setProvSecret] = useState('');
   const [provEmail, setProvEmail] = useState('');
   const [provPassword, setProvPassword] = useState('');
   const [provName, setProvName] = useState('');
@@ -123,8 +134,54 @@ export default function LoginModal({ isOpen, onClose, isMandatory = false }) {
     } catch {
       // Fallback
     }
-    if (envSecretKey) {
-      setProvSecret(envSecretKey);
+  };
+
+  const handlePasteForgotSecret = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          setForgotSecret(text.trim());
+          return;
+        }
+      }
+    } catch {}
+  };
+
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotSuccess('');
+
+    if (!forgotEmail || !forgotSecret || !forgotNewPassword) {
+      setForgotError('Please enter email, sovereign Base64 secret key, and new password.');
+      return;
+    }
+    if (forgotNewPassword.length < 6) {
+      setForgotError('New password must be at least 6 characters.');
+      return;
+    }
+    if (forgotConfirmPassword && forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await resetPassword(forgotEmail.trim(), forgotNewPassword, forgotSecret.trim());
+      if (res?.status === 'success') {
+        setForgotSuccess(res.message || `Password for ${forgotEmail} has been securely reset.`);
+        setEmail(forgotEmail.trim());
+        setPassword(forgotNewPassword);
+        setForgotNewPassword('');
+        setForgotConfirmPassword('');
+      } else {
+        setForgotError(res?.error || res?.detail || 'Failed to reset password. Verify your Base64 secret key.');
+      }
+    } catch (err) {
+      setForgotError(err.message || 'Network error resetting password.');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -272,33 +329,51 @@ export default function LoginModal({ isOpen, onClose, isMandatory = false }) {
 
         {/* Modern Segmented Pill Tab Switcher */}
         <div className="px-6 pt-4 pb-2 bg-slate-950/30">
-          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950/90 rounded-2xl border border-slate-800">
+          <div className="grid grid-cols-3 gap-1 p-1 bg-slate-950/90 rounded-2xl border border-slate-800">
             <button
               type="button"
-              onClick={() => setActiveTab('signin')}
+              onClick={() => { setActiveTab('signin'); setErrorMsg(''); }}
               className={`
-                py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-200
+                py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200
                 ${activeTab === 'signin'
                   ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-200 font-bold border border-cyan-500/40 shadow-sm shadow-cyan-950/60'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'}
               `}
             >
               <Lock size={13} className={activeTab === 'signin' ? 'text-cyan-400' : 'text-slate-500'} />
-              <span>Personnel Sign In</span>
+              <span className="truncate">Sign In</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setActiveTab('provision')}
+              onClick={() => {
+                if (email && !forgotEmail) setForgotEmail(email);
+                setActiveTab('forgot');
+                setForgotError('');
+              }}
               className={`
-                py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-200
+                py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200
+                ${activeTab === 'forgot'
+                  ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-200 font-bold border border-amber-500/40 shadow-sm shadow-amber-950/60'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'}
+              `}
+            >
+              <Key size={13} className={activeTab === 'forgot' ? 'text-amber-400' : 'text-slate-500'} />
+              <span className="truncate">Forgot Password</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setActiveTab('provision'); setProvError(''); }}
+              className={`
+                py-2 px-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200
                 ${activeTab === 'provision'
                   ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-200 font-bold border border-indigo-500/40 shadow-sm shadow-indigo-950/60'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'}
               `}
             >
-              <Key size={13} className={activeTab === 'provision' ? 'text-indigo-400' : 'text-slate-500'} />
-              <span>Admin Provisioning Console</span>
+              <Cpu size={13} className={activeTab === 'provision' ? 'text-indigo-400' : 'text-slate-500'} />
+              <span className="truncate">Provision User</span>
             </button>
           </div>
         </div>
@@ -356,9 +431,21 @@ export default function LoginModal({ isOpen, onClose, isMandatory = false }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-300">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (email) setForgotEmail(email);
+                      setActiveTab('forgot');
+                    }}
+                    className="text-[11px] font-medium text-cyan-400 hover:text-cyan-300 hover:underline transition-colors cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -422,7 +509,217 @@ export default function LoginModal({ isOpen, onClose, isMandatory = false }) {
           </div>
         )}
 
-        {/* Tab 2: Admin Provisioning Console */}
+        {/* Tab 2: Sovereign Forgot / Reset Password Console */}
+        {activeTab === 'forgot' && (
+          <div className="p-6 space-y-4 animate-fadeIn max-h-[78vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
+            {/* Header info badge */}
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                <Key size={14} className="text-amber-400 shrink-0" />
+                <span>Base64 Sovereign Authorization Required</span>
+              </div>
+              <p className="text-[11px] text-amber-200/80 leading-relaxed font-sans">
+                Due to national security protocols, password resets can only be authorized using the sovereign Base64 Admin Secret Key. Public or unauthenticated resets are strictly disabled.
+              </p>
+            </div>
+
+            {forgotSuccess ? (
+              <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs space-y-3 animate-fadeIn shadow-lg shadow-emerald-950/40">
+                <div className="flex items-center gap-2 font-bold text-emerald-300 text-sm">
+                  <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                  <span>Password Reset Successfully!</span>
+                </div>
+                <p className="text-xs text-emerald-200/90 leading-relaxed">
+                  {forgotSuccess} All active sessions and refresh tokens have been revoked for security.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('signin');
+                    setForgotSuccess('');
+                  }}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
+                >
+                  <span>Proceed to Sign In</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-3.5">
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Registered Official Email <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="email"
+                      required
+                      value={forgotEmail}
+                      onChange={(e) => {
+                        setForgotEmail(e.target.value);
+                        if (forgotError) setForgotError('');
+                      }}
+                      placeholder="officer@sanjeevani.gov.in"
+                      className="w-full bg-slate-950/70 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all font-sans"
+                    />
+                  </div>
+                </div>
+
+                {/* Base64 Secret Key */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Key size={13} className="text-amber-400" />
+                      Master Base64 Secret Key <span className="text-rose-400">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handlePasteForgotSecret}
+                      className="flex items-center gap-1 text-[10px] text-amber-300 hover:text-white bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/40 transition-colors cursor-pointer"
+                      title="Paste Base64 Secret"
+                    >
+                      <ClipboardPaste size={11} />
+                      <span>Paste Key</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showForgotSecret ? "text" : "password"}
+                      required
+                      value={forgotSecret}
+                      onChange={(e) => {
+                        setForgotSecret(e.target.value);
+                        if (forgotError) setForgotError('');
+                      }}
+                      placeholder="Enter Base64 Admin Secret..."
+                      className="w-full bg-slate-950/70 border border-amber-500/40 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotSecret(!showForgotSecret)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showForgotSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* New Password & Confirm */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      New Password <span className="text-rose-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type={showForgotNewPassword ? "text" : "password"}
+                        required
+                        minLength={6}
+                        value={forgotNewPassword}
+                        onChange={(e) => {
+                          setForgotNewPassword(e.target.value);
+                          if (forgotError) setForgotError('');
+                        }}
+                        placeholder="Min 6 chars"
+                        className="w-full bg-slate-950/70 border border-slate-700/80 rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showForgotNewPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Confirm Password <span className="text-rose-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type={showForgotConfirmPassword ? "text" : "password"}
+                        required
+                        minLength={6}
+                        value={forgotConfirmPassword}
+                        onChange={(e) => {
+                          setForgotConfirmPassword(e.target.value);
+                          if (forgotError) setForgotError('');
+                        }}
+                        placeholder="Re-enter password"
+                        className="w-full bg-slate-950/70 border border-slate-700/80 rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotConfirmPassword(!showForgotConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showForgotConfirmPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Error Banner */}
+                {forgotError && (
+                  <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/40 text-rose-300 text-xs flex items-center justify-between gap-3 shadow-lg shadow-rose-950/50 animate-fadeIn">
+                    <div className="flex items-center gap-2.5">
+                      <ShieldAlert size={16} className="shrink-0 text-rose-400" />
+                      <span className="font-medium leading-relaxed">{forgotError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setForgotError('')}
+                      className="text-rose-400 hover:text-white p-1 rounded-lg hover:bg-rose-500/20 transition-colors shrink-0"
+                      title="Dismiss error"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:via-orange-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transition-all duration-200 disabled:opacity-50 cursor-pointer"
+                >
+                  {forgotLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Verifying Base64 & Updating Credentials...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Key size={14} />
+                      <span>Reset Password with Base64 Authorization</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('signin')}
+                    className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Remember your password? <span className="text-cyan-400 hover:underline">Return to Sign In</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Admin Provisioning Console */}
         {activeTab === 'provision' && (
           <div className="p-6 space-y-4 animate-fadeIn max-h-[78vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
             {provSuccess && (
